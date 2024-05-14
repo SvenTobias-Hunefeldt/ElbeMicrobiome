@@ -1,0 +1,3631 @@
+---
+title: "BiCEst mOTUs"
+author: "Sven Tobias-Hünefeldt"
+date: "2023-12-22"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+#Load packages
+```{r}
+rm(list=ls())
+
+require(RCurl)
+require(tidyverse)
+require(R.utils)
+require(phyloseq)
+require(ggplot2)
+require(plotly)
+library(phyloseq)
+library(microbiome)
+library(Rmisc)
+library(dplyr)
+library(plyr)
+```
+
+#Set environment
+```{r}
+setwd("C:/Users/hunefeldt/OneDrive/Desktop/PhD/R_analysis/MicrobialAnalsis/motus/")
+path <- getwd()
+
+#Set language to english
+Sys.setenv(LANG = "en")
+
+Shape_list = c(0, #Hollow square
+               15, #Filled square
+               1, #Hollow circle
+               16, #Filled circle
+               2, #Hollow triangle
+               17, #Filled triangle
+               5, #Hollow diamond
+               23) #Filled diamonds
+
+
+#Colourblind friendly pallete
+cbbPalette <- c("black",
+                "red",
+                "navy", 
+                "green", 
+                "magenta",
+                "forestgreen")
+#If more options are needed
+expanded_cbbPalette <- c("#000000", #Black
+                "#E69F00", #Orange
+                "#56B4E9", #Blue (light)
+                "#009E73", #Sea green
+                "#CC79A7", #Magenta (light)
+                "#F0E442", #Yellow
+                "#0072B2", #Blue
+                "#D55E00", #Burnt orange
+                "dodgerblue4",
+                "rosybrown",
+                "floralwhite",
+                "lightgoldenrod4",
+                "cornsilk3",
+                "coral4",
+                "gray38",
+                "turquoise4",
+                "springgreen3",
+                "slateblue3",
+                "forestgreen",
+                "lightgreen") 
+
+#Refine colours
+Datecolour <- c("May 21" = "red",
+                "Mai 21" = "red",
+                "Jul 21" = "forestgreen", 
+                "Feb 22" = "black",
+                "May 22" = "green",
+                "Mai 22" = "green", 
+                "Jun 22" = "magenta",
+                "Nov 22" = "navy")
+
+#Define theme for plotting
+My_Theme = theme_bw()+
+  theme(axis.title.x = element_text(size=18),
+       # theme_grey(base_size = 22),
+        axis.text.x = element_text(angle=0, colour = "black", vjust=1, hjust = 0.5, size=18), 
+        axis.text.y = element_text(colour = "black", size=18),
+        axis.title.y = element_text(size=18),
+        plot.title = element_text(size = 18, hjust = 0.5),
+        legend.title =element_text(size = 18),
+        legend.text = element_text(size = 16),
+        legend.position="right",
+        legend.key.size = unit(1, "cm"),
+        strip.text.x = element_text(size=18, face="bold"),
+        strip.text.y = element_text(size=18, face="bold"),
+        #panel.background = element_blank(),
+        panel.border = element_rect(fill = NA, colour = "black"),
+        strip.background = element_rect(colour="black"),
+       text = element_text(family = "sans"))
+
+```
+
+#Add TEP/CSP to physicochem
+
+```{r Import Microscopy data}
+Brightfield_sum.df = read.csv("C:/Users/hunefeldt/OneDrive/Desktop/PhD/R_analysis/ParticleAnalysis/Data/AllBrightfield_Summary.csv", fileEncoding = "UTF-8-BOM")
+Brightfield_sum.df = subset(Brightfield_sum.df, !Date=="2021.11")
+```
+
+```{r}
+#Particle count per L = particle count in image * magnification effect (x630) with field of view * convert from 1 mL sample to L
+Brightfield_sum.df$Count = Brightfield_sum.df$Count * 10122.6872775 * 1000
+```
+
+```{r Correct Brightfield for FDR based on colour deconvolution}
+#Import false discovery files
+FalseDiscovery_sum.df = read.csv("C:/Users/hunefeldt/OneDrive/Desktop/PhD/R_analysis/ParticleAnalysis/Data/AllFalseDiscovery_Summary.csv", fileEncoding = "UTF-8-BOM")
+FalseDiscovery_sum.df = subset(FalseDiscovery_sum.df, !Date=="11.2021")
+
+#Multiply to per Litre values
+FalseDiscovery_sum.df$Count = FalseDiscovery_sum.df$Count * 10122.6872775 * 1000
+
+##Multiply area and count for area per Litre values
+Brightfield_sum.df$AreaL = Brightfield_sum.df$Count * Brightfield_sum.df$Average_Size
+FalseDiscovery_sum.df$Combined = FalseDiscovery_sum.df$Count * FalseDiscovery_sum.df$Average_Size
+
+#Control for NA values
+FalseDiscovery_sum.df$Combined[is.na(FalseDiscovery_sum.df$Combined)] <- 0
+
+#Calculate FDR rates dependent on station, fraction, and what we're correcting
+CorrectionSpread = FalseDiscovery_sum.df %>%
+  group_by(CorrectionFor, Date, Station, Fraction) %>%
+  dplyr::summarise(mean_val = mean(Combined), sd = sd(Combined), median = median(Combined))
+print(CorrectionSpread)
+
+#Loop for FDR correction
+StationID="Station2"
+StainID="AlcianBlue"
+FractionID="Light"
+Date="7.2021"
+Brightfield_sum.df$CorrAreaL = 0
+i=385
+for (i in 1:length(Brightfield_sum.df$Station)) {
+  
+  StationID=Brightfield_sum.df$Station[i]
+  StainID=Brightfield_sum.df$Condition[i]
+  FractionID=Brightfield_sum.df$Fraction[i]
+  DateID=Brightfield_sum.df$Date[i]
+  
+  print(paste0(DateID, StationID, StainID, FractionID))
+  
+  if (grepl(Brightfield_sum.df$Condition[i], "AlcianBlue") == T | grepl(Brightfield_sum.df$Condition[i], "CBBG") == T) {
+  
+    Control_mean = subset(CorrectionSpread, Date==DateID & Station==StationID & CorrectionFor==StainID & Fraction==FractionID)$mean_val
+    
+    Brightfield_sum.df$CorrAreaL[i] = Brightfield_sum.df$AreaL[i] - Control_mean
+  
+    
+  } else {
+    
+    print("Image was not Alcian Blue or CBBG stained so does not need correcting")
+    Brightfield_sum.df$CorrAreaL[i] = Brightfield_sum.df$AreaL[i]
+    
+  }
+}
+
+#Make back up and comment out in case of issues
+#Brightfield_sum.df_v0 = Brightfield_sum.df
+#To restore in case of downstream issues instead of rerunning loop
+#Brightfield_sum.df = Brightfield_sum.df_v0
+
+#Remove non-sensical negative values
+Brightfield_sum.df$CorrAreaL[Brightfield_sum.df$CorrAreaL < 0 ] = 0
+
+####Make plot pretty####
+#Rename stations for pretty plots
+Brightfield_sum.df$Station = gsub("Station2$", "Muhlenberger Loch", Brightfield_sum.df$Station)
+Brightfield_sum.df$Station = gsub("Station3$", "Twielenfleth", Brightfield_sum.df$Station)
+Brightfield_sum.df$Station = gsub("Station4$", "Schwarztonnensand", Brightfield_sum.df$Station)
+Brightfield_sum.df$Station = gsub("Station5$", "Brunsbuttel", Brightfield_sum.df$Station)
+Brightfield_sum.df$Station = gsub("Station6$", "Meedem Grund", Brightfield_sum.df$Station)
+#Brightfield_sum.df$Station = gsub("Station1.5$", "Seemanshöft", Brightfield_sum.df$Station)
+#Brightfield_sum.df$Station = gsub("Station4.1$", "Kollmar", Brightfield_sum.df$Station)
+
+Brightfield_sum.df$Stromkilometer = Brightfield_sum.df$Station
+
+#Get distance from Hamburg/Elbe distance for spearman tests
+Brightfield_sum.df$Stromkilometer = gsub("Muhlenberger Loch", 633, Brightfield_sum.df$Stromkilometer)
+Brightfield_sum.df$Stromkilometer = gsub("Twielenfleth", 651, Brightfield_sum.df$Stromkilometer)
+Brightfield_sum.df$Stromkilometer = gsub("Schwarztonnensand", 665, Brightfield_sum.df$Stromkilometer)
+Brightfield_sum.df$Stromkilometer = gsub("Brunsbuttel", 694, Brightfield_sum.df$Stromkilometer)
+Brightfield_sum.df$Stromkilometer = gsub("Meedem Grund", 712, Brightfield_sum.df$Stromkilometer)
+#Brightfield_sum.df$Stromkilometer = gsub("Seemanshöft", 629, Brightfield_sum.df$Stromkilometer)
+#Brightfield_sum.df$Stromkilometer = gsub("Kollmar", 665, Brightfield_sum.df$Stromkilometer)
+
+Brightfield_sum.df$Stromkilometer = as.numeric(as.character(Brightfield_sum.df$Stromkilometer))
+
+
+Brightfield_sum.df$Fraction = gsub("Light", "Suspended", Brightfield_sum.df$Fraction)
+Brightfield_sum.df$Fraction = gsub("Heavy", "Sinking", Brightfield_sum.df$Fraction)
+Brightfield_sum.df$Fraction = gsub("0point2", "0.2 filtered", Brightfield_sum.df$Fraction)
+Brightfield_sum.df$Fraction = factor(Brightfield_sum.df$Fraction,
+                             levels = c("Suspended", "Sinking", "0.2 filtered"))
+
+Brightfield_sum.df$Condition = gsub("AlcianBlue", "TEP", Brightfield_sum.df$Condition)
+Brightfield_sum.df$Condition = gsub("CBBG", "CSP", Brightfield_sum.df$Condition)
+Brightfield_sum.df$Condition = gsub("Particle", "Unstained", Brightfield_sum.df$Condition)
+Brightfield_sum.df$Condition = gsub("0point2", "Unstained 0.2µm filtered", Brightfield_sum.df$Condition)
+Brightfield_sum.df$Condition = factor(Brightfield_sum.df$Condition,
+                             levels = c("Unstained", "Unstained 0.2µm filtered", "TEP", "CSP"))
+
+
+Brightfield_sum.df$Date = factor(Brightfield_sum.df$Date,
+                             levels = c("2021.07", 
+                                        #"11.2021", 
+                                        "2022.02", 
+                                        "2022.05", 
+                                        "2022.06",
+                                        "2022.11"))
+
+#Keep for backup
+colnames(Brightfield_sum.df)
+CSPMeed.df = data.frame("Station" = "Station6",
+                        "Condition" = "CBBG",
+                        "Fraction" = "Light",
+                        "Date" = "2022.02",
+                        "ImageNumber" = 0,
+                        "Count" = NA,
+                        "Total_Area" = NA,
+                        "Average_Size" = NA,
+                        "Perc_Area" = NA,
+                        "Perim" = NA,
+                        "AreaL" = NA,
+                        "CorrAreaL" = NA,
+                        "Stromkilometer" = NA)
+
+
+Brightfield_sum_V1.df = rbind(Brightfield_sum.df, CSPMeed.df)
+```
+
+```{r Basic TEP and CSP area per litre plot}
+
+#Summarise plots for easy plotting
+Brightfield_sum_V1.df = na.omit(Brightfield_sum_V1.df)
+TEPCSP_AreaL.df = Rmisc::summarySE(Brightfield_sum_V1.df, 
+                            measurevar="CorrAreaL", 
+                            groupvars=c("Date",
+                                        "Station", 
+                                        "Condition",
+                                        "Fraction"),
+                            na.rm = T)
+
+#Remove irrelevant data
+TEPCSP_AreaL.df = subset(TEPCSP_AreaL.df, Fraction!="0.2 filtered")
+TEPCSP_AreaL.df = subset(TEPCSP_AreaL.df, Condition!="Unstained")
+
+write.csv(TEPCSP_AreaL.df, "TEPCSP_AreaperL.csv")
+```
+
+#Import data
+```{r Download data}
+h <- curl::new_handle()
+curl::handle_setopt(
+  handle = h,
+  httpauth = 1,
+  userpwd = "BICEST:vJGDYLs7"
+)
+
+##Download Data##
+
+# url_new_motus <- "https://sunagawalab.ethz.ch/share/BICEST/GROS22/motus/mag_2_new_motus" 
+# url_ref_motus <- "https://sunagawalab.ethz.ch/share/BICEST/GROS22/motus/mag_2_existing_motus" 
+# url_tax_bac <- "https://sunagawalab.ethz.ch/share/BICEST/GROS22/MAGs/gtdb/gtdbtk.bac120.summary.R214.tsv"
+# url_tax_arc <-"https://sunagawalab.ethz.ch/share/BICEST/GROS22/MAGs/gtdb/gtdbtk.ar53.summary.R214.tsv"
+# url_tax_motus <- "https://zenodo.org/records/10275750/files/mOTUs3.1.0.genome_metadata.tsv.gz?download=1"
+# url_checkm <- "https://sunagawalab.ethz.ch/share/BICEST/GROS22/MAGs/metadata/GROS22-2.prok.genomes_2_quality.tsv.gz"
+# url_checkm2 <- "https://sunagawalab.ethz.ch/share/BICEST/GROS22/MAGs/metadata/GROS22-1.prok.genomes_2_quality.tsv.gz"
+# motus_pkg_url <- "https://sunagawalab.ethz.ch/share/BICEST/GROS22/motus/motus/GROS22_mOTUs3.1.grosextended.motus"
+# drep_url <- "https://sunagawalab.ethz.ch/share/BICEST/GROS22/MAGs/drep/drep-099/data_tables/Cdb.csv.gz"
+# url_16S_1 <- "https://sunagawalab.ethz.ch/share/BICEST/GROS22/MAGs/metadata/GROS22-1.prok.barrnap.0.9.tsv.gz"
+# url_16S_2 <- "https://sunagawalab.ethz.ch/share/BICEST/GROS22/MAGs/metadata/GROS22-2.prok.barrnap.0.9.tsv.gz"
+# 
+# curl::curl_download(url_new_motus,paste(path,"/BICEST_mag_2_new_motus", sep=""), handle =  h)
+# curl::curl_download(url_ref_motus,paste(path,"/BICEST_mag_2_existing_motus", sep=""), handle =  h)
+# curl::curl_download(url_tax_bac,paste(path,"/BICEST_gtdbtk.bac120.summary.R214.tsv", sep=""), handle =  h)
+# curl::curl_download(url_tax_arc,paste(path,"/BICEST_gtdbtk.ar53.summary.R214.tsv", sep=""), handle =  h)
+# curl::curl_download(url_tax_motus,paste(path,"/mOTUs3.1.0.genome_metadata.tsv.gz", sep=""), handle =  h)
+# curl::curl_download(url_checkm,paste(path,"/GROS22-2.prok.genomes_2_quality.tsv.gz", sep=""), handle =  h)
+# curl::curl_download(url_checkm2,paste(path,"/GROS22-1.prok.genomes_2_quality.tsv.gz", sep=""), handle =  h)
+# curl::curl_download(motus_pkg_url,paste(path,"/GROS22_mOTUs3.1.grosextended.motus", sep=""), handle =  h)
+# curl::curl_download(drep_url,paste(path,"/Cdb.csv.gz", sep=""), handle =  h)
+# curl::curl_download(url_16S_1,paste(path,"/GROS22-1.prok.barrnap.0.9.tsv.gz", sep=""), handle =  h)
+# curl::curl_download(url_16S_2,paste(path,"/GROS22-2.prok.barrnap.0.9.tsv.gz", sep=""), handle =  h)
+
+# gunzip(paste0(path,"/mOTUs3.1.0.genome_metadata.tsv.gz"), overwrite = T)
+# gunzip(paste0(path,"/Cdb.csv.gz"), overwrite = T)
+# gunzip(paste0(path,"/GROS22-2.prok.genomes_2_quality.tsv.gz"), overwrite = T)
+# gunzip(paste0(path,"/GROS22-1.prok.genomes_2_quality.tsv.gz"), overwrite = T)
+# gunzip(paste0(path,"/GROS22-1.prok.barrnap.0.9.tsv.gz"), overwrite = T)
+# gunzip(paste0(path,"/GROS22-2.prok.barrnap.0.9.tsv.gz"), overwrite = T)
+```
+
+
+```{r Import data}
+##Read mOTUs##
+
+motus <- read.csv(paste0(path,"/GROS22_mOTUs3.1.grosextended.motus"), sep="\t", skip=2, header = TRUE, row.names = 1) ##Theres some junk in the first two lines
+colnames(motus) <- gsub(".*_S", "S", colnames(motus) ) ##here im just removing the projectid for whatever reason. If you want to add this to gene_cat or remove here
+rownames(motus) <- gsub(".* ", "", gsub("\\[|\\]", "", rownames(motus))) ##mOTUs contain a taxonomy followed by [mOTU_id] i just want mOTU_id
+
+
+##Now we want to create  a list which matches each genome to its mOTU 
+membership.new = read.csv(paste0(path, "/BICEST_mag_2_new_motus"), sep = "\t", header = FALSE) %>%
+  dplyr::rename(mOTU = V1, reps=V2) %>%
+  separate_wider_delim(reps, ";", names_sep = "split", too_few=c("align_start")) %>% 
+  pivot_longer(!mOTU, values_to = "user_genome",values_drop_na = TRUE) %>% 
+  select(user_genome, mOTU)
+membership.ref = read.csv(paste0(path, "/BICEST_mag_2_existing_motus"), sep = "\t", header = FALSE, quote="") %>% 
+  select(V1, V2)%>%
+  dplyr::rename(., user_genome=V1, mOTU=V2)
+membership <- rbind(membership.ref, membership.new)
+nrow(membership)## 13765
+##Read mOTUs Taxonomic Data
+
+bac_gtdb = read.csv(paste0(path, "/BICEST_gtdbtk.bac120.summary.R214.tsv"), sep = "\t", header = TRUE) 
+arc_gtdb = read.csv(paste0(path, "/BICEST_gtdbtk.ar53.summary.R214.tsv"), sep = "\t", header = TRUE)
+gtdb = rbind(bac_gtdb, arc_gtdb) %>% 
+  select(user_genome, classification )##Read in both archaea and bacteria
+nrow(gtdb)## 13765
+###Read in dRep data 
+
+drep <- read.csv("Cdb.csv") %>% 
+  select(genome, secondary_cluster)%>%
+  dplyr::rename(user_genome=genome, drep_cluster = secondary_cluster) %>% 
+  mutate(user_genome = gsub(".fa", "", user_genome))
+nrow(drep) ## 13765
+##Read in qa data 
+
+qa <- read.csv(paste0(path,"/GROS22-2.prok.genomes_2_quality.tsv"), sep="\t", quote="") %>% 
+  rbind(., read.csv(paste0(path,"/GROS22-1.prok.genomes_2_quality.tsv"), sep="\t", quote="")) %>% 
+  dplyr::rename(user_genome = GENOME, completeness=COMPLETENESS, contamination=CONTAMINATION, genome_size=GENOME_SIZE) %>% 
+  select(user_genome, completeness, contamination, N50, genome_size)
+nrow(qa) ## 13765
+
+
+##Read in barrnap (16S data)
+
+barrnap <- read.csv(paste0(path, "/GROS22-1.prok.barrnap.0.9.tsv"), sep="\t", quote="") %>% 
+  rbind(., read.csv(paste0(path, "/GROS22-2.prok.barrnap.0.9.tsv"), sep="\t", quote="")) %>% 
+  dplyr::rename(user_genome = genome, full_16S_rRNA = X16S_rRNA, partial_16S_rRNA = X16S_rRNA_partial) %>%
+  select(user_genome, full_16S_rRNA, partial_16S_rRNA)
+
+###Combine all together
+genome_stats <- left_join(membership, gtdb) %>% 
+  left_join(drep) %>% 
+  left_join(qa) %>%
+  left_join(barrnap)
+nrow(genome_stats) ## 13765
+```
+
+##Make dataframes 
+```{r}
+motu_stats <- genome_stats %>%
+  mutate(type = if_else(grepl("NotEnoughMGs", mOTU), "Unassigned", if_else(grepl("ELB", mOTU), "BICEST", "mOTUs.3.1.0"))) 
+
+###If you want to you can use this opportunity to reassign some of your MAGs from Unassigned using dRep clusters###
+motu_stats %>% 
+  group_by(drep_cluster, mOTU) %>%
+  dplyr::summarise(n_mags = n_distinct(user_genome))
+
+##You can already see that for instance 1000_1 has a MAG annotated as NotEnoughMGs, but this probably is ELBEEST_794
+##However 1002_1  has 6 MAgs that are NotEnoughMGs, but then 2 that are ELBEEST_87 and ELBEEST_88. It would be nice to know which.
+##This can also work in reverse, if we write this to output and search for ext_mOTU_v31_19264, we find around 10 drep clusters, 
+##one of these has 141 and the rest 1 MAG each. Here I would tend towards assuming that each of these should be associated to this single mOTU
+##Like i said before bad quality MAGs might not cluster with dREp but we find the MGs.
+##Just be careful, if you want to modify the easiest way would be
+motu_stats %>% 
+  group_by(mOTU) %>% 
+  dplyr::summarise(n_drep = n_distinct(drep_cluster)) %>%
+  filter(n_drep >1) %>% 
+  arrange(desc(n_drep))
+
+##This gives you a list of all the mOTUs with lots of drep clusters, 
+
+##Double check the data 
+motu_stats[which(motu_stats$mOTU == "ELBEEST_35"),] %>% 
+  select(mOTU, drep_cluster, user_genome) %>% 
+  group_by(drep_cluster) %>% 
+  dplyr::summarise(n_mags = n_distinct(user_genome)) %>% 
+  arrange(desc(n_mags))
+
+##Now a quick one liner will rename all the drep_clusters to match the major mOTU cluster
+motu_stats[which(motu_stats$mOTU == "ELBEEST_35"), "drep_cluster"] <- "568_8" ##This will remove the additional drep clusters
+##Now just rerun the code block above to see that it worked and move on to the next one. 
+
+##Now thats sorted lets see about those NotEnoughMG annots, here we are only interested in those that have 2 unique mOTU, ie un-/classified
+
+motu_stats %>% 
+  group_by(drep_cluster, mOTU) %>%
+  dplyr::summarise(n_mags = n_distinct(user_genome)) %>% 
+  ungroup() %>%
+  group_by(drep_cluster) %>% 
+  dplyr::summarise(n_mOTU = n_distinct(mOTU), n_mags=sum(n_mags)) %>%
+  filter(n_mOTU ==2) %>% 
+  arrange(desc(n_mags))
+
+##This gives you a list of all the drep_clusters with lots of mOTUs, 
+
+##Double check the data 
+motu_stats[which(motu_stats$drep_cluster == "616_1"),] %>% 
+  select(mOTU, drep_cluster, user_genome) %>% 
+  group_by(mOTU) %>% 
+  dplyr::summarise(n_mags = n_distinct(user_genome)) %>% 
+  arrange(desc(n_mags))
+
+##So we can see here that there are 134 assigned to ELBEEST_33 and 3 unassigned, lets go ahead and assign these. 
+##Again a quick one liner
+motu_stats[which(motu_stats$drep_cluster == "616_1"), "mOTU"] <- "ELBEEST_33" ##This will remove the additional drep clusters
+##rerun the chunk above and we can see that now all are assigned to ELBEEST_33. 
+
+###Lets plot the data to see how its looking. 
+###We dont want to plot all groups so lets see which ones to focus on 
+motu_stats %>% 
+  separate(classification, c("domain", "phylum", "class", "order", "family",  "genus", "species"), ";") %>%
+  group_by(phylum) %>%
+  dplyr::summarise(n_mags = n_distinct(user_genome)) %>% 
+  arrange(desc(n_mags))
+
+##Lets select the top 7 to plot and assign the rest to the "Other" bin
+
+motu_stats %>% 
+  separate(classification, c("domain", "phylum", "class", "order", "family",  "genus", "species"), ";") %>% 
+  mutate(Phylum_plot = ifelse(grepl("p__Pseudomonadota|p__Actinomycetota|p__Bacteroidota|p__Verrucomicrobiota|p__Patescibacteria|p__Planctomycetota|p__Chloroflexota", phylum), phylum, "Other")) %>%
+  mutate(Phylum_plot = gsub("p__", "", Phylum_plot)) %>%
+  group_by(type, Phylum_plot) %>%
+  dplyr::summarise(n_mags = n_distinct(user_genome), PRESENT = sum(partial_16S_rRNA, full_16S_rRNA), ABSENT = n_mags-PRESENT) %>% 
+  pivot_longer(cols = c("PRESENT", "ABSENT"), names_to = "rRNA", values_to ="counts") %>% 
+  ggplot(aes(y=factor(type, levels=c("Unassigned", "mOTUs.3.1.0", "BICEST")), 
+             x = n_mags, 
+             alpha = factor(rRNA, levels=c("PRESENT","ABSENT")),
+             fill=factor(type, levels=c("Unassigned", "mOTUs.3.1.0", "BICEST")))) + 
+  geom_col() + scale_alpha_manual(values = c(1,0.5)) +
+  theme_bw() +
+  facet_grid(rows=vars(factor(Phylum_plot, levels=c("Actinomycetota", "Bacteroidota", "Chloroflexota", "Patescibacteria", "Planctomycetota",  "Pseudomonadota", "Verrucomicrobiota", "Other"))), 
+             drop = TRUE, 
+             scales="free", 
+             switch = "y", 
+             as.table = TRUE
+  ) + xlab(label = "MAGs with and without partial 16S rRNA") +
+  theme(axis.text.y = element_blank(),
+        axis.ticks.y = element_blank(),
+        axis.title.y = element_blank(),
+        strip.text.y.left = element_text(angle = 0),
+        strip.text = element_text(angle = 90),
+        strip.background = element_blank(),
+        legend.position = "bottom",
+        panel.spacing = unit(0,'lines'),
+        panel.border = element_blank()) + 
+  labs (fill= "Database Sournce", alpha = "Contains full/partial 16S rRNA") +
+  guides(fill = guide_legend(order=2, ncol=3, title.position = "top", 
+                             label.hjust = 0, title.vjust = 1,
+                             keywidth = unit(0.5, 'cm'), override.aes=list(size = 1)),
+         alpha = guide_legend(order=2, ncol=3, title.position = "top", 
+                              label.hjust = 0, title.vjust = 1,
+                              keywidth = unit(0.5, 'cm')))
+
+#####Ok so we have all that information together.
+
+```
+
+##Plot for instance genome completeness, size etc
+```{r}
+##First we need to create a single taxonomy for each of the new ELBEEST/BICEST mOTUs
+
+genome_stats %>% 
+  select(mOTU) %>% 
+  unique() %>% 
+  nrow() ## So I get 1172 unique mOTUs, including 874 ELBEEST mOTUs. Depending on your cleaning steps (drep etc) the following might change a bit
+##particularly when we look at unique classifications. Lets keep that in mind and go forward
+
+genome_stats %>% 
+  select(mOTU, classification) %>% 
+  unique() %>% 
+  nrow() ## 1946, so now we have added classification and so we have a few hundred examples where there is more than one classification for a mOTU
+
+genome_stats %>% 
+  select(mOTU, classification) %>% 
+  group_by(mOTU) %>% 
+  dplyr::summarise(count = n_distinct(classification)) %>%
+  filter(count > 1) %>% 
+  arrange(desc(count))
+
+##Ok that was a false alarm as we have 732 classifications for unclassified mOTUs
+
+genome_stats %>% 
+  filter(mOTU != "NotEnoughMGs") %>%
+  select(mOTU, classification) %>% 
+  group_by(mOTU) %>% 
+  dplyr::summarise(count = n_distinct(classification)) %>%
+  filter(count > 1) %>% 
+  arrange(desc(count)) %>% 
+  nrow() ##ok so we need to resolve 40, this might differ when you add unclassified mOTUs into mOTU clusters above. 
+
+##Ok so lets go through and see if we can do this relatively quickly 
+
+motu_to_check <- genome_stats %>% 
+  filter(mOTU != "NotEnoughMGs") %>%
+  select(mOTU, classification) %>% 
+  group_by(mOTU) %>% 
+  dplyr::summarise(count = n_distinct(classification)) %>%
+  filter(count > 1) %>% 
+  select(mOTU) %>% 
+  pull()
+
+##Ok so we have our list of 40 mOTUs that are conflicting
+
+genome_stats %>% 
+  filter(mOTU %in% motu_to_check) %>% 
+  select(mOTU, classification, user_genome) %>% 
+  group_by(mOTU, classification) %>%
+  dplyr::summarise(count = n_distinct(user_genome)) %>%
+  arrange(mOTU) %>% 
+  print(n=100)
+  
+##Here we see at a first look that usually there is a more complete and less complete taxonomy. 
+##Wracking my brain to automate this but I think we need to do a manual curate so lets set that up.
+```
+
+##Curate data
+```{r Curate data}
+##Just a quick note, how do we make sense of different level tax assignments. Lets say there are 10 MAGs belonging to a mOTU and 9 are assigned to species and 1 not. 
+##This is an easy fix, ok lets just take the majority and go to species level. 
+##Now what about if we have 9 not assigned and 1 is. Well this might be because only 1 was HQ and able to be assigned to species level. Shouldn't we trust the info from our HQ mag. I say yes!
+##Of course with 10 it would be better if a few MAGs were assigned to species not just 1. 
+##Generally most of your analysis will occur at the mOTU level or higher taxonomy (family or even phylum ) so dont stress about the need to assign each mOTU to species level. 
+
+##You will also get mOTUs that are assigned to the same species but are two distinct mOTUs, so its not all that simple.
+
+##code hidden here
+genome_stats[which(genome_stats$mOTU == "ELBEEST_124" & genome_stats$classification == "d__Bacteria;p__Nitrospirota;c__Nitrospiria;o__Nitrospirales;f__Nitrospiraceae;g__Nitrospira_F;s__"), "classification"] <- "d__Bacteria;p__Nitrospirota;c__Nitrospiria;o__Nitrospirales;f__Nitrospiraceae;g__Nitrospira_F;s__Nitrospira_F sp919902665"
+#The next example has two genus annotations for one mOTU, but the major is assigned to a single so we take that one 
+genome_stats[which(genome_stats$mOTU == "ELBEEST_125" & genome_stats$classification == "d__Bacteria;p__Pseudomonadota;c__Gammaproteobacteria;o__Xanthomonadales;f__SZUA-36;g__;s__"), "classification"] <- "d__Bacteria;p__Pseudomonadota;c__Gammaproteobacteria;o__Xanthomonadales;f__SZUA-36;g__JABDPF01;s__"
+genome_stats[which(genome_stats$mOTU == "ELBEEST_125" & genome_stats$classification == "d__Bacteria;p__Pseudomonadota;c__Gammaproteobacteria;o__Xanthomonadales;f__SZUA-36;g__JAHEFT01;s__"), "classification"] <- "d__Bacteria;p__Pseudomonadota;c__Gammaproteobacteria;o__Xanthomonadales;f__SZUA-36;g__JABDPF01;s__"
+genome_stats[which(genome_stats$mOTU == "ELBEEST_174" & genome_stats$classification == "d__Bacteria;p__Pseudomonadota;c__Gammaproteobacteria;o__Pseudomonadales;f__Halieaceae;g__;s__"), "classification"] <- "d__Bacteria;p__Pseudomonadota;c__Gammaproteobacteria;o__Pseudomonadales;f__Halieaceae;g__Halioglobus;s__"
+genome_stats[which(genome_stats$mOTU == "ELBEEST_193" & genome_stats$classification == "d__Bacteria;p__Pseudomonadota;c__Alphaproteobacteria;o__Puniceispirillales;f__Puniceispirillaceae;g__UBA3439;s__"), "classification"] <- "d__Bacteria;p__Pseudomonadota;c__Alphaproteobacteria;o__Puniceispirillales;f__Puniceispirillaceae;g__UBA3439;s__UBA3439 sp016778825"
+genome_stats[which(genome_stats$mOTU == "ELBEEST_194" & genome_stats$classification == "d__Bacteria;p__Pseudomonadota;c__Alphaproteobacteria;o__Puniceispirillales;f__Puniceispirillaceae;g__UBA3439;s__"), "classification"] <- "d__Bacteria;p__Pseudomonadota;c__Alphaproteobacteria;o__Puniceispirillales;f__Puniceispirillaceae;g__UBA3439;s__UBA3439 sp016778825"
+genome_stats[which(genome_stats$mOTU == "ELBEEST_200" & genome_stats$classification == "d__Bacteria;p__Actinomycetota;c__Actinomycetia;o__Nanopelagicales;f__Nanopelagicaceae;g__Planktophila;s__"), "classification"] <- "d__Bacteria;p__Actinomycetota;c__Actinomycetia;o__Nanopelagicales;f__Nanopelagicaceae;g__Planktophila;s__Planktophila sulfonica"
+genome_stats[which(genome_stats$mOTU == "ELBEEST_221" & genome_stats$classification == "d__Bacteria;p__Pseudomonadota;c__Gammaproteobacteria;o__Pseudomonadales;f__Porticoccaceae;g__HTCC2207;s__"), "classification"] <- "d__Bacteria;p__Pseudomonadota;c__Gammaproteobacteria;o__Pseudomonadales;f__Porticoccaceae;g__HTCC2207;s__HTCC2207 sp002685195"
+##Again here we have a genus conflict with 12/14 mOTUs assigned to a single genus which we will take
+genome_stats[which(genome_stats$mOTU == "ELBEEST_272" & genome_stats$classification == "d__Bacteria;p__Pseudomonadota;c__Gammaproteobacteria;o__Burkholderiales;f__SG8-39;g__CAILKO01;s__"), "classification"] <- "d__Bacteria;p__Pseudomonadota;c__Gammaproteobacteria;o__Burkholderiales;f__SG8-39;g__SG8-39;s__"
+genome_stats[which(genome_stats$mOTU == "ELBEEST_310" & genome_stats$classification == "d__Bacteria;p__Actinomycetota;c__Acidimicrobiia;o__Acidimicrobiales;f__Ilumatobacteraceae;g__UBA3006;s__"), "classification"] <- "d__Bacteria;p__Actinomycetota;c__Acidimicrobiia;o__Acidimicrobiales;f__Ilumatobacteraceae;g__UBA3006;s__UBA3006 sp903850275"
+genome_stats[which(genome_stats$mOTU == "ELBEEST_362" & genome_stats$classification == "d__Bacteria;p__Pseudomonadota;c__Gammaproteobacteria;o__Burkholderiales;f__Burkholderiaceae_A;g__JAHDXY01;s__"), "classification"] <- "d__Bacteria;p__Pseudomonadota;c__Gammaproteobacteria;o__Burkholderiales;f__Burkholderiaceae_A;g__JAHDXY01;s__JAHDXY01 sp023257915"
+genome_stats[which(genome_stats$mOTU == "ELBEEST_370" & genome_stats$classification == "d__Bacteria;p__Verrucomicrobiota;c__Verrucomicrobiae;o__Pedosphaerales;f__AAA164-E04;g__;s__"), "classification"] <- "d__Bacteria;p__Verrucomicrobiota;c__Verrucomicrobiae;o__Pedosphaerales;f__AAA164-E04;g__AAA164-E04;s__"
+genome_stats[which(genome_stats$mOTU == "ELBEEST_376" & genome_stats$classification == "d__Bacteria;p__Desulfobacterota_B;c__Binatia;o__HRBIN30;f__;g__;s__"), "classification"] <- "d__Bacteria;p__Desulfobacterota_B;c__Binatia;o__HRBIN30;f__JAGDMS01;g__;s__"
+genome_stats[which(genome_stats$mOTU == "ELBEEST_403" & genome_stats$classification == "d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Flavobacteriales;f__Flavobacteriaceae;g__UBA3478;s__"), "classification"] <- "d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Flavobacteriales;f__Flavobacteriaceae;g__UBA3478;s__UBA3478 sp016780435"
+genome_stats[which(genome_stats$mOTU == "ELBEEST_412" & genome_stats$classification == "d__Bacteria;p__Pseudomonadota;c__Gammaproteobacteria;o__Burkholderiales;f__Burkholderiaceae_A;g__UBA2463;s__"), "classification"] <- "d__Bacteria;p__Pseudomonadota;c__Gammaproteobacteria;o__Burkholderiales;f__Burkholderiaceae_A;g__UBA2463;s__UBA2463 sp945901825"
+genome_stats[which(genome_stats$mOTU == "ELBEEST_427" & genome_stats$classification == "d__Bacteria;p__Pseudomonadota;c__Alphaproteobacteria;o__Micavibrionales;f__UBA2020;g__;s__"), "classification"] <- "d__Bacteria;p__Pseudomonadota;c__Alphaproteobacteria;o__Micavibrionales;f__UBA2020;g__UBA2020;s__"
+##here the most are unclassifed at the species level with 3 and 1 assigned to two genera. Lets be rational and take up to family 
+genome_stats[which(genome_stats$mOTU == "ELBEEST_439" & genome_stats$classification == "d__Bacteria;p__Pseudomonadota;c__Gammaproteobacteria;o__Burkholderiales;f__Burkholderiaceae_B;g__PHCI01;s__"), "classification"] <- "d__Bacteria;p__Pseudomonadota;c__Gammaproteobacteria;o__Burkholderiales;f__Burkholderiaceae_B;g__;s__"
+genome_stats[which(genome_stats$mOTU == "ELBEEST_439" & genome_stats$classification == "d__Bacteria;p__Pseudomonadota;c__Gammaproteobacteria;o__Burkholderiales;f__Burkholderiaceae_B;g__JAKFVA01;s__"), "classification"] <- "d__Bacteria;p__Pseudomonadota;c__Gammaproteobacteria;o__Burkholderiales;f__Burkholderiaceae_B;g__;s__"
+##Again two genera 5/1 split
+genome_stats[which(genome_stats$mOTU == "ELBEEST_455" & genome_stats$classification == "d__Bacteria;p__Pseudomonadota;c__Gammaproteobacteria;o__Burkholderiales;f__Burkholderiaceae_B;g__Rhodoferax_A;s__"), "classification"] <- "d__Bacteria;p__Pseudomonadota;c__Gammaproteobacteria;o__Burkholderiales;f__Burkholderiaceae_B;g__CAIKVZ01;s__"
+genome_stats[which(genome_stats$mOTU == "ELBEEST_458" & genome_stats$classification == "d__Bacteria;p__Patescibacteria;c__Paceibacteria;o__UBA9983_A;f__JAACPR01;g__;s__"), "classification"] <- "d__Bacteria;p__Patescibacteria;c__Paceibacteria;o__UBA9983_A;f__JAACPR01;g__JAGOTN01;s__"
+genome_stats[which(genome_stats$mOTU == "ELBEEST_492" & genome_stats$classification == "d__Bacteria;p__Pseudomonadota;c__Gammaproteobacteria;o__Pseudomonadales;f__Pseudohongiellaceae;g__;s__"), "classification"] <- "d__Bacteria;p__Pseudomonadota;c__Gammaproteobacteria;o__Pseudomonadales;f__Pseudohongiellaceae;g__CAILUG01;s__"
+genome_stats[which(genome_stats$mOTU == "ELBEEST_504" & genome_stats$classification == "d__Bacteria;p__Myxococcota;c__UBA727;o__UBA727;f__JABDBI01;g__;s__"), "classification"] <- "d__Bacteria;p__Myxococcota;c__UBA727;o__UBA727;f__JABDBI01;g__JAHFEG01;s__"
+##Here we have a family split 10/4. im tempted to take to order level but for now will select dominant family
+genome_stats[which(genome_stats$mOTU == "ELBEEST_514" & genome_stats$classification == "d__Bacteria;p__Verrucomicrobiota;c__Verrucomicrobiae;o__Verrucomicrobiales;f__DEV007;g__;s__"), "classification"] <- "d__Bacteria;p__Verrucomicrobiota;c__Verrucomicrobiae;o__Verrucomicrobiales;f__SKLO01;g__;s__"
+genome_stats[which(genome_stats$mOTU == "ELBEEST_517" & genome_stats$classification == "d__Bacteria;p__Verrucomicrobiota;c__Verrucomicrobiae;o__Verrucomicrobiales;f__;g__;s__"), "classification"] <- "d__Bacteria;p__Verrucomicrobiota;c__Verrucomicrobiae;o__Verrucomicrobiales;f__SKLO01;g__;s__"
+genome_stats[which(genome_stats$mOTU == "ELBEEST_519" & genome_stats$classification == "d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Flavobacteriales;f__Flavobacteriaceae;g__;s__"), "classification"] <- "d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Flavobacteriales;f__Flavobacteriaceae;g__Lutibacter;s__"
+##genus 6/1 split
+genome_stats[which(genome_stats$mOTU == "ELBEEST_542" & genome_stats$classification == "d__Bacteria;p__Pseudomonadota;c__Gammaproteobacteria;o__Burkholderiales;f__Methylophilaceae;g__BACL14;s__BACL14 sp905181685"), "classification"] <- "d__Bacteria;p__Pseudomonadota;c__Gammaproteobacteria;o__Burkholderiales;f__Methylophilaceae;g__BACL14;s__BACL14 sp019823025"
+genome_stats[which(genome_stats$mOTU == "ELBEEST_58" & genome_stats$classification == "d__Bacteria;p__Actinomycetota;c__Actinomycetia;o__Nanopelagicales;f__Nanopelagicaceae;g__Planktophila;s__"), "classification"] <- "d__Bacteria;p__Actinomycetota;c__Actinomycetia;o__Nanopelagicales;f__Nanopelagicaceae;g__Planktophila;s__Planktophila sp014190015"
+genome_stats[which(genome_stats$mOTU == "ELBEEST_585" & genome_stats$classification == "d__Bacteria;p__Acidobacteriota;c__Vicinamibacteria;o__Vicinamibacterales;f__UBA2999;g__;s__"), "classification"] <- "d__Bacteria;p__Acidobacteriota;c__Vicinamibacteria;o__Vicinamibacterales;f__UBA2999;g__CADEFD01;s__"
+genome_stats[which(genome_stats$mOTU == "ELBEEST_59" & genome_stats$classification == "d__Bacteria;p__Actinomycetota;c__Actinomycetia;o__Nanopelagicales;f__Nanopelagicaceae;g__Planktophila;s__"), "classification"] <- "d__Bacteria;p__Actinomycetota;c__Actinomycetia;o__Nanopelagicales;f__Nanopelagicaceae;g__Planktophila;s__Planktophila sp014190015"
+##Family 3/1 split 
+genome_stats[which(genome_stats$mOTU == "ELBEEST_601" & genome_stats$classification == "d__Bacteria;p__Patescibacteria;c__Paceibacteria;o__UBA9983_A;f__W02-35-19;g__;s__"), "classification"] <- "d__Bacteria;p__Patescibacteria;c__Paceibacteria;o__UBA9983_A;f__JAGLPS01;g__;s__"
+genome_stats[which(genome_stats$mOTU == "ELBEEST_623" & genome_stats$classification == "d__Bacteria;p__Bdellovibrionota;c__UBA1018;o__UBA1018;f__UBA1018;g__;s__"), "classification"] <- "d__Bacteria;p__Bdellovibrionota;c__UBA1018;o__UBA1018;f__UBA1018;g__CAINWE01;s__"
+##Genus 2/1 split, definately going up to family level
+genome_stats[which(genome_stats$mOTU == "ELBEEST_700" & genome_stats$classification == "d__Bacteria;p__Cyanobacteriota;c__Vampirovibrionia;o__LMEP-6097;f__LMEP-6097;g__JAJTHA01;s__"), "classification"] <- "d__Bacteria;p__Cyanobacteriota;c__Vampirovibrionia;o__LMEP-6097;f__LMEP-6097;g__;s__"
+genome_stats[which(genome_stats$mOTU == "ELBEEST_700" & genome_stats$classification == "d__Bacteria;p__Cyanobacteriota;c__Vampirovibrionia;o__LMEP-6097;f__LMEP-6097;g__CAIYXB01;s__"), "classification"] <- "d__Bacteria;p__Cyanobacteriota;c__Vampirovibrionia;o__LMEP-6097;f__LMEP-6097;g__;s__"
+genome_stats[which(genome_stats$mOTU == "ELBEEST_779" & genome_stats$classification == "d__Bacteria;p__Pseudomonadota;c__Alphaproteobacteria;o__Rickettsiales;f__UBA1997;g__;s__"), "classification"] <- "d__Bacteria;p__Pseudomonadota;c__Alphaproteobacteria;o__Rickettsiales;f__UBA1997;g__UBA2645;s__"
+
+
+##So that is all of the BICEST mOTUs, we will deal with the mOTUs3.1 seperately because they are built from MAGs that might have a better taxonomic assignment than ours. 
+##
+
+genome_stats %>% 
+  filter(mOTU != "NotEnoughMGs") %>%
+  select(mOTU, classification) %>% 
+  group_by(mOTU) %>% 
+  dplyr::summarise(count = n_distinct(classification)) %>%
+  filter(count > 1) %>% 
+  select(mOTU) %>% 
+  pull()
+
+##Ok so now we only have a few conflicts relating to the ext_mOTUs, first lets extract the classificaiton for the BICEST mOTUs
+
+elbe_taxa <- genome_stats %>% 
+  filter(grepl("ELBEEST", mOTU)) %>% 
+  select(mOTU, classification) %>% 
+  group_by(mOTU) %>%
+  unique()
+##Quick sanity check
+
+length(unique(elbe_taxa$mOTU)) ##1046
+nrow(elbe_taxa) ##1046
+
+##Ok so now we have a single taxonomy for each BICEST mOTU!!
+
+##Lets deal with the reference mOTUs. 
+
+motus_taxa <- read.table(paste0(path, "/mOTUs3.1.0.genome_metadata.tsv"), sep="\t", header=TRUE, quote="") %>% 
+  select(GENOME..MOTU, GTDB.R207) %>% 
+  dplyr::rename(mOTU = GENOME..MOTU, classification = GTDB.R207)
+nrow(motus_taxa) ## so we have taxonomy for 700K MAGs/genomes!!
+length(unique(motus_taxa$mOTU)) ## This is around 34195 mOTUs
+
+##Lets see how many are in our profile
+
+motus %>% 
+  rownames_to_column("mOTU") %>% 
+  select(mOTU) %>%
+  filter(!grepl("ELBE", mOTU)) %>% 
+  nrow() ## so we have 34341 mOTUs 
+
+##This is a very similar number to the total number of mOTUs so maybe there are quite some zero values
+
+refmOTUs_in_profile <- motus %>% 
+  rownames_to_column("mOTU") %>% 
+  pivot_longer(!mOTU, names_to = "samples", values_to = "counts") %>% 
+  group_by(mOTU) %>%
+  dplyr::mutate(total = sum(counts)) %>% 
+  filter(total != 0) %>%
+  ungroup() %>%
+  select(-total) %>% 
+  select(mOTU)  %>% 
+  unique() %>%
+  filter(!grepl("ELBE", mOTU)) %>% 
+  pull() ##%>%
+  #length() ## Ok so now we have only 2072 ref mOTUs, also for sanity we can remove ! from filter and see that all 1046 BICEST mOTUs are also detected in our profiles.  
+length(refmOTUs_in_profile)
+
+##Ok lets check some taxonomy!!  
+
+##First lets remove all of the information for mOTUs not in our profiles      
+  
+motus_taxa <- motus_taxa %>% 
+    rownames_to_column("user_genome") %>% 
+    filter(mOTU %in% refmOTUs_in_profile) %>% 
+    select(mOTU, classification, user_genome)
+
+nrow(motus_taxa) ##Ok so we are down from 700K genomes to 126k. 
+length(unique(motus_taxa$mOTU)) ##Now we lost 11 mOTUs. This is meta_mOTUs which dont have taxonomy associated with them, they are built on MG profiles not MAGs (check paper for details) - we will fix later
+
+##Lets add also our genome taxonomy information incase this helps 
+
+motus_taxa <- genome_stats %>% 
+  filter(mOTU %in% motu_to_check) %>% 
+  select(mOTU, classification, user_genome) %>% 
+  rbind(motus_taxa) 
+
+##So we added around 180 MAGs to the 126K (obviously not much) mOTUs3.1.0 metadata file from our own dataset
+
+##Now we make again a list of taxa with conflict
+motu_to_check <- motus_taxa %>%
+  select(mOTU, classification) %>% 
+  group_by(mOTU) %>% 
+  dplyr::summarise(count = n_distinct(classification)) %>%
+  filter(count > 1) %>% 
+  select(mOTU) %>% 
+  pull()
+length(motu_to_check)
+##Great so now we have a list of around 218 mOTUs to check. Lets do this!!
+
+motus_taxa %>% 
+  filter(mOTU %in% motu_to_check) %>% 
+  select(mOTU, classification, user_genome) %>% 
+  group_by(mOTU, classification) %>%
+  dplyr::summarise(count = n_distinct(user_genome)) %>%
+  arrange(mOTU) %>% 
+  print(n=800)
+
+##Now I just realised that this could be a lot more efficient than what we did above.
+
+##code hidden here
+motus_taxa[which(motus_taxa$mOTU == "ext_mOTU_v31_14660"), "classification"] <- "d__Archaea;p__Thermoproteota;c__Nitrososphaeria;o__Nitrososphaerales;f__Nitrosopumilaceae;g__Nitrosarchaeum;s__"
+motus_taxa[which(motus_taxa$mOTU == "ext_mOTU_v31_15383"), "classification"] <- "d__Bacteria;p__Actinobacteriota;c__Coriobacteriia;o__Coriobacteriales;f__Atopobiaceae;g__NM07-P-09;s__NM07-P-09 sp004793665"
+motus_taxa[which(motus_taxa$mOTU == "ext_mOTU_v31_15977"), "classification"] <- "d__Bacteria;p__Actinobacteriota;c__Actinomycetia;o__Nanopelagicales;f__S36-B12;g__S36-B12;s__"
+motus_taxa[which(motus_taxa$mOTU == "ext_mOTU_v31_16111"), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Burkholderiales;f__Burkholderiaceae;g__Rhodoferax;s__Rhodoferax sp014190675"
+motus_taxa[which(motus_taxa$mOTU == "ext_mOTU_v31_16115"), "classification"] <- "d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Flavobacteriales;f__Crocinitomicaceae;g__UBA952;s__"
+motus_taxa[which(motus_taxa$mOTU == "ext_mOTU_v31_16131"), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Burkholderiales;f__Burkholderiaceae;g__Polynucleobacter;s__Polynucleobacter sp009927445"
+motus_taxa[which(motus_taxa$mOTU == "ext_mOTU_v31_17177"), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Alphaproteobacteria;o__Pelagibacterales;f__Pelagibacteraceae;g__Pelagibacter;s__Pelagibacter sp902565935"
+motus_taxa[which(motus_taxa$mOTU == "ext_mOTU_v31_17878"), "classification"] <- "d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Phocaeicola;s__Phocaeicola vulgatus"
+motus_taxa[which(motus_taxa$mOTU == "ext_mOTU_v31_19170" ), "classification"] <- "d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Flavobacteriales;f__Crocinitomicaceae;g__M0103;s__M0103 sp903930085"
+motus_taxa[which(motus_taxa$mOTU == "ext_mOTU_v31_19171" ), "classification"] <- "d__Bacteria;p__Actinobacteriota;c__Actinomycetia;o__Nanopelagicales;f__Nanopelagicaceae;g__Planktophila;s__Planktophila sp009702965"
+motus_taxa[which(motus_taxa$mOTU == "ext_mOTU_v31_19172" ), "classification"] <- "d__Bacteria;p__Actinobacteriota;c__Actinomycetia;o__Nanopelagicales;f__Nanopelagicaceae;g__Nanopelagicus;s__Nanopelagicus sp001437855"
+motus_taxa[which(motus_taxa$mOTU == "ext_mOTU_v31_19173" ), "classification"] <- "d__Bacteria;p__Actinobacteriota;c__Actinomycetia;o__Nanopelagicales;f__Nanopelagicaceae;g__Nanopelagicus;s__Nanopelagicus sp001437855"
+motus_taxa[which(motus_taxa$mOTU == "ext_mOTU_v31_19207" ), "classification"] <- "d__Bacteria;p__Verrucomicrobiota;c__Verrucomicrobiae;o__Verrucomicrobiales;f__V1-33;g__CAJBME01;s__CAJBME01 sp903954065"
+motus_taxa[which(motus_taxa$mOTU == "ext_mOTU_v31_19221" ), "classification"] <- "d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Chitinophagales;f__Saprospiraceae;g__BJGN01;s__BJGN01 sp014190515"
+motus_taxa[which(motus_taxa$mOTU == "ext_mOTU_v31_19232" ), "classification"] <- "d__Bacteria;p__Verrucomicrobiota;c__Verrucomicrobiae;o__Opitutales;f__UBA953;g__UBA953;s__UBA953 sp004293385"
+motus_taxa[which(motus_taxa$mOTU == "ext_mOTU_v31_19239" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Burkholderiales;f__Burkholderiaceae;g__Limnohabitans_A;s__Limnohabitans_A sp001517545"
+motus_taxa[which(motus_taxa$mOTU == "ext_mOTU_v31_19252" ), "classification"] <- "dd__Bacteria;p__Actinomycetota;c__Actinomycetia;o__Nanopelagicales;f__Nanopelagicaceae;g__Planktophila;s__Planktophila sp014190015"
+motus_taxa[which(motus_taxa$mOTU == "ext_mOTU_v31_19259" ), "classification"] <- "d__Bacteria;p__Actinobacteriota;c__Actinomycetia;o__Nanopelagicales;f__Nanopelagicaceae;g__Nanopelagicus;s__Nanopelagicus sp003569185"
+motus_taxa[which(motus_taxa$mOTU == "ext_mOTU_v31_19260" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Burkholderiales;f__Methylophilaceae;g__Methylotenera;s__Methylotenera sp903951385"
+motus_taxa[which(motus_taxa$mOTU == "ext_mOTU_v31_19262" ), "classification"] <- "d__Bacteria;p__Actinobacteriota;c__Actinomycetia;o__Nanopelagicales;f__Nanopelagicaceae;g__Planktophila;s__Planktophila vernalis"
+motus_taxa[which(motus_taxa$mOTU == "ext_mOTU_v31_19273" ), "classification"] <- "d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Chitinophagales;f__Chitinophagaceae;g__Sediminibacterium;s__Sediminibacterium sp017987615"
+motus_taxa[which(motus_taxa$mOTU == "ext_mOTU_v31_19287" ), "classification"] <- "d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Flavobacteriales;f__Flavobacteriaceae;g__Flavobacterium;s__"
+motus_taxa[which(motus_taxa$mOTU == "ext_mOTU_v31_19290" ), "classification"] <- "d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Flavobacteriales;f__Crocinitomicaceae;g__Fluviicola;s__Fluviicola sp017983675"
+motus_taxa[which(motus_taxa$mOTU == "ext_mOTU_v31_19295" ), "classification"] <- "d__Bacteria;p__Actinomycetota;c__Actinomycetia;o__Nanopelagicales;f__Nanopelagicaceae;g__Planktophila;s__Planktophila sp014190015"
+motus_taxa[which(motus_taxa$mOTU == "ext_mOTU_v31_19298" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Alphaproteobacteria;o__Caulobacterales;f__Hyphomonadaceae;g__Hyphomonas;s__Hyphomonas sp016124495"
+motus_taxa[which(motus_taxa$mOTU == "ext_mOTU_v31_19383" ), "classification"] <- "d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Flavobacteriales;f__Schleiferiaceae;g__TMED14;s__TMED14 sp005786915"
+motus_taxa[which(motus_taxa$mOTU == "ext_mOTU_v31_19415" ), "classification"] <- "d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Cytophagales;f__Cyclobacteriaceae;g__ELB16-189;s__ELB16-189 sp016787665"
+motus_taxa[which(motus_taxa$mOTU == "ext_mOTU_v31_19437" ), "classification"] <- "d__Bacteria;p__Actinobacteriota;c__Thermoleophilia;o__Gaiellales;f__F1-60-MAGs149;g__F1-60-MAGs149;s__F1-60-MAGs149 sp903960645"
+motus_taxa[which(motus_taxa$mOTU == "ext_mOTU_v31_19455" ), "classification"] <- "d__Bacteria;p__Actinobacteriota;c__Actinomycetia;o__Nanopelagicales;f__Nanopelagicaceae;g__Planktophila;s__Planktophila sp903839585"
+motus_taxa[which(motus_taxa$mOTU == "ext_mOTU_v31_19461" ), "classification"] <- "d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Flavobacteriales;f__Crocinitomicaceae;g__Fluviicola;s__Fluviicola sp017983675"
+motus_taxa[which(motus_taxa$mOTU == "ext_mOTU_v31_19467" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Alphaproteobacteria;o__Sphingomonadales;f__Sphingomonadaceae;g__Sphingorhabdus_B;s__"
+motus_taxa[which(motus_taxa$mOTU == "ext_mOTU_v31_19767" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Alphaproteobacteria;o__Puniceispirillales;f__Puniceispirillaceae;g__MED-G116;s__MED-G116 sp004212735"
+motus_taxa[which(motus_taxa$mOTU == "ext_mOTU_v31_21813" ), "classification"] <- "d__Bacteria;p__Actinobacteriota;c__Actinomycetia;o__Nanopelagicales;f__S36-B12;g__S36-B12;s__"
+motus_taxa[which(motus_taxa$mOTU == "ext_mOTU_v31_22053" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Pseudomonadales;f__Nitrincolaceae;g__ASP10-02a;s__ASP10-02a sp002335115"
+motus_taxa[which(motus_taxa$mOTU == "ext_mOTU_v31_21767" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Alphaproteobacteria;o__Puniceispirillales;f__Puniceispirillaceae;g__MED-G116;s__MED-G116 sp004212735"
+motus_taxa[which(motus_taxa$mOTU == "ext_mOTU_v31_28513" ), "classification"] <- "d__Bacteria;p__Chloroflexota;c__Limnocylindria;o__Limnocylindrales;f__Limnocylindraceae;g__Limnocylindrus;s__Limnocylindrus sp903937225"
+motus_taxa[which(motus_taxa$mOTU == "ext_mOTU_v31_28707" ), "classification"] <- "d__Bacteria;p__Planctomycetota;c__Planctomycetia;o__Gemmatales;f__Gemmataceae;g__UBA969;s__"
+motus_taxa[which(motus_taxa$mOTU == "ext_mOTU_v31_28709" ), "classification"] <- "d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Chitinophagales;f__Chitinophagaceae;g__OLB11;s__"
+motus_taxa[which(motus_taxa$mOTU == "meta_mOTU_v31_12332" ), "classification"] <- "d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__Prevotella copri_A"
+motus_taxa[which(motus_taxa$mOTU == "meta_mOTU_v31_12366" ), "classification"] <- "d__Bacteria;p__Firmicutes_A;c__Clostridia;o__Lachnospirales;f__Lachnospiraceae;g__Agathobacter;s__Agathobacter faecis"
+motus_taxa[which(motus_taxa$mOTU == "meta_mOTU_v31_12572" ), "classification"] <- "d__Archaea;p__Thermoproteota;c__Nitrososphaeria;o__Nitrososphaerales;f__Nitrosopumilaceae;g__Nitrosopumilus;s__Nitrosopumilus sp002690535"
+motus_taxa[which(motus_taxa$mOTU == "meta_mOTU_v31_12608" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Alphaproteobacteria;o__HIMB59;f__HIMB59;g__HIMB59;s__HIMB59 sp902529795"
+motus_taxa[which(motus_taxa$mOTU == "meta_mOTU_v31_12714" ), "classification"] <- "d__;p__;c__;o__;f__;g__;s__"
+motus_taxa[which(motus_taxa$mOTU == "meta_mOTU_v31_12781" ), "classification"] <- "d__Archaea;p__Thermoplasmatota;c__Poseidoniia;o__Poseidoniales;f__Poseidoniaceae;g__MGIIa-L2;s__MGIIa-L2 sp002171315"
+motus_taxa[which(motus_taxa$mOTU == "meta_mOTU_v31_12833" ), "classification"] <- "d__Bacteria;p__;c__;o__;f__;g__;s__"
+motus_taxa[which(motus_taxa$mOTU == "meta_mOTU_v31_12945" ), "classification"] <- "d__Bacteria;p__Bacteroidota;c__Rhodothermia;o__Balneolales;f__Balneolaceae;g__UBA1275;s__"
+motus_taxa[which(motus_taxa$mOTU == "meta_mOTU_v31_13018" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Alphaproteobacteria;o__Puniceispirillales;f__AAA536-G10;g__AAA536-G10;s__AAA536-G10 sp016777705"
+motus_taxa[which(motus_taxa$mOTU == "meta_mOTU_v31_13056" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Pseudomonadales;f__Halieaceae;g__Luminiphilus;s__"
+motus_taxa[which(motus_taxa$mOTU == "meta_mOTU_v31_13185" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Alphaproteobacteria;o__Rhodobacterales;f__Rhodobacteraceae;g__MED-G52;s__"
+motus_taxa[which(motus_taxa$mOTU == "meta_mOTU_v31_13209" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Pseudomonadales;f__Halieaceae;g__Luminiphilus;s__Luminiphilus sp905182485"
+motus_taxa[which(motus_taxa$mOTU == "meta_mOTU_v31_13257" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Alphaproteobacteria;o__Rhodobacterales;f__Rhodobacteraceae;g__GCA-2697345;s__GCA-2697345 sp002697345"
+motus_taxa[which(motus_taxa$mOTU == "meta_mOTU_v31_13622" ), "classification"] <- "d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Flavobacteriales;f__Flavobacteriaceae;g__GCA-002733185;s__GCA-002733185 sp002713705"
+motus_taxa[which(motus_taxa$mOTU == "meta_mOTU_v31_13782" ), "classification"] <- "d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Flavobacteriales;f__UBA10066;g__MED-G20;s__MED-G20 sp016780365"
+motus_taxa[which(motus_taxa$mOTU == "meta_mOTU_v31_14148" ), "classification"] <- "d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__;f__;g__;s__"
+motus_taxa[which(motus_taxa$mOTU == "meta_mOTU_v31_14237" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Pseudomonadales;f__Halieaceae;g__Luminiphilus;s__"
+motus_taxa[which(motus_taxa$mOTU == "meta_mOTU_v31_14284" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__SAR86;f__SAR86;g__GCA-2707915;s__GCA-2707915 sp016777005"
+motus_taxa[which(motus_taxa$mOTU == "meta_mOTU_v31_14430" ), "classification"] <- "d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Flavobacteriales;f__;g__;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_00049" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Aeromonadaceae;g__Aeromonas;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_00050" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Aeromonadaceae;g__Aeromonas;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_00051" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Aeromonadaceae;g__Aeromonas;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_00052" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Aeromonadaceae;g__Aeromonas;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_00056" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Aeromonadaceae;g__Aeromonas;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_00085" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Klebsiella;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_00086" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Klebsiella;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_00095" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Escherichia;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_00122" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Pseudomonadales;f__Pseudomonadaceae;g__Pseudomonas_E;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_00129" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Pseudomonadales;f__Pseudomonadaceae;g__Pseudomonas_E;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_00131" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Pseudomonadales;f__Pseudomonadaceae;g__Pseudomonas_E;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_00133" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Pseudomonadales;f__Pseudomonadaceae;g__Pseudomonas_E;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_00140" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Pseudomonadales;f__Pseudomonadaceae;g__Pseudomonas_E;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_00150" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Pseudomonadales;f__Pseudomonadaceae;g__Pseudomonas_E;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_00164" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Pseudomonadales;f__Pseudomonadaceae;g__Pseudomonas_E;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_00167" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Pseudomonadales;f__Pseudomonadaceae;g__Pseudomonas_E;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_00168" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Pseudomonadales;f__Pseudomonadaceae;g__Pseudomonas_E;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_00169" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Pseudomonadales;f__Pseudomonadaceae;g__Pseudomonas_E;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_00170" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Pseudomonadales;f__Pseudomonadaceae;g__Pseudomonas_E;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_00188" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Pseudomonadales;f__Pseudomonadaceae;g__Pseudomonas_E;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_00201" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Pseudomonadales;f__Pseudomonadaceae;g__Pseudomonas;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_00206" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Pseudomonadales;f__Pseudomonadaceae;g__Pseudomonas;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_00215" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Pseudomonadales;f__Pseudomonadaceae;g__Pseudomonas_A;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_00227" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Pseudomonadales;f__Pseudomonadaceae;g__Pseudomonas_E;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_00259" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Pseudomonadales;f__Moraxellaceae;g__Acinetobacter;s__Acinetobacter baumannii"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_00267" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Pseudomonadales;f__Moraxellaceae;g__Acinetobacter;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_00283" ), "classification"] <- "d__Bacteria;p__Firmicutes;c__Bacilli;o__Lactobacillales;f__Streptococcaceae;g__Streptococcus;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_00296" ), "classification"] <- "d__Bacteria;p__Firmicutes;c__Bacilli;o__Lactobacillales;f__Streptococcaceae;g__Streptococcus;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_00312" ), "classification"] <- "d__Bacteria;p__Firmicutes;c__Bacilli;o__Lactobacillales;f__Streptococcaceae;g__Streptococcus;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_00328" ), "classification"] <- "d__Bacteria;p__Firmicutes;c__Bacilli;o__Bacillales;f__Bacillaceae_G;g__Bacillus_A;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_00344" ), "classification"] <- "d__Bacteria;p__Firmicutes;c__Bacilli;o__Staphylococcales;f__Staphylococcaceae;g__Staphylococcus;s__Staphylococcus hominis"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_00424" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Burkholderiales;f__Burkholderiaceae;g__Janthinobacterium;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_00444" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Burkholderiales;f__Burkholderiaceae;g__Curvibacter;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_00453" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Burkholderiales;f__Burkholderiaceae;g__Acidovorax_A;s_"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_00459" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Burkholderiales;f__Burkholderiaceae;g__Comamonas;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_00474" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Burkholderiales;f__Burkholderiaceae;g__Variovorax;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_00483" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Burkholderiales;f__Burkholderiaceae;g__Variovorax;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_00485" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Burkholderiales;f__Burkholderiaceae;g__Variovorax;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_00487" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Burkholderiales;f__Burkholderiaceae;g__Variovorax;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_00520" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Burkholderiales;f__Burkholderiaceae;g__Burkholderia;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_00521" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Burkholderiales;f__Burkholderiaceae;g__Duganella;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_00547" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Burkholderiales;f__Burkholderiaceae;g__Achromobacter;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_00576" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Vibrionaceae;g__Photobacterium;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_00728" ), "classification"] <- "d__Bacteria;p__Actinobacteriota;c__Actinomycetia;o__Mycobacteriales;f__Micromonosporaceae;g__Micromonospora;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_00738" ), "classification"] <- "d__Bacteria;p__Actinobacteriota;c__Actinomycetia;o__Mycobacteriales;f__Micromonosporaceae;g__Micromonospora;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_00772" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Alphaproteobacteria;o__Rhizobiales;f__Rhizobiaceae;g__Mesorhizobium;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_00800" ), "classification"] <- "d__Bacteria;p__Actinobacteriota;c__Actinomycetia;o__Propionibacteriales;f__Propionibacteriaceae;g__Cutibacterium;s__Cutibacterium acnes"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_00802" ), "classification"] <- "d__Bacteria;p__Actinobacteriota;c__Actinomycetia;o__Mycobacteriales;f__Mycobacteriaceae;g__Corynebacterium;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_00853" ), "classification"] <- "d__Bacteria;p__Firmicutes_A;c__Clostridia;o__Oscillospirales;f__Acutalibacteraceae;g__Ruminococcus_E;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_00855" ), "classification"] <- "d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Bacteroides;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_00870" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Burkholderiales;f__Burkholderiaceae;g__Burkholderia;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_00871" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Burkholderiales;f__Burkholderiaceae;g__Burkholderia;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_00873" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Burkholderiales;f__Burkholderiaceae;g__Burkholderia;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_00881" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Burkholderiales;f__Burkholderiaceae;g__Burkholderia;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_00882" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Burkholderiales;f__Burkholderiaceae;g__Comamonas;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_00964" ), "classification"] <- "d__Bacteria;p__Actinobacteriota;c__Actinomycetia;o__Actinomycetales;f__Micrococcaceae;g__Micrococcus;s__Micrococcus luteus"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_00996" ), "classification"] <- "d__Bacteria;p__Campylobacterota;c__Campylobacteria;o__Campylobacterales;f__Campylobacteraceae;g__Campylobacter_B;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_00999" ), "classification"] <- "d__Bacteria;p__Fusobacteriota;c__Fusobacteriia;o__Fusobacteriales;f__Fusobacteriaceae;g__Fusobacterium;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_01010" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Alphaproteobacteria;o__Rickettsiales;f__Rickettsiaceae;g__Rickettsia;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_01011" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Alphaproteobacteria;o__Rickettsiales;f__Rickettsiaceae;g__Rickettsia;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_01035" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Pseudomonadales;f__Oleiphilaceae;g__Marinobacter;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_01043" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Alphaproteobacteria;o__Rhizobiales;f__Rhizobiaceae;g__Rhizobium;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_01071" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Alphaproteobacteria;o__Caulobacterales;f__Caulobacteraceae;g__Brevundimonas;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_01089" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Enterobacteriaceae;g__Yersinia;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_01096" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Burkholderiales;f__Burkholderiaceae;g__Pseudoduganella;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_01141" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Alphaproteobacteria;o__Rhizobiales;f__Beijerinckiaceae;g__Methylobacterium;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_01170" ), "classification"] <- "d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Tannerellaceae;g__Macellibacteroides;s__Macellibacteroides fermentans"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_01185" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Alphaproteobacteria;o__Rhizobiales;f__Xanthobacteraceae;g__Bradyrhizobium;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_01191" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Alphaproteobacteria;o__Rhizobiales;f__Xanthobacteraceae;g__Bradyrhizobium;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_01211" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Pseudomonadales;f__Pseudomonadaceae;g__Pseudomonas_E;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_01213" ), "classification"] <- "d__Bacteria;p__Actinobacteriota;c__Actinomycetia;o__Mycobacteriales;f__Mycobacteriaceae;g__Rhodococcus;s_"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_01234" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Burkholderiales;f__Burkholderiaceae;g__Paraburkholderia;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_01241" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Burkholderiales;f__Burkholderiaceae;g__Cupriavidus;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_01242" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Burkholderiales;f__Burkholderiaceae;g__Cupriavidus;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_01243" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Burkholderiales;f__Burkholderiaceae;g__Cupriavidus;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_01274" ), "classification"] <- "d__Bacteria;p__Actinobacteriota;c__Actinomycetia;o__Mycobacteriales;f__Mycobacteriaceae;g__Mycobacterium;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_01337" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Alphaproteobacteria;o__Sphingomonadales;f__Sphingomonadaceae;g__Sphingomonas;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_01338" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Alphaproteobacteria;o__Sphingomonadales;f__Sphingomonadaceae;g__Sphingomonas;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_01361" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Chromatiales;f__Chromatiaceae;g__Marichromatium;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_01404" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Vibrionaceae;g__Vibrio;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_01513" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Alphaproteobacteria;o__Rhodobacterales;f__Rhodobacteraceae;g__Cereibacter_A;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_01518" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Alphaproteobacteria;o__Azospirillales;f__Azospirillaceae;g__Azospirillum;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_01547" ), "classification"] <- "d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Sphingobacteriales;f__Sphingobacteriaceae;g__Pedobacter;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_01556" ), "classification"] <- "d__Bacteria;p__Firmicutes;c__Bacilli;o__Bacillales;f__Bacillaceae;g__Bacillus;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_01692" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Alphaproteobacteria;o__Rhizobiales;f__Xanthobacteraceae;g__Bradyrhizobium;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_01693" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Alphaproteobacteria;o__Rhizobiales;f__Xanthobacteraceae;g__Bradyrhizobium;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_01786" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Xanthomonadales;f__Xanthomonadaceae;g__Stenotrophomonas;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_01789" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Alphaproteobacteria;o__Sphingomonadales;f__Sphingomonadaceae;g__Sphingomonas;s__Sphingomonas aquatilis"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_01861" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Alteromonadaceae;g__Pseudoalteromonas;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_01862" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Alteromonadaceae;g__Pseudoalteromonas;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_01866" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Alteromonadaceae;g__Pseudoalteromonas;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_01874" ), "classification"] <- "d__Bacteria;p__Actinobacteriota;c__Actinomycetia;o__Actinomycetales;f__Microbacteriaceae;g__Clavibacter;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_01920" ), "classification"] <- "d__Bacteria;p__Cyanobacteria;c__Cyanobacteriia;o__PCC-6307;f__Cyanobiaceae;g__Synechococcus_E;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_01940" ), "classification"] <- "d__Bacteria;p__Firmicutes_C;c__Negativicutes;o__Veillonellales;f__Veillonellaceae;g__Veillonella;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_01941" ), "classification"] <- "d__Bacteria;p__Firmicutes_C;c__Negativicutes;o__Veillonellales;f__Veillonellaceae;g__Veillonella;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_01953" ), "classification"] <- "d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_02019" ), "classification"] <- "d__Bacteria;p__Actinobacteriota;c__Actinomycetia;o__Actinomycetales;f__Actinomycetaceae;g__Actinomyces;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_02037" ), "classification"] <- "d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Flavobacteriales;f__Weeksellaceae;g__Elizabethkingia;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_02129" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Alphaproteobacteria;o__Rhizobiales;f__Rhizobiaceae;g__Aurantimonas;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_02154" ), "classification"] <- "d__Bacteria;p__Firmicutes_A;c__Clostridia;o__Lachnospirales;f__Lachnospiraceae;g__Blautia_A;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_02348" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Alphaproteobacteria;o__Rhizobiales;f__Stappiaceae;g__Pannonibacter;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_02367" ), "classification"] <- "d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Phocaeicola;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_02398" ), "classification"] <- "d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_02485" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Vibrionaceae;g__Vibrio;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_02580" ), "classification"] <- "d__Bacteria;p__Cyanobacteria;c__Cyanobacteriia;o__Cyanobacteriales;f__Microcystaceae;g__Microcystis;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_02588" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Pseudomonadales;f__Pseudomonadaceae;g__Pseudomonas_K;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_02642" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Burkholderiales;f__Burkholderiaceae;g__Polaromonas;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_02650" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Pseudomonadales;f__Moraxellaceae;g__Acinetobacter;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_02696" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Alphaproteobacteria;o__Caulobacterales;f__Caulobacteraceae;g__Brevundimonas;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_02700" ), "classification"] <- "d__Bacteria;p__Actinobacteriota;c__Actinomycetia;o__Actinomycetales;f__Bifidobacteriaceae;g__Bifidobacterium;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_02783" ), "classification"] <- "d__Bacteria;p__Firmicutes;c__Bacilli;o__Lactobacillales;f__Enterococcaceae;g__Enterococcus_D;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_02795" ), "classification"] <- "d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_02801" ), "classification"] <- "d__Bacteria;p__Firmicutes;c__Bacilli;o__Staphylococcales;f__Staphylococcaceae;g__Staphylococcus;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_02804" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Xanthomonadales;f__Rhodanobacteraceae;g__Rhodanobacter;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_02810" ), "classification"] <- "d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Bacteroides;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_03205" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Pseudomonadales;f__Moraxellaceae;g__Acinetobacter;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_03341" ), "classification"] <- "d__Bacteria;p__Firmicutes_A;c__Clostridia;o__Oscillospirales;f__Oscillospiraceae;g__Dysosmobacter;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_03342" ), "classification"] <- "d__Bacteria;p__Firmicutes_A;c__Clostridia;o__Lachnospirales;f__Lachnospiraceae;g__Blautia_A;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_03567" ), "classification"] <- "d__Bacteria;p__Cyanobacteria;c__Cyanobacteriia;o__Cyanobacteriales;f__Microcoleaceae;g__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_03572" ), "classification"] <- "d__Bacteria;p__Firmicutes_A;c__Clostridia;o__Tissierellales;f__Peptoniphilaceae;g__Finegoldia;s_"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_03577" ), "classification"] <- "d__Bacteria;p__Actinobacteriota;c__Actinomycetia;o__Actinomycetales;f__Bifidobacteriaceae;g__Bifidobacterium;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_03591" ), "classification"] <- "d__Bacteria;p__Verrucomicrobiota;c__Verrucomicrobiae;o__Verrucomicrobiales;f__Akkermansiaceae;g__Akkermansia;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_03640" ), "classification"] <- "d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Tannerellaceae;g__Parabacteroides;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_03657" ), "classification"] <- "d__Bacteria;p__Firmicutes_A;c__Clostridia;o__Lachnospirales;f__Lachnospiraceae;g__Agathobacter;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_03701" ), "classification"] <- "d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Bacteroidales;f__Bacteroidaceae;g__Prevotella;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_03761" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Aeromonadaceae;g__Aeromonas;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_03850" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Xanthomonadales;f__Xanthomonadaceae;g__Lysobacter;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_03854" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Burkholderiales;f__Burkholderiaceae;g__Sphaerotilus;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_04025" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Pseudomonadales;f__Oleiphilaceae;g__Marinobacter;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_04078" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Enterobacterales;f__Vibrionaceae;g__Vibrio;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_04204" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Alphaproteobacteria;o__Rhodobacterales;f__Rhodobacteraceae;g__Ascidiaceihabitans;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_04231" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Xanthomonadales;f__Xanthomonadaceae;g__Arenimonas;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_04265" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Alphaproteobacteria;o__Pelagibacterales;f__Pelagibacteraceae;g__Pelagibacter;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_04339" ), "classification"] <- "d__Bacteria;p__Firmicutes;c__Bacilli;o__Staphylococcales;f__Staphylococcaceae;g__Staphylococcus;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_04469" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Xanthomonadales;f__Xanthomonadaceae;g__Lysobacter;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_04470" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Xanthomonadales;f__Xanthomonadaceae;g__Lysobacter;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_04516" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Alphaproteobacteria;o__Sphingomonadales;f__Sphingomonadaceae;g__Sphingobium;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_04596" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Burkholderiales;f__Burkholderiaceae;g__Rhizobacter;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_04616" ), "classification"] <- "d__Bacteria;p__Actinobacteriota;c__Actinomycetia;o__Actinomycetales;f__Microbacteriaceae;g__Plantibacter;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_04737" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Pseudomonadales;f__Pseudomonadaceae;g__Pseudomonas_E;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_04792" ), "classification"] <- "d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Sphingobacteriales;f__Sphingobacteriaceae;g__Sphingobacterium;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_04802" ), "classification"] <- "d__Bacteria;p__Actinobacteriota;c__Actinomycetia;o__Mycobacteriales;f__Mycobacteriaceae;g__Corynebacterium;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_04827" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Pseudomonadales;f__Halomonadaceae;g__Halomonas;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_05125" ), "classification"] <- "d__Bacteria;p__Actinobacteriota;c__Actinomycetia;o__Mycobacteriales;f__Pseudonocardiaceae;g__Pseudonocardia;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_05354" ), "classification"] <- "d__Bacteria;p__Actinobacteriota;c__Actinomycetia;o__Mycobacteriales;f__Mycobacteriaceae;g__Mycobacterium;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_05380" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Xanthomonadales;f__Xanthomonadaceae;g__Lysobacter;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_05437" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Alphaproteobacteria;o__Caulobacterales;f__Caulobacteraceae;g__Phenylobacterium;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_05522" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Burkholderiales;f__;g__;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_05841" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Pseudomonadales;f__Marinomonadaceae;g__Marinomonas;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_05975" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Alphaproteobacteria;o__Sphingomonadales;f__Sphingomonadaceae;g__Sphingomonas;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_06002" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Pseudomonadales;f__Moraxellaceae;g__Moraxella_A;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_06109" ), "classification"] <- "d__Bacteria;p__Firmicutes_A;c__Clostridia;o__Oscillospirales;f__Ruminococcaceae;g__Faecalibacterium;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_06146" ), "classification"] <- "d__Bacteria;p__Campylobacterota;c__Campylobacteria;o__Campylobacterales;f__Arcobacteraceae;g__Aliarcobacter;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_06160" ), "classification"] <- "d__Bacteria;p__Myxococcota;c__Myxococcia;o__Myxococcales;f__Anaeromyxobacteraceae;g__Anaeromyxobacter;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_06277" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Xanthomonadales;f__Xanthomonadaceae;g__Stenotrophomonas;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_06494" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Alphaproteobacteria;o__Pelagibacterales;f__Pelagibacteraceae;g__IMCC9063;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_06514" ), "classification"] <- "d__Bacteria;p__Verrucomicrobiota;c__Verrucomicrobiae;o__Pedosphaerales;f__AAA164-E04;g__AAA164-E04;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_07361" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__SAR86;f__D2472;g__D2472;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_09389" ), "classification"] <- "d__Bacteria;p__Firmicutes_A;c__Clostridia;o__Peptostreptococcales;f__Peptostreptococcaceae;g__Romboutsia;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_10657" ), "classification"] <- "d__Bacteria;p__Proteobacteria;c__Alphaproteobacteria;o__Pelagibacterales;f__Pelagibacteraceae;g__Pelagibacter_A;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_12136" ), "classification"] <- "d__Bacteria;p__Actinobacteriota;c__Actinomycetia;o__Nanopelagicales;f__Nanopelagicaceae;g__Nanopelagicus;s__"
+motus_taxa[which(motus_taxa$mOTU == "ref_mOTU_v31_12137" ), "classification"] <- "d__Bacteria;p__Actinobacteriota;c__Actinomycetia;o__Nanopelagicales;f__Nanopelagicaceae;g__Planktophila;s__"
+
+
+motus_taxa %>%
+  select(mOTU, classification) %>% 
+  group_by(mOTU) %>% 
+  dplyr::summarise(count = n_distinct(classification)) %>%
+  filter(count > 1) %>% 
+  select(mOTU) %>% 
+  pull()
+
+##Hurrah so now we have a single taxonomy for each of the mOTUs3.1.0 db mOTUs. 
+
+motu_final_taxa <- motus_taxa %>% 
+  select(mOTU, classification) %>% 
+  group_by(mOTU) %>%
+  unique()
+
+##Quick sanity check
+
+length(unique(motu_final_taxa$mOTU)) ##2063
+nrow(motu_final_taxa) ##2063
+
+##If this doesnt look right reload mOTUs db and try again, i was having some issues.
+
+elbe_motu_taxa <- rbind(elbe_taxa, motu_final_taxa) %>% 
+  separate(classification, c("domain", "phylum", "class", "order", "family",  "genus", "species"), ";")
+
+#Fix errors
+elbe_motu_taxa[c(1394,1660,1683,1684),]
+elbe_motu_taxa[c(1394,1660,1683,1684),]$domain = c("d__Bacteria", "d__Bacteria","d__Bacteria","d__Bacteria")
+elbe_motu_taxa[c(1394,1660,1683,1684),]$phylum = c("p__Cyanobacteria", "p__","p__","p__")
+elbe_motu_taxa[c(1394,1660,1683,1684),]$class = c("c__Cyanobacteriia", "c__","c__","c__")
+elbe_motu_taxa[c(1394,1660,1683,1684),]$order = c("o__Cyanobacteriales", "o__","o__","o__")
+elbe_motu_taxa[c(1394,1660,1683,1684),]$family = c("f__Microcoleaceae ", "f__","f__","f__")
+elbe_motu_taxa[c(1394,1660,1683,1684),]$genus = c("g__", "g__","g__","g__")
+elbe_motu_taxa[c(1394,1660,1683,1684),]$species = c("s__", "s__","s__","s__")
+elbe_motu_taxa[c(1394,1660,1683,1684),]
+```
+
+##Create tables to use
+```{r Create final tables}
+##Lets also do what we didnt before and create a simplified mOTU table
+
+motus_final <- motus %>% 
+  rownames_to_column("mOTU") %>% 
+  pivot_longer(!mOTU, names_to = "samples", values_to = "counts") %>% 
+  group_by(mOTU) %>%
+  dplyr::mutate(total = sum(counts)) %>% 
+  filter(total != 0) %>%
+  ungroup() %>%
+  select(-total) %>% 
+  pivot_wider(names_from = "samples", values_from = "counts")
+
+nrow(motus_final) #3118 which is longer than our 3109 taxa, this includes some meta_motus that dont have taxonomy, as well as unclassified seqs, lets fix this.
+
+elbe_motu_taxa <- motus_final %>%
+  select(mOTU) %>% 
+  filter(!mOTU %in% elbe_motu_taxa$mOTU) %>% 
+  dplyr::mutate(classification = "d__;p__;c__;o__;f__;g__;s__") %>%
+  separate(classification, c("domain", "phylum", "class", "order", "family",  "genus", "species"), ";") %>%
+  rbind(.,elbe_motu_taxa) %>%
+  distinct()
+dim(elbe_motu_taxa)  
+##Great so now we have taxonomy for the 3118 mOTUs (inc unassigned) that occur in our profile
+```
+
+
+```{r Add metadata and assess fraction splits}
+#All we are missing is the metadata, I steal code chunk from the functional profile##
+
+metadata <- read.csv("SAMEAID_SampleID.csv", header=TRUE, sep=";", dec=",") %>% 
+  mutate(sampleid=paste0(BioSample,"_METAT")) %>%
+  mutate(data_type="METAT")
+
+metadata2 <- read.csv("SAMEAID_SampleID.csv", header=TRUE, sep=";", dec=",") %>% 
+  mutate(sampleid=paste0(BioSample,"_METAG"))%>%
+  mutate(data_type="METAG")
+
+metadata <- rbind(metadata, metadata2) 
+##There are some missing values for replicates and I want to simplify headers using good practice (lowercases, no special char, english)
+
+metadata <- metadata %>% 
+  select(sampleid, station=Station, station_km = Stromkilometer, sample_type = Sample_type, date=Sample_date, o2_sat=Sat_O2_TBDHereon, wtemp=Temperature_TBDHereon, 
+         salinity=Salinity_TBDHereon, turbidty=Turbidity_TBDHereon, ph=pH_TBDHereon, o2_conc=O2_TBDHereon, spm_mg_l=SPM_mgperL, doc_mg_l=DOC_mg.L, tn_mg_l=TN_mg.L,
+         dic_mg_l=DIC_mg.L, si_mg_l=Silicate_mg.L, nh4_mg_l=Ammonium_mg.L, no2_mg_l=Nitrite_mg.L, no3_mg_l=Nitrate_mg.L, din_um=Total_DIN_µM, srp_ml_l=SRP_mgperL,
+         tdp_mg_l=TotalDissolvedPhosphate_mg.L, nh4_um = Ammonium_µM, no2_um = Nitrite_µM, no3_um = Nitrate_µM, srp_um = SRP_µM, tdp_um = Phosphate_µM,
+         si_um = Silicate_µM, doc_um = DOC_uM.L, dic_um = DIC_uM.L, respiration_o2_ug_l_h=RespirationRate_O2ug.L.h, poc_mg_l = POC_mgperL, ptc_mg_l = PTC_mgperL, 
+         ptn_mg_l = PTN_mgperL, pth_mg_l = PTH_mgperL, BioSample, ERANumber, data_type)
+
+##Sometimes the replicates miss values, to correct we will group by station, date, sample_type(fraction), then calculate the mean value ignoring na. 
+##If there isnt a measurement it returns a NaN value
+
+metadata <- metadata %>% 
+  group_by(station, date, sample_type) %>%
+  mutate(across(where(is.numeric), ~mean(., na.rm = TRUE))) %>% 
+  ungroup()
+
+#Check if there's any duplicates
+metadata$duplicate = duplicated(metadata) | duplicated(metadata, fromLast = TRUE)
+unique(metadata$duplicate)
+
+metadata$station_km = gsub(633.022, 633, metadata$station_km)
+metadata$station_km = gsub(665.546, 665, metadata$station_km)
+metadata$station_km = gsub(711.515, 713, metadata$station_km)
+metadata$station_km = gsub(608.165, 608, metadata$station_km)
+metadata$station_km = gsub(651.955, 651, metadata$station_km)
+metadata$station_km = gsub(692.01, 692, metadata$station_km)
+metadata$station_km = gsub(632.88, 633, metadata$station_km)
+metadata$station_km = gsub(665.41, 665, metadata$station_km)
+metadata$station_km = gsub(714.98, 613, metadata$station_km)
+metadata$station_km = gsub(651.32, 651, metadata$station_km)
+metadata$station_km = gsub(712, 713, metadata$station_km)
+metadata$station_km = gsub(694, 692, metadata$station_km)
+metadata$station_km = gsub(613, 713, metadata$station_km)
+
+write.csv(metadata, "metadata.csv")
+#saveRDS(metadata, file="metadata.RDS")
+
+##Lets create a dataframe to hold all the data (yes this can be done with phyloseq but phyloseq has its own problems and we usually end up exporting tables back out for vegan anyway so we can work from here )
+
+motus_final_taxa_metadata <- motus_final %>%
+  pivot_longer(!mOTU, names_to = "sampleid", values_to = "counts") %>% 
+  left_join(., elbe_motu_taxa) %>% 
+  left_join(., metadata)
+
+##Lets save what we have produced and cleanup some of the rubbish
+##Its a good idea to hash this out so we dont accidentally overwrite anything
+
+saveRDS(motus_final_taxa_metadata, file="motus_final_taxa_metadata.RDS")
+saveRDS(motu_stats, file="motu_stats.RDS")
+saveRDS(metadata, file="metadata.RDS")
+
+rm(list=ls())
+```
+
+
+
+```{r Re-read in saved data}
+motus_final_taxa_metadata <- readRDS(file="motus_final_taxa_metadata.RDS")
+metadata <- readRDS(file="metadata.RDS")
+##Lets check out experimental scheme
+
+setwd("C:/Users/hunefeldt/OneDrive/Desktop/PhD/R_analysis/MicrobialAnalsis/motus/")
+path <- getwd()
+
+motus_final_taxa_metadata %>% 
+  select(sampleid, data_type, date, station, sample_type) %>% 
+  group_by(data_type, sample_type, date) %>% 
+  dplyr::summarise(count=n_distinct(sampleid)) %>% 
+  print(n=30) 
+
+##So when we consider fraction and date we see that Nov 21 has few samples, we should consider removing
+
+motus_final_taxa_metadata %>% 
+  select(sampleid, data_type, date, station, sample_type) %>% 
+  group_by(data_type, sample_type, station) %>% 
+  dplyr::summarise(count=n_distinct(sampleid)) %>% 
+  print(n=30) 
+
+##By station we see that Kollmar, SeemanshÃ¶ft and BunthausSpitze also were sampled infrequently, lets also remove these. 
+
+motus_final_taxa_metadata <- motus_final_taxa_metadata %>% 
+  filter(!grepl("Bunthaus|Kollmar|Seemans", station), !grepl("Nov 21", date))
+```
+
+
+```{r Check counts}
+####Lets see how our counts look across all the samples, im going to create sub_files for plotting rather than piping directly to ggplot because it takes time
+##when we want to adjust visuals
+
+sample_specific_counts <- motus_final_taxa_metadata %>% 
+  group_by(sampleid) %>%
+  dplyr::mutate(sample_sums=sum(counts)) %>% 
+  select(sampleid, data_type, sample_type, sample_sums)
+
+
+  ggplot(sample_specific_counts,aes(x=sampleid, y=sample_sums)) + geom_point() 
+
+##Ok there are clearly some samples with far fewer mOTU counts. Lets see how this looks when we compare metaT and metaG, also for the different size fractions
+
+sample_specific_counts %>%
+  ggplot() +
+  geom_point(aes(x=sampleid, y=sample_sums)) +
+  facet_wrap(~data_type*sample_type, scales="free_y", nrow=2)
+
+###So take homes. We shouldnt compare metaG an metaT because the counts are an order of magnitude. You can look at metaT later. For now i will ignore. 
+###Should we compare FL and PA (maybe but also maybe not), 
+###There is an argument for comparing FL and PA but generally you want to explore what are the drivers of composition independent of fraction anyway. 
+##Lets split the files, i will keep heavy and light together, splitting more reduces the number of pairwise comparisons which also helps.
+
+colnames(motus_final_taxa_metadata)
+
+motus_metadata_metag_fl <- motus_final_taxa_metadata %>% 
+  filter(data_type == "METAG" & sample_type == "Free_living")
+
+motus_metadata_metag_pa <- motus_final_taxa_metadata %>% 
+  filter(data_type == "METAG" & sample_type != "Free_living")
+
+##Lets start with free-living by first checking the sample_sums again
+
+motus_metadata_metag_fl %>% 
+  group_by(sampleid) %>%
+  mutate(sample_sums=sum(counts)) %>%
+  select(sampleid, station, date, sample_sums) %>%
+  unique() %>% 
+  arrange(sample_sums) %>% 
+  print(n=61)
+
+##So we can see here that counts from Feb 22 are also quite low from all free-living samples. 
+
+motus_metadata_metag_pa %>% 
+  group_by(sampleid) %>%
+  mutate(sample_sums=sum(counts)) %>%
+  select(sampleid, station, date, sample_sums) %>%
+  unique() %>% 
+  arrange(sample_sums) %>% 
+  print(n=61)
+
+##So we can see here that counts from Feb 22 are also quite low from all particle-associated samples. These are in theory the only winter samples. 
+##These samples generally had lower read counts. Anyway lets compare this also with the functional profiles to make an assessment. 
+##We dont want to throw away a whole month of samples if the data are biologically interesting but also we shouldnt force a perspective based on sampling depth
+
+##For now I will remove them
+
+motus_final_taxa_metadata <- motus_final_taxa_metadata %>% 
+  filter(!grepl("Feb 22", date))
+
+motus_metadata_metag_fl <- motus_final_taxa_metadata %>% 
+  filter(data_type == "METAG" & sample_type == "Free_living")
+
+motus_metadata_metag_pa <- motus_final_taxa_metadata %>% 
+  filter(data_type == "METAG" & sample_type != "Free_living")
+
+##Lets check again
+
+motus_metadata_metag_fl %>% 
+  group_by(sampleid) %>%
+  mutate(sample_sums=sum(counts)) %>%
+  select(sampleid, station, date, sample_sums) %>%
+  unique() %>% 
+  arrange(sample_sums) %>% 
+  print(n=61)
+
+##Theres two samples with low counts (lower than 14k), lets remove these also
+
+motus_metadata_metag_fl <- motus_metadata_metag_fl %>% 
+  filter(!grepl("SAMEA112714820_METAG|SAMEA110290254_METAG", sampleid))
+
+##and the particle associated
+
+motus_metadata_metag_pa %>% 
+  group_by(sampleid) %>%
+  mutate(sample_sums=sum(counts)) %>%
+  select(sampleid, station, date, sample_sums) %>%
+  unique() %>% 
+  arrange(sample_sums) %>% 
+  print(n=61)
+
+#Here the sums are genearlly lower with a plateau around 8k reads. For now we will leave everything and come back if these cause issues.
+```
+
+#PCA
+```{r }
+###Ok lets calculate some distances, 
+
+##First we want to covert our data back to an OTU table 
+
+motus_fl_df <- motus_metadata_metag_fl %>%
+  select(mOTU, sampleid, counts) %>%
+  transform(counts = as.numeric(counts)) %>%
+  pivot_wider(names_from="mOTU", values_from="counts", values_fill = 0) %>% 
+  column_to_rownames("sampleid") %>%
+  as.data.frame()
+
+##Lets check this works first with vegdist which doesnt resample
+library(vegan)
+library(glue)
+motus_fl_norare_dist_matrix <- vegdist(motus_fl_df, method="bray")
+
+##great that worked, we can ordinate the data 
+
+pcoa <- cmdscale(motus_fl_norare_dist_matrix, eig=TRUE, add=TRUE)
+positions_fl <- pcoa$points
+colnames(positions_fl) <- c("pcoa1", "pcoa2")
+percent_explained <- 100 * pcoa$eig / sum(pcoa$eig)
+pretty_pe <- format(round(percent_explained, digits =1), nsmall=1, trim=TRUE)
+labels <- c(glue("PCo Axis 1 ({pretty_pe[1]}%)"),
+            glue("PCo Axis 2 ({pretty_pe[2]}%)"))
+
+positions_fl %>% 
+  as_tibble(rownames = "sampleid") %>%
+  left_join(metadata, by = c("sampleid" = "sampleid")) %>%
+  ggplot(aes(x=pcoa1, y=pcoa2, color = date, shape=station)) +
+  geom_point(size=4) +
+  labs(x=labels[1], y=labels[2]) + 
+  theme_classic()+ theme(legend.position = "right") +
+  guides(colour = guide_legend(title.position="top", title.hjust = 0, title = "Date "),
+         shape = guide_legend(title.position="top", title.hjust = 0, title = "Station"))
+
+##Noice, so here we see a strong station effect (PC1, marine left and brackish right) and a strong season effect PC2 (May bottom, Jun-Nov top)
+
+##Lets run this with avgdist which does rarefaction and subsampling https://www.biorxiv.org/content/biorxiv/early/2023/06/26/2023.06.23.546312.full.pdf
+
+motus_fl_rare_dist_matrix <- avgdist(motus_fl_df, dmethod="bray", sample=2400)
+pcoa <- cmdscale(motus_fl_rare_dist_matrix, eig=TRUE, add=TRUE)
+positions_fl <- pcoa$points
+colnames(positions_fl) <- c("pcoa1", "pcoa2")
+percent_explained <- 100 * pcoa$eig / sum(pcoa$eig)
+pretty_pe <- format(round(percent_explained, digits =1), nsmall=1, trim=TRUE)
+labels <- c(glue("PCo Axis 1 ({pretty_pe[1]}%)"),
+            glue("PCo Axis 2 ({pretty_pe[2]}%)"))
+
+positions_fl %>% 
+  as_tibble(rownames = "sampleid") %>%
+  left_join(metadata, by = c("sampleid" = "sampleid")) %>%
+  ggplot(aes(x=pcoa1, y=pcoa2, color = date, shape=station)) +
+  geom_point(size=4) +
+  labs(x=labels[1], y=labels[2]) + 
+  theme_classic()+ theme(legend.position = "right") +
+  guides(colour = guide_legend(title.position="top", title.hjust = 0, title = "Date "),
+         shape = guide_legend(title.position="top", title.hjust = 0, title = "Station"))
+
+##So when we apply rarefaction to the data the overall trend remains the same but we are explaining much more variation in the data.
+##In particular we see that the replicates are much closer to one another suggesting nearly all variation is due to sampling depth. 
+
+##Go back and recreate the motus_fl_df, this time do not remove the samples from Feb 22. We know they have less sequences so lets check what impact rarefaction has. 
+##Make sure to change sample depth from 14000, to 2400
+
+##So when we run vegdist with the Feb22 samples we see that they all cluster separately from the others, independent of station. This was true for gene catalog
+
+##When we run avgdist with 2400 reads we maintain the same structure as before without Feb22 so thats not a problem
+##The Feb22 samples no longer stand out, they actually group with the May samples to some extent. 
+##We can also see now the gradient in salinity although it is less pronounced. This resembles Jun22 and Mai 21 where BB is less resolved.
+```
+
+
+```{r Run against environmental variables}
+##First lets check what we actually have complete data for, we dont want to remove too many samples. 
+
+
+nrow(positions_fl)
+
+
+env_params <- positions_fl %>% 
+  as_tibble(rownames = "sampleid") %>%
+  select(-pcoa1, -pcoa2) %>%
+  left_join(metadata, by = c("sampleid" = "sampleid")) %>%
+#   filter(!is.na(wtemp)) %>%
+  select_if(~ !any(is.na(.))) %>%
+  select_if(~ ! any(is.character(.))) %>% 
+  select(-station_km) %>% 
+  colnames()## Ok thats not the worst list, lets export this so we can read it into our mantel function
+
+##Lets also do a quick correlation matrix with these parameters 
+library(rstatix)
+env_params_corr <- positions_fl %>% 
+  as_tibble(rownames = "sampleid") %>%
+  left_join(metadata, by = c("sampleid" = "sampleid")) %>% 
+#  filter(!is.na(wtemp)) %>%
+  select_if(~ !any(is.na(.))) %>%
+  select_if(~ ! any(is.character(.))) %>% 
+  select(-duplicate) %>%
+  cor_mat(method = "spearman") %>%
+  as.matrix() %>%
+  as_tibble() %>%
+  pivot_longer(-rowname)
+
+env_params_corr_p <- positions_fl %>% 
+  as_tibble(rownames = "sampleid") %>%
+  left_join(metadata, by = c("sampleid" = "sampleid")) %>% 
+#  filter(!is.na(wtemp)) %>%
+  select_if(~ !any(is.na(.))) %>%
+  select_if(~ ! any(is.character(.))) %>% 
+  select(-duplicate) %>%
+  cor_pmat(method = "spearman") %>%
+  as.matrix() %>%
+  as_tibble() %>%
+  pivot_longer(-rowname) %>%
+  select(rowname, name, p_value = value) %>% 
+  cbind(., corr=env_params_corr$value) %>% 
+  filter(rowname < name) %>%
+  mutate(p_value = as.numeric(p_value), corr=as.numeric(corr))
+
+env_params_corr_p %>% 
+  ggplot(aes(x=rowname,y=name)) +
+  geom_point(aes(size=corr, colour=corr, ), shape=15) +
+  geom_point(aes(), shape=0, size = 8.5) + 
+  scale_colour_gradient2(low = "red", mid = "white", high = "darkgreen", midpoint=0) + 
+  guides(colour = guide_colorbar(title = "Mantel's r", frame.colour = "black", barwidth = 1.5)) + #title.theme = element_text(angle=90, vjust=1))) +
+  scale_size_continuous(guide="none") +
+  scale_x_discrete()+ theme_bw() +
+  scale_y_discrete(position = "right") +
+  coord_fixed(ratio = 1) +
+  theme(axis.title = element_blank(), axis.ticks = element_blank(), line =element_blank(),
+        strip.background = element_blank()) +
+  theme(rect = element_blank(),
+        axis.text.x = element_text(angle = 45, hjust=1.1, vjust=1.1), 
+        legend.position = "right") +
+  geom_text(vjust=0.76,hjust=0.49, aes(label = paste0(c("","*")[(abs(p_value) <= .05)+1], c("","*")[(abs(p_value) <= .001)+1], c("","*")[(abs(p_value) <= .001)+1])))
+
+##Plot salinity v pc1
+
+positions_fl %>% 
+  as_tibble(rownames = "sampleid") %>%
+  left_join(metadata, by = c("sampleid" = "sampleid")) %>% 
+  filter(!is.na(wtemp)) %>%
+  select_if(~ !any(is.na(.))) %>%
+  select_if(~ ! any(is.character(.))) %>% 
+  ggplot(aes(x=pcoa1, y=o2_sat)) +
+  geom_point() +
+  geom_smooth(method="lm", formula=y~x)
+
+##Obviously some critical data, salinity temp etc are missing. 
+
+##We will create a function to test our env_params. Note that it subsamples the dist_matrix so we can test for example wtemp where data is missing
+
+mantel_function = function(parameter){
+motus_fl_rare_dist_matrix_mantel <- motus_fl_rare_dist_matrix %>%
+  as.matrix() %>%
+  as_tibble(rownames="sample") %>%
+  pivot_longer(-sample) %>% 
+  left_join(., metadata, by = c("sample" = "sampleid"))%>% 
+  left_join(., metadata, by = c("name" = "sampleid")) %>% 
+  filter(paste0(parameter,".x") != "NA", paste0(parameter,".y") != "NA") %>%  ##  This allows us to remove missing data, but ideally you shouldnt have any
+  select(sample, name, value) %>%
+  pivot_wider(names_from = name, values_from = value) %>% 
+  select(-sample) %>% 
+  as.dist()  
+
+motus_fl_env_dist_matrix_mantel <- motus_fl_rare_dist_matrix %>%
+  as.matrix() %>%
+  as_tibble(rownames="sample") %>%
+  pivot_longer(-sample) %>% 
+  left_join(., metadata, by = c("sample" = "sampleid"))%>% 
+  left_join(., metadata, by = c("name" = "sampleid")) %>% 
+  filter(paste0(parameter,".x") != "NA", paste0(parameter,".y") != "NA") %>%  ##  This allows us to remove missing data, but ideally you shouldnt have any
+  select(sample, paste0(parameter,".x")) %>%
+  unique() %>%
+  column_to_rownames("sample") %>%
+  dist(method="euclidean")
+
+mantel_out = mantel(motus_fl_rare_dist_matrix_mantel, motus_fl_env_dist_matrix_mantel, method = "spearman", permutations = 9999, na.rm = TRUE)
+cbind(env=parameter, mantel=mantel_out$statistic, sig=mantel_out$signif)
+}
+
+##Now we can write a little loop to calculate mantel test statistics for each of our parameters
+
+out = data.frame(env=NA, mantel=NA, sig=NA)
+for(env in env_params){
+out <- rbind(out, mantel_function(parameter = env))
+}
+
+out %>% 
+  mutate(sig=as.numeric(sig)) %>%
+  filter(sig < 0.05) %>%
+  arrange(desc(mantel))
+
+##So we can see now that DOC is the most well correlated, followed by TN, DIC and nitrate. 
+
+##Lets quickly run this again with temperature 
+
+positions_fl %>% 
+  as_tibble(rownames = "sampleid") %>%
+  select(-pcoa1, -pcoa2) %>%
+  left_join(metadata, by = c("sampleid" = "sampleid")) %>% 
+  select(station, date, wtemp) %>% 
+  filter(is.na(wtemp)) ##%>%
+  nrow() ## so we are missing six samples for wtemp, removing Nov22 
+mantel_function(parameter = "wtemp")
+
+## We see that wtemp is similar correlated as is DOC
+
+##Lets quickly run this again with temperature 
+
+positions_fl %>% 
+  as_tibble(rownames = "sampleid") %>%
+  select(-pcoa1, -pcoa2) %>%
+  left_join(metadata, by = c("sampleid" = "sampleid")) %>% 
+  select(station, date, salinity) %>% 
+  filter(is.na(salinity)) ##%>%
+  nrow() ## so we are missing six samples for wtemp, removing Nov22 
+mantel_function(parameter = "salinity")
+
+##Salinity however is massive, 0.7 compared to 0.3 for DOC and wtemp. Again we are missing six samples here so I suggest you go and get these sorted.
+```
+
+##PCA with size fractions
+```{r }
+##Considering we observed how sub-sampling at 2400 was sufficient to reproduce the same patterns we saw when sampling at 14000 we can prob compare all sample_types
+
+motus_df <- motus_final_taxa_metadata %>%
+  filter(data_type == "METAG") %>%
+  select(mOTU, sampleid, counts) %>%
+  pivot_wider(names_from="mOTU", values_from="counts", values_fill=0) %>% 
+  column_to_rownames("sampleid") %>%
+  as.data.frame()
+
+motus_rare_dist_matrix <- avgdist(motus_df, dmethod="bray", sample=2400)
+pcoa <- cmdscale(motus_rare_dist_matrix, eig=TRUE, add=TRUE)
+positions <- pcoa$points
+colnames(positions) <- c("pcoa1", "pcoa2")
+percent_explained <- 100 * pcoa$eig / sum(pcoa$eig)
+pretty_pe <- format(round(percent_explained, digits =1), nsmall=1, trim=TRUE)
+labels <- c(glue("PCo Axis 1 ({pretty_pe[1]}%)"),
+            glue("PCo Axis 2 ({pretty_pe[2]}%)"))
+
+positions %>% 
+  as_tibble(rownames = "sampleid") %>%
+  left_join(metadata, by = c("sampleid" = "sampleid")) %>%
+  mutate(station_type = paste(station, sample_type)) %>%
+  ggplot(aes(x=pcoa1, y=pcoa2, colour = date, shape=station, alpha=sample_type)) +
+  geom_point(size=4) +
+  labs(x=labels[1], y=labels[2]) + 
+  theme_classic()+ theme(legend.position = "right") +
+  guides(colour = guide_legend(title.position="top", title.hjust = 0, title = "Date "),
+         shape = guide_legend(title.position="top", title.hjust = 0, title = "Station"))
+
+##Ok so there actually does not seem to be a huge variation between the different fractions
+
+library(ggtern)
+library(microbiomeutilities)
+```
+
+#Ternary plots
+```{r }
+#so to do a ternary plot we actually need to create a physeq object really quick 
+motus_table <- motus_final_taxa_metadata %>%
+  filter(data_type == "METAG") %>%
+  select(mOTU, sampleid, counts) %>%
+  group_by(sampleid) %>% 
+  mutate(total=sum(counts)) %>% 
+  filter(total > 2400) %>%  ##Here we just remove those with low counts
+  select(-total) %>% 
+  ungroup() %>% 
+  pivot_wider(names_from = sampleid, values_from = counts, values_fill = 0) %>% 
+  column_to_rownames("mOTU") %>% 
+  phyloseq::otu_table(taxa_are_rows = TRUE)
+motus_taxa <- motus_final_taxa_metadata %>% 
+  filter(data_type == "METAG") %>%
+  select(mOTU, phylum, class, order, family, genus, species) %>% 
+  unique() %>% 
+  column_to_rownames("mOTU") %>% 
+  as.matrix() %>%
+  phyloseq::tax_table()
+motus_sampledata <- motus_final_taxa_metadata %>% 
+  filter(data_type == "METAG") %>%
+  select(-phylum, -class, -order, -family, -genus, -species, -counts, -mOTU, -domain) %>% 
+  unique() %>%  
+  column_to_rownames("sampleid") %>% 
+  sample_data()
+bicest_motu_ps <- phyloseq(motus_table, motus_taxa, motus_sampledata)
+bicest_motu_ps
+#bicest_motu_ps_v0 = bicest_motu_ps
+
+##Great now lets make a ternary plot showing the differences between the fractions, 
+tern_table <- prep_ternary(
+  bicest_motu_ps,
+  abund.thres = 1e-04, ##We can adjust this if we feel there are too few/many taxa being plotted
+  prev.thres = 0.1, ##We can adjust this if we feel there are too few/many taxa being plotted
+  group = "sample_type",
+  level = "lowest"
+)
+tern_table %>%
+  mutate(phylum = ifelse(grepl("Pseudomonadota|Actinomycetota|Bacteroidota|Verrucomicrobiota|Patescibacteria|Planctomycetota|Chloroflexota|Nitrospirota", phylum), phylum, "Other")) %>%
+  ggtern(., aes(Free_living,Heavy_fraction,Light_fraction)) + 
+  facet_wrap(~phylum, nrow = 3, strip.position = "bottom") +
+  geom_point(size=4, aes()) +theme_rgbw() +
+  labs(title = "Sample_type") +
+  theme(legend.position = "none", tern.axis.arrow.text.T=element_text(vjust = -0.5), tern.axis.arrow.text.L=element_text(vjust = -0.5), 
+        tern.axis.arrow.text.R=element_text(vjust = 0.5), strip.background = element_blank()) + theme_hidetitles()
+
+##So we see that there are few mOTUs that are unique to the free-living. We see quite some that are enriched for the fractions (right side) 
+##Nitrospirota for example appear to be completely missing from the free-living which would point to particles as being critical for nitrogen cycling 
+
+
+sample_data(bicest_motu_ps) <- sample_data(bicest_motu_ps) %>% 
+  as_tibble(rownames="sampleid") %>% 
+  mutate(salinity_fac = cut(salinity, breaks = c(0,5,18,40), labels = c("oligohaline", "mesohaline", "polyhaline"), include.lowest = T, right = F)) %>% 
+  filter(!is.na(salinity_fac)) %>% 
+  column_to_rownames("sampleid") %>% 
+  sample_data()
+
+##Great now lets make a ternary plot showing the differences between salinity levels, 
+##For this im going to define some categorical levels for salinity 
+tern_table <- prep_ternary(
+  bicest_motu_ps,
+  abund.thres = 1e-04, ##We can adjust this if we feel there are too few/many taxa being plotted
+  prev.thres = 0.1, ##We can adjust this if we feel there are too few/many taxa being plotted
+  group = "salinity_fac",
+  level = "lowest"
+)
+tern_table %>%
+  mutate(phylum = ifelse(grepl("Pseudomonadota|Actinomycetota|Bacteroidota|Verrucomicrobiota|Patescibacteria|Planctomycetota|Chloroflexota|Nitrospirota", phylum), phylum, "Other")) %>%
+  ggtern(., aes(oligohaline,polyhaline,mesohaline)) + 
+  facet_wrap(~phylum, nrow = 3, strip.position = "bottom") +
+  geom_point(size=4, aes()) +theme_rgbw() +
+  labs(title = "Sample_type") +
+  theme(legend.position = "none", tern.axis.arrow.text.T=element_text(vjust = -0.5), tern.axis.arrow.text.L=element_text(vjust = -0.5), 
+        tern.axis.arrow.text.R=element_text(vjust = 0.5), strip.background = element_blank()) + theme_hidetitles()
+
+##Now this is quite different. We have few examples where there are mOTUs common to all sites. Nitrospirota is strictly oligohaline(freshwater)
+```
+
+#Physicochemical plots
+```{r PP plots}
+
+Physicochem.df = read.csv("C:/Users/hunefeldt/OneDrive/Desktop/PhD/R_analysis/ParticleAnalysis/Data/PhysicochemicalParameters_mod.txt", encoding = "UTF-8", sep = "\t") %>%
+  subset(Sample_date!="Nov 21") 
+
+#  summarySE(Physicochem.df, measurevar = "Turbidity_NTU", groupvars = c("Stromkilometer", "Sample_date", "O2_uM", "Salinity_PSU"))
+  
+Physicochem.df$station_km = as.numeric(Physicochem.df$Stromkilometer)
+Physicochem.df$Stromkilometer = NULL
+Physicochem.df$station_km = gsub(608.165, 608, Physicochem.df$station_km)
+Physicochem.df$station_km = gsub(613, 713, Physicochem.df$station_km)
+Physicochem.df$station_km = gsub(632.88, 633, Physicochem.df$station_km)
+Physicochem.df$station_km = gsub(632.884, 633, Physicochem.df$station_km)
+Physicochem.df$station_km = gsub(633.022, 633, Physicochem.df$station_km)
+Physicochem.df$station_km = gsub(651.32, 651, Physicochem.df$station_km)
+Physicochem.df$station_km = gsub(651.323, 651, Physicochem.df$station_km)
+Physicochem.df$station_km = gsub(651.955, 651, Physicochem.df$station_km)
+Physicochem.df$station_km = gsub(665.41, 665, Physicochem.df$station_km)
+Physicochem.df$station_km = gsub(665.414, 665, Physicochem.df$station_km)
+Physicochem.df$station_km = gsub(665.546, 665, Physicochem.df$station_km)
+Physicochem.df$station_km = gsub(691.997, 692, Physicochem.df$station_km)
+Physicochem.df$station_km = gsub(692.010, 692, Physicochem.df$station_km)
+Physicochem.df$station_km = gsub(692.01, 692, Physicochem.df$station_km)
+Physicochem.df$station_km = gsub(694, 692, Physicochem.df$station_km)
+Physicochem.df$station_km = gsub(711.515, 713, Physicochem.df$station_km)
+Physicochem.df$station_km = gsub(712, 713, Physicochem.df$station_km)
+Physicochem.df$station_km = gsub(714.975, 713, Physicochem.df$station_km)
+Physicochem.df$station_km = gsub(714.98, 713, Physicochem.df$station_km)
+sort(unique(Physicochem.df$station_km))
+
+Physicochem.df = subset(Physicochem.df, station_km > 630)
+
+Physicochem.df$station_km = as.numeric(Physicochem.df$station_km)
+
+####Turbidity####
+Turbidity.plt =   ggplot(Physicochem.df)+
+    #geom_line(, aes(x = station_km, y = Turbidity_NTU),linewidth =1)+
+    geom_point(aes(x = station_km, y = Turbidity_NTU, color = Sample_date), size = 1)+
+    #geom_point(aes(x = station_km, y = O2_uM), size = 1, color = "red")+
+    #geom_point(aes(x = station_km, y = Salinity_PSU), size = 1, color = "blue")+
+    geom_smooth(aes(x = station_km, y = Turbidity_NTU, color = Sample_date), size = 1)+
+    #geom_smooth(aes(x = station_km, y = O2_uM), size = 1, color = "red")+
+    #geom_smooth(aes(x = station_km, y = Salinity_PSU), size = 1, color = "blue")+
+    #scale_color_manual(values = Datecolour)+
+    scale_x_reverse() +
+  xlab("Elbe (km)")+
+    #scale_y_log10()+
+    My_Theme
+Turbidity.plt
+
+#Reorder dates
+#library(data.table)
+newtab = data.table::data.table(Turbidity.plt$data) # Extract dataframe
+sort(unique(newtab$station_km))
+
+newtab$station_km = gsub(6334, 632, newtab$station_km)
+newtab$station_km = gsub(6513, 665, newtab$station_km)
+newtab$station_km = gsub(6654, 665, newtab$station_km)
+newtab$station_km = as.numeric(newtab$station_km)
+
+#Update factor order
+newtab$Sample_date = factor(newtab$Sample_date, 
+                     levels = c("May 21",
+                                "Jul 21",
+                                "Feb 22",
+                                "May 22",
+                                "Jun 22",
+                                "Nov 22"))
+#Reintegrate into plot object
+Turbidity.plt$data <- newtab
+Turbidity.plt #Inspect new plot
+
+
+####Salinity ####
+Salinity_PSU.plt =   ggplot(Physicochem.df)+
+    #geom_line(, aes(x = station_km, y = Salinity_PSU),linewidth =1)+
+    geom_point(aes(x = station_km, y = Salinity_PSU, color = Sample_date), size = 1)+
+    #geom_point(aes(x = station_km, y = O2_uM), size = 1, color = "red")+
+    #geom_point(aes(x = station_km, y = Salinity_PSU), size = 1, color = "blue")+
+    geom_smooth(aes(x = station_km, y = Salinity_PSU, color = Sample_date), size = 1)+
+    #geom_smooth(aes(x = station_km, y = O2_uM), size = 1, color = "red")+
+    #geom_smooth(aes(x = station_km, y = Salinity_PSU), size = 1, color = "blue")+
+    #scale_color_manual(values = Datecolour)+
+    scale_x_reverse() +
+  xlab("Elbe (km)")+
+    #scale_y_log10()+
+    My_Theme
+Salinity_PSU.plt
+
+#Reorder dates
+#library(data.table)
+newtab = data.table::data.table(Salinity_PSU.plt$data) # Extract dataframe
+sort(unique(newtab$station_km))
+
+newtab$station_km = gsub(6334, 632, newtab$station_km)
+newtab$station_km = gsub(6513, 665, newtab$station_km)
+newtab$station_km = gsub(6654, 665, newtab$station_km)
+newtab$station_km = as.numeric(newtab$station_km)
+
+#Update factor order
+newtab$Sample_date = factor(newtab$Sample_date, 
+                     levels = c("May 21",
+                                "Jul 21",
+                                "Feb 22",
+                                "May 22",
+                                "Jun 22",
+                                "Nov 22"))
+#Reintegrate into plot object
+Salinity_PSU.plt$data <- newtab
+Salinity_PSU.plt #Inspect new plot
+
+
+
+####Oxygen ####
+O2_uM.plt =   ggplot(Physicochem.df)+
+    #geom_line(, aes(x = station_km, y = O2_uM),linewidth =1)+
+    geom_point(aes(x = station_km, y = O2_uM, color = Sample_date), size = 1)+
+    #geom_point(aes(x = station_km, y = O2_uM), size = 1, color = "red")+
+    #geom_point(aes(x = station_km, y = O2_uM), size = 1, color = "blue")+
+    geom_smooth(aes(x = station_km, y = O2_uM, color = Sample_date), size = 1)+
+    #geom_smooth(aes(x = station_km, y = O2_uM), size = 1, color = "red")+
+    #geom_smooth(aes(x = station_km, y = O2_uM), size = 1, color = "blue")+
+    #scale_color_manual(values = Datecolour)+
+    scale_x_reverse() +
+  xlab("Elbe (km)")+
+    #scale_y_log10()+
+    My_Theme
+O2_uM.plt
+
+#Reorder dates
+#library(data.table)
+newtab = data.table::data.table(O2_uM.plt$data) # Extract dataframe
+sort(unique(newtab$station_km))
+
+newtab$station_km = gsub(6334, 632, newtab$station_km)
+newtab$station_km = gsub(6513, 665, newtab$station_km)
+newtab$station_km = gsub(6654, 665, newtab$station_km)
+newtab$station_km = as.numeric(newtab$station_km)
+
+#Update factor order
+newtab$Sample_date = factor(newtab$Sample_date, 
+                     levels = c("May 21",
+                                "Jul 21",
+                                "Feb 22",
+                                "May 22",
+                                "Jun 22",
+                                "Nov 22"))
+#Reintegrate into plot object
+O2_uM.plt$data <- newtab
+O2_uM.plt #Inspect new plot
+
+
+####Integrate Turbidity/Salinity/O2####
+library(ggpubr)
+
+Physicochem.plt = ggarrange(Turbidity.plt, Salinity_PSU.plt, O2_uM.plt,
+          common.legend = T,
+          legend = "right")
+
+png("Figures/Physicochem.png", width = 12, height = 8, units = "in", res = 120)
+Physicochem.plt
+dev.off()
+
+
+```
+##Physicochem correlation heatmap
+```{r}
+
+#Import as clean data frame
+Physicochem.df = read.csv("C:/Users/hunefeldt/OneDrive/Desktop/PhD/R_analysis/ParticleAnalysis/Data/PhysicochemicalParameters_mod.txt", encoding = "UTF-8", sep = "\t") %>%
+  subset(Sample_date!="Nov 21") #Remove data taken from shore
+
+#Clean up data  
+Physicochem.df$station_km = as.numeric(Physicochem.df$Stromkilometer)
+Physicochem.df$Stromkilometer = NULL
+Physicochem.df$station_km = gsub(608.165, 608, Physicochem.df$station_km)
+Physicochem.df$station_km = gsub(613, 713, Physicochem.df$station_km)
+Physicochem.df$station_km = gsub(632.88, 633, Physicochem.df$station_km)
+Physicochem.df$station_km = gsub(632.884, 633, Physicochem.df$station_km)
+Physicochem.df$station_km = gsub(633.022, 633, Physicochem.df$station_km)
+Physicochem.df$station_km = gsub(6334, 633, Physicochem.df$station_km)
+Physicochem.df$station_km = gsub(651.32, 651, Physicochem.df$station_km)
+Physicochem.df$station_km = gsub(651.323, 651, Physicochem.df$station_km)
+Physicochem.df$station_km = gsub(651.955, 651, Physicochem.df$station_km)
+Physicochem.df$station_km = gsub(6513, 651, Physicochem.df$station_km)
+Physicochem.df$station_km = gsub(665.41, 665, Physicochem.df$station_km)
+Physicochem.df$station_km = gsub(665.414, 665, Physicochem.df$station_km)
+Physicochem.df$station_km = gsub(665.546, 665, Physicochem.df$station_km)
+Physicochem.df$station_km = gsub(6654, 665, Physicochem.df$station_km)
+Physicochem.df$station_km = gsub(691.997, 692, Physicochem.df$station_km)
+Physicochem.df$station_km = gsub(692.010, 692, Physicochem.df$station_km)
+Physicochem.df$station_km = gsub(692.01, 692, Physicochem.df$station_km)
+Physicochem.df$station_km = gsub(694, 692, Physicochem.df$station_km)
+Physicochem.df$station_km = gsub(711.515, 713, Physicochem.df$station_km)
+Physicochem.df$station_km = gsub(712, 713, Physicochem.df$station_km)
+Physicochem.df$station_km = gsub(714.975, 713, Physicochem.df$station_km)
+Physicochem.df$station_km = gsub(714.98, 713, Physicochem.df$station_km)
+sort(unique(Physicochem.df$station_km))
+
+Physicochem.df = subset(Physicochem.df, station_km > 630)
+colnames(Physicochem.df)
+Physicochem.df = distinct(Physicochem.df)
+
+Physicochem.df[c(7:37)] = sapply(Physicochem.df[c(7:37)], as.numeric)
+
+
+#Make results dataframe
+Results.df = data.frame(Var1 = as.character("DELETEME"),
+                        Var2 = as.character("DELETEME"),
+                        p.value = as.numeric(9999999),
+                        rho.value = as.numeric(9999999))
+#Run comparison tests
+i=9
+x=10
+for (i in c(8:27,29:37)) {
+  print(colnames(Physicochem.df)[i])
+  
+  for (x in c(8:27,29:37)) {
+    
+    #Remove problematic comparisons
+    if (grepl(colnames(Physicochem.df)[i], "Silicate_mg.L") == T & grepl(colnames(Physicochem.df)[x], "Total_DIN_uM") == T | 
+        grepl(colnames(Physicochem.df)[i], "Silicate_mg.L") == T & grepl(colnames(Physicochem.df)[x], "Ammonium_uM") == T |
+      grepl(colnames(Physicochem.df)[i], "Silicate_mg.L") == T & grepl(colnames(Physicochem.df)[x], "Nitrite_uM") == T |
+      grepl(colnames(Physicochem.df)[i], "Silicate_mg.L") == T & grepl(colnames(Physicochem.df)[x], "Nitrate_uM") == T |
+      grepl(colnames(Physicochem.df)[i], "Silicate_mg.L") == T & grepl(colnames(Physicochem.df)[x], "Phosphate_uM") == T |
+      grepl(colnames(Physicochem.df)[i], "Silicate_mg.L") == T & grepl(colnames(Physicochem.df)[x], "Silicate_uM") == T |
+      grepl(colnames(Physicochem.df)[i], "Total_DIN_uM") == T & grepl(colnames(Physicochem.df)[x], "Silicate_mg.L") == T | 
+        grepl(colnames(Physicochem.df)[i], "Ammonium_uM") == T & grepl(colnames(Physicochem.df)[x], "Silicate_mg.L") == T |
+      grepl(colnames(Physicochem.df)[i], "Nitrite_uM") == T & grepl(colnames(Physicochem.df)[x], "Silicate_mg.L") == T |
+      grepl(colnames(Physicochem.df)[i], "Nitrate_uM") == T & grepl(colnames(Physicochem.df)[x], "Silicate_mg.L") == T |
+      grepl(colnames(Physicochem.df)[i], "Phosphate_uM") == T & grepl(colnames(Physicochem.df)[x], "Silicate_mg.L") == T |
+      grepl(colnames(Physicochem.df)[i], "Silicate_uM") == T & grepl(colnames(Physicochem.df)[x], "Silicate_mg.L") == T |
+      
+      
+      grepl(colnames(Physicochem.df)[i], "Total_DIN_uM") == T & grepl(colnames(Physicochem.df)[x], "RespirationRate_O2ug.L.h") == T |
+      grepl(colnames(Physicochem.df)[i], "Ammonium_uM") == T & grepl(colnames(Physicochem.df)[x], "RespirationRate_O2ug.L.h") == T |
+      grepl(colnames(Physicochem.df)[i], "Nitrite_uM") == T & grepl(colnames(Physicochem.df)[x], "RespirationRate_O2ug.L.h") == T |
+      grepl(colnames(Physicochem.df)[i], "Nitrate_uM") == T & grepl(colnames(Physicochem.df)[x], "RespirationRate_O2ug.L.h") == T |
+      grepl(colnames(Physicochem.df)[i], "Phosphate_uM") == T & grepl(colnames(Physicochem.df)[x], "RespirationRate_O2ug.L.h") == T |
+      grepl(colnames(Physicochem.df)[i], "Silicate_uM") == T & grepl(colnames(Physicochem.df)[x], "RespirationRate_O2ug.L.h") == T | 
+      grepl(colnames(Physicochem.df)[i], "RespirationRate_O2ug.L.h") == T & grepl(colnames(Physicochem.df)[x], "Total_DIN_uM") == T |
+      grepl(colnames(Physicochem.df)[i], "RespirationRate_O2ug.L.h") == T & grepl(colnames(Physicochem.df)[x], "Ammonium_uM") == T |
+      grepl(colnames(Physicochem.df)[i], "RespirationRate_O2ug.L.h") == T & grepl(colnames(Physicochem.df)[x], "Nitrite_uM") == T |
+      grepl(colnames(Physicochem.df)[i], "RespirationRate_O2ug.L.h") == T & grepl(colnames(Physicochem.df)[x], "Nitrate_uM") == T |
+      grepl(colnames(Physicochem.df)[i], "RespirationRate_O2ug.L.h") == T & grepl(colnames(Physicochem.df)[x], "Phosphate_uM") == T |
+      grepl(colnames(Physicochem.df)[i], "RespirationRate_O2ug.L.h") == T & grepl(colnames(Physicochem.df)[x], "Silicate_uM") == T){
+      
+      print(paste0("Error with: i = ", colnames(Physicochem.df)[i] ," & x = ", colnames(Physicochem.df)[x]))
+      
+    } else {
+  
+    test.tmp = cor.test(as.numeric(unlist(Physicochem.df[i])), as.numeric(unlist(Physicochem.df[x])), method = "spearman")
+  
+    tmp.df = data.frame(Var1 = colnames(Physicochem.df)[i],
+                        Var2 = colnames(Physicochem.df)[x],
+                        p.value = as.numeric(test.tmp$p.value),
+                        rho.value = as.numeric(test.tmp$estimate))
+    
+    Results.df = rbind(Results.df, tmp.df)
+  
+}
+  
+  
+}
+}
+#Remove initial row with DELETEME
+Results.df = Results.df[-1,]
+
+#Remove self comparisons
+Results.df = Results.df %>% 
+  as_tibble() %>% 
+  mutate(duplicates = if_else(Var1 == Var2,
+                              TRUE,
+                              FALSE)) %>% 
+  filter(duplicates == FALSE)
+
+Results_sign.df = subset(Results.df, p.value < 0.05)
+#Results_sign.df = Results.df
+
+#Make p value heatmap
+Physico_pvalue.plt = ggplot(Results_sign.df, aes(x = Var1, y = Var2, fill = p.value))+
+  geom_tile()+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))+
+  scale_fill_gradient(low = "navy", high = "white")+
+  xlab("Physicochemical parameters") + 
+  ylab("Physicochemical parameters")
+Physico_pvalue.plt
+
+#Make rho value heatmap
+Physico_rhovalue.plt =ggplot(Results.df, aes(x = Var1, y = Var2, fill = rho.value))+
+  geom_tile()+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))+
+  scale_fill_gradient(low = "white", high = "navy")+
+  xlab("Physicochemical parameters") + 
+  ylab("Physicochemical parameters")
+Physico_rhovalue.plt
+
+
+#Test arrangement
+ggarrange(Physico_pvalue.plt, Physico_rhovalue.plt)
+
+png("Figures/Physicochem_heatmap.png", width = 16, height = 8, units = "in", res = 120)
+ggarrange(Physico_pvalue.plt, Physico_rhovalue.plt)
+dev.off()
+
+```
+
+#Alpha diversity
+## phyloseq based
+```{r }
+#so to do a ternary plot we actually need to create a physeq object really quick 
+motus_table <- readRDS(paste0(path, file="/motus_final_taxa_metadata.RDS")) %>%
+  filter(data_type == "METAG") %>%
+  select(mOTU, sampleid, counts) %>%
+  group_by(sampleid) %>% 
+  mutate(total=sum(counts)) %>% 
+  filter(total > 2400) %>%  ##Here we just remove those with low counts
+  select(-total) %>% 
+  ungroup() %>% 
+  pivot_wider(names_from = sampleid, values_from = counts, values_fill = 0) %>% 
+  column_to_rownames("mOTU") %>% 
+  phyloseq::otu_table(taxa_are_rows = TRUE)
+motus_taxa <- readRDS(paste0(path, file="/motus_final_taxa_metadata.RDS")) %>% 
+  filter(data_type == "METAG") %>%
+  select(mOTU, phylum, class, order, family, genus, species) %>% 
+  unique() %>% 
+  column_to_rownames("mOTU") %>% 
+  as.matrix() %>%
+  phyloseq::tax_table()
+motus_sampledata <- readRDS(paste0(path, file="/motus_final_taxa_metadata.RDS")) %>% 
+  filter(data_type == "METAG") %>%
+  select(-phylum, -class, -order, -family, -genus, -species, -counts, -mOTU, -domain) %>% 
+  unique() %>%  
+  column_to_rownames("sampleid") %>% 
+  sample_data()
+bicest_motu_ps <- phyloseq(motus_table, motus_taxa, motus_sampledata)
+bicest_motu_ps
+
+
+
+#Calculate richness
+alpha_summary_METAG <- estimate_richness(bicest_motu_ps, measures = c("Observed", "Shannon", "Chao1"))
+#Calculate evenness
+Evenness_METAG <- evenness(bicest_motu_ps, 'pielou')
+#Append evenness to other diversity metrics
+alpha_summary_METAG$Pielou <- Evenness_METAG$pielou
+#Combine diveristy metrics with metadata
+Map_METAG_alpha <- data.frame(alpha_summary_METAG, sample_data(bicest_motu_ps))
+
+
+
+Observed_Chao1.plt = Map_METAG_alpha %>%
+  select(!se.chao1) %>%
+  pivot_longer(cols= c("Observed", "Chao1", "Shannon", "Pielou"), values_to = "richness") %>%
+  subset(name=="Observed" | name=="Chao1") %>%
+  subset(date!="Nov 21") %>%
+  summarySE(., measurevar = "richness", groupvars = c("station_km", "date")) %>%
+  ggplot(aes(x = as.numeric(station_km), y = richness, colour = date, group = date))+
+  geom_line(linewidth =1)+
+  geom_point(size = 1)+
+  #facet_wrap(. ~ name + sample_type)+
+  #scale_y_log10()+
+  scale_color_manual("Sample Date", values = Datecolour)+
+  scale_x_reverse()+
+  My_Theme
+Observed_Chao1.plt
+
+
+#Reorder dates
+#library(data.table)
+newtab = data.table::data.table(Observed_Chao1.plt$data) # Extract dataframe
+
+#Update factor order
+newtab$date = factor(newtab$date, 
+                     levels = c("Mai 21",
+                                "Jul 21",
+                                "Feb 22",
+                                "Mai 22",
+                                "Jun 22",
+                                "Nov 22"))
+#Reintegrate into plot object
+Observed_Chao1.plt$data <- newtab
+Observed_Chao1.plt #Inspect new plot
+
+png("Figures/ObservedChao1.png", width = 12, height = 8, units = "in", res = 120)
+Observed_Chao1.plt
+dev.off()
+
+
+
+
+
+
+cor.test(Map_METAG_alpha$Observed, method = "s")
+
+
+Shannon = Map_METAG_alpha %>%
+  select(!se.chao1) %>%
+  pivot_longer(cols= c("Observed", "Chao1", "Shannon", "Pielou"), values_to = "richness") %>%
+  subset(name=="Shannon") %>%
+  subset(date!="Nov 21") %>%
+  summarySE(., measurevar = "richness", groupvars = c("station_km", "date", "sample_type", "name", "turbidty")) %>%
+  ggplot(aes(x = station_km, y = richness, colour = date, shape = sample_type))+
+  geom_line(linewidth =1)+
+  geom_point(size = 1)+
+  facet_wrap(. ~ name + sample_type)+
+  scale_color_manual(values = Datecolour)+
+  scale_x_reverse() 
+Shannon
+
+png("Shannon.png", width = 12, height = 8, units = "in", res = 120)
+Shannon
+dev.off()
+
+Pielou = Map_METAG_alpha %>%
+  select(!se.chao1) %>%
+  pivot_longer(cols= c("Observed", "Chao1", "Pielou", "Pielou"), values_to = "richness") %>%
+  subset(name=="Pielou") %>%
+  subset(date!="Nov 21") %>%
+  summarySE(., measurevar = "richness", groupvars = c("station_km", "date", "sample_type", "name", "turbidty")) %>%
+  ggplot(aes(x = station_km, y = richness, colour = date, shape = sample_type))+
+  geom_line(linewidth =1)+
+  geom_point(size = 1)+
+  facet_wrap(. ~ name + sample_type)+
+  scale_color_manual(values = Datecolour)+
+  scale_x_reverse() 
+Pielou
+
+png("Pielou.png", width = 12, height = 8, units = "in", res = 120)
+Pielou
+dev.off()
+```
+
+
+
+## To elbe km & salinity
+```{r}
+#Summarise at species level for richness
+Prokaryotes_sp.sum = Rmisc::summarySE(Prok_met.df, measurevar = "red_value", groupvars = c("Domain","Phylum", "Class", "Order", "Family", "Genus", "Species", 
+                                                                                           "station", "station_km", 
+                                                                                           "sample_type", "date", "salinity"))
+
+
+motu_rich_km.df <- readRDS(paste0(path, file="/motus_final_taxa_metadata.RDS")) %>%
+  filter(data_type == "METAG") %>%
+  select(mOTU, sampleid, counts) %>%
+  dplyr::group_by(sampleid) %>% 
+  dplyr::mutate(total=sum(counts)) %>% 
+  filter(total > 2400) %>%  ##Here we just remove those with low counts
+  select(-total) %>% 
+  ungroup() %>%
+  left_join(metadata) %>%
+  subset(date!="Nov 21") %>%
+  Rmisc::summarySE(., measurevar = "counts", groupvars = c("mOTU",
+                                                           "station", "station_km", 
+                                                           "sample_type", "date", "salinity")) %>%
+  dplyr::rename(., "replicates" = "N") %>%
+  subset(., station_km > 620) %>%
+  dplyr::filter(counts > 0)# %>%
+  Rmisc::summarySE(., measurevar = "counts", groupvars = c("station_km"))
+View(motu_rich_km.df)
+
+
+motu_rich_km.plt <- readRDS(paste0(path, file="/motus_final_taxa_metadata.RDS")) %>%
+  filter(data_type == "METAG") %>%
+  select(mOTU, sampleid, counts) %>%
+  dplyr::group_by(sampleid) %>% 
+  dplyr::mutate(total=sum(counts)) %>% 
+  filter(total > 2400) %>%  ##Here we just remove those with low counts
+  select(-total) %>% 
+  ungroup() %>%
+  left_join(metadata) %>%
+  subset(date!="Nov 21") %>%
+  Rmisc::summarySE(., measurevar = "counts", groupvars = c("mOTU",
+                                                           "station", "station_km", 
+                                                           "sample_type", "date", "salinity")) %>%
+  dplyr::rename(., "replicates" = "N") %>%
+  subset(., station_km > 620) %>%
+  dplyr::filter(counts > 0) %>%
+  Rmisc::summarySE(., measurevar = "counts", groupvars = c("station_km")) %>%
+  ggplot(aes(x = as.numeric(station_km), y = N))+
+  geom_line(linewidth =1)+
+  geom_point(size = 1)+
+  scale_x_reverse() +
+  My_Theme+
+  xlab("Elbe (km)")+
+  ylab("mOTU Richness")
+
+motu_rich_km.plt
+
+pdf("Figures/Figure2b_StationkmRichness.pdf", height = 5, width = 5)
+motu_rich_km.plt
+dev.off()
+
+png("Figures/Figure2b_StationkmRichness.png", height = 5, width = 5, units = "in", res = 120)
+motu_rich_km.plt
+dev.off()
+
+
+motu_rich_kmdate.plt <- readRDS(paste0(path, file="/motus_final_taxa_metadata.RDS")) %>%
+  filter(data_type == "METAG") %>%
+  select(mOTU, sampleid, counts) %>%
+  dplyr::group_by(sampleid) %>% 
+  dplyr::mutate(total=sum(counts)) %>% 
+  filter(total > 2400) %>%  ##Here we just remove those with low counts
+  select(-total) %>% 
+  ungroup() %>%
+  left_join(metadata) %>%
+  subset(date!="Nov 21") %>%
+  Rmisc::summarySE(., measurevar = "counts", groupvars = c("mOTU",
+                                                           "station", "station_km", 
+                                                           "sample_type", "date", "salinity")) %>%
+  dplyr::rename(., "replicates" = "N") %>%
+  subset(., station_km > 620) %>%
+  dplyr::filter(counts > 0) %>%
+  Rmisc::summarySE(., measurevar = "counts", groupvars = c("station_km", "date")) %>%
+  ggplot(aes(x = as.numeric(station_km), y = N, colour = date))+
+  geom_line(linewidth =1)+
+  geom_point(size = 1)+
+  scale_x_reverse() +
+  #facet_grid(. ~ date) +
+  My_Theme+
+  xlab("Elbe (km)")+
+  ylab("mOTU Richness")
+
+motu_rich_kmdate.plt
+
+pdf("Figures/Figure2b_StationkmDateRichness.pdf", height = 5, width = 7)
+motu_rich_kmdate.plt
+dev.off()
+
+
+motu_rich_kmdate.df <- readRDS(paste0(path, file="/motus_final_taxa_metadata.RDS")) %>%
+  filter(data_type == "METAG") %>%
+  select(mOTU, sampleid, counts) %>%
+  dplyr::group_by(sampleid) %>% 
+  dplyr::mutate(total=sum(counts)) %>% 
+  filter(total > 2400) %>%  ##Here we just remove those with low counts
+  select(-total) %>% 
+  ungroup() %>%
+  left_join(metadata) %>%
+  subset(date!="Nov 21") %>%
+  Rmisc::summarySE(., measurevar = "counts", groupvars = c("mOTU",
+                                                           "station", "station_km", 
+                                                           "sample_type", "date", "salinity")) %>%
+  dplyr::rename(., "replicates" = "N") %>%
+  subset(., station_km > 620) %>%
+  dplyr::filter(counts > 0) %>%
+  dplyr::group_by(station_km, date, sample_type) %>% 
+  dplyr::mutate(Richness=n_distinct(mOTU)) %>%
+  Rmisc::summarySE(., measurevar = "Richness", groupvars = c("station_km", "date", "sample_type"))
+
+motu_rich_kmdate.df
+
+mOTUrich_kmdate.mdl = aov(Richness ~ station_km * date, data = motu_rich_kmdate.df)
+summary(mOTUrich_kmdate.mdl)
+rstatix::eta_squared(mOTUrich_kmdate.mdl)
+
+
+
+
+
+ggplot(motu_rich_kmdate.df, aes(x = sample_type, y = Richness))+
+  geom_boxplot()+
+  #facet_grid(. ~ date) +
+  My_Theme+
+  xlab("Elbe (km)")+
+  ylab("mOTU Richness") +
+  ggpubr::stat_compare_means()
+
+mOTUrich_fratcion.mdl = aov(Richness ~ sample_type, motu_rich_kmdate.df)
+summary(mOTUrich_fratcion.mdl)
+rstatix::eta_squared(mOTUrich_fratcion.mdl)
+
+pairwise.wilcox.test(motu_rich_kmdate.df$Richness, motu_rich_kmdate.df$sample_type)
+
+```
+#Beta diversity
+
+```{r}
+
+bicest_motu_ps = bicest_motu_ps_v0
+
+bicest_motu_ps = subset_samples(bicest_motu_ps, station_km > 630 & date!="Nov 21" )
+
+bicest_motu_ps = subset_samples(bicest_motu_ps, station_km!=713 | date!="Jun 22")
+
+#Calculate ordination matrix based on Bray-Curtis dissimilarity
+mOTU.ord <- ordinate(bicest_motu_ps, method = "NMDS", distance = "bray")
+#Ensure data is good fit
+stressplot(mOTU.ord) #Good stressplot
+mOTU.ord #Good level of stress - 0.1795514
+
+#Design plot
+NMDS_mOTU.plt = plot_ordination(bicest_motu_ps, 
+                             mOTU.ord, 
+                             shape = "station_km", 
+                             color = "date"
+                             ) + 
+  theme(legend.position = "right")+
+  stat_ellipse(aes(group = date), lwd = 1)+
+  scale_color_manual("Sample Date", values = Datecolour)+
+  scale_shape_manual("Elbe km", values = Shape_list)+
+  geom_point(aes(size = 2), show.legend = F)+
+  #facet_grid(. ~ data_type)+
+  annotate("text", x=-0.85, y=1, size = 6, label= paste0("Stress = ", round(mOTU.ord$stress, digits = 3)))+
+  theme_bw()+
+  My_Theme+
+  guides(colour = guide_legend(order = 1),
+         shape = guide_legend(order = 2, override.aes = list(size = 4)),
+         size = "none",
+         linewidth = "none")
+#Inspect plot
+NMDS_mOTU.plt
+
+#Reorder dates
+#library(data.table)
+newtab = data.table::data.table(NMDS_mOTU.plt$data) # Extract dataframe
+
+#Update factor order
+newtab$date = factor(newtab$date, 
+                     levels = c("Mai 21",
+                                "Jul 21",
+                                "Feb 22",
+                                "Mai 22",
+                                "Jun 22",
+                                "Nov 22"))
+#Reintegrate into plot object
+NMDS_mOTU.plt$data <- newtab
+NMDS_mOTU.plt #Inspect new plot
+
+
+png("Figures/mOTU_NMDS.png", width = 8, height = 7, units = "in", res = 120)
+NMDS_mOTU.plt
+dev.off()
+
+#Pairwise PERMANOVA - fractions
+fraction_group = get_variable(bicest_motu_ps@sam_data, "sample_type")
+mOTU.dist = phyloseq::distance(bicest_motu_ps, method = "bray")
+Depth_ado = RVAideMemoire::pairwise.perm.manova(mOTU.dist, fraction_group, nperm = 999, p.method = "bonferroni")
+Depth_ado
+#Only the free-living fraction is significantly different
+
+
+####Calculate variability####
+#Extract ellipse coordinates from plot
+pb = ggplot_build(NMDS_mOTU.plt)
+el = pb$data[[2]][c("colour", 
+                    #"shape",
+                    "x",
+                    "y")]
+
+
+i=1
+ellipseAreaList = data.frame()
+group_list = unique(el$colour)
+#Separate into groups
+for (i in 1:length(group_list)) {
+
+  #Subset to separate into individual ellipse groups - if you used shape in addition to colour you'll want to change this as well
+  Object = subset(el, 
+                  colour == group_list[i])
+  
+  #Remove grouping column
+  Object = Object[-1]
+  
+  # Center of ellipse
+  ctr = MASS::cov.trob(Object)$center  
+  
+  # Calculate distance to center from each point on the ellipse
+  dist2center <- sqrt(rowSums((t(t(Object)-ctr))^2))
+
+  # Calculate area of ellipse from semi-major and semi-minor axes. 
+  # These are, respectively, the largest and smallest values of dist2center. 
+  value = pi*min(dist2center)*max(dist2center)
+  
+  #Store in the area list
+  ellipseAreaList = rbind(ellipseAreaList, data.frame(group_list[i], value))
+}
+
+#Assign days from the colour scheme
+ellipseAreaList$Date[grep("red", ellipseAreaList$group_list.i.)] = "Mai 21"
+ellipseAreaList$Date[grep("black", ellipseAreaList$group_list.i.)] = "Feb 22"
+ellipseAreaList$Date[grep("green", ellipseAreaList$group_list.i.)] = "Mai 22"
+ellipseAreaList$Date[grep("forestgreen", ellipseAreaList$group_list.i.)] = "Jul 21"
+ellipseAreaList$Date[grep("magenta", ellipseAreaList$group_list.i.)] = "Jun 22"
+ellipseAreaList$Date[grep("navy", ellipseAreaList$group_list.i.)] = "Nov 22"
+
+#Arrange for easier reading
+ellipseAreaList = arrange(ellipseAreaList, desc(value))
+ellipseAreaList
+
+#Is the trend significant?
+#cor.test(ellipseAreaList$value, ellipseAreaList$Date, method = "spearman")
+kruskal.test(ellipseAreaList$value, ellipseAreaList$Date, p.adjust.method = "bonferroni") # this trend is not significant
+
+
+
+####Anosim and adonis date tests####
+
+#anosim
+date_group = get_variable(bicest_motu_ps@sam_data, "date")
+date_ano = anosim(phyloseq::distance(bicest_motu_ps, method = "bray"), date_group, distance = "bray")
+date_ano$signif #0.001
+date_ano$statistic #0.466
+#Significant differences between group means - based on date
+
+#Adonis
+date_group = get_variable(bicest_motu_ps@sam_data, "date")
+mOTU.dist = phyloseq::distance(bicest_motu_ps, method = "bray")
+date_ado = adonis2(mOTU.dist ~ date_group)
+date_ado
+#Significant differences between group means and distribution - based on date
+#R2 = 0.33339
+#p = 0.001
+
+#Pairwise PERMANOVA
+date_group = get_variable(bicest_motu_ps@sam_data, "date")
+mOTU.dist = phyloseq::distance(bicest_motu_ps, method = "bray")
+date.stat = RVAideMemoire::pairwise.perm.manova(mOTU.dist, date_group, nperm = 999, p.method = "bonferroni")
+date.stat
+#All are significantly distinct from each other (p<0.05; 0.015-0.045)
+
+
+####Anosim and adonis station_km tests####
+
+#anosim
+station_km_group = get_variable(bicest_motu_ps@sam_data, "station_km")
+station_km_ano = anosim(phyloseq::distance(bicest_motu_ps, method = "bray"), station_km_group, distance = "bray")
+station_km_ano$signif #0.001
+station_km_ano$statistic #0.282
+#Significant differences between group means - based on station_km
+
+#Adonis
+station_km_group = get_variable(bicest_motu_ps@sam_data, "station_km")
+mOTU.dist = phyloseq::distance(bicest_motu_ps, method = "bray")
+station_km_ado = adonis2(mOTU.dist ~ station_km_group)
+station_km_ado
+#Significant differences between group means and distribution - based on station_km
+#R2 = 0.18549
+#p = 0.001
+
+#Pairwise PERMANOVA
+station_km_group = get_variable(bicest_motu_ps@sam_data, "station_km")
+mOTU.dist = phyloseq::distance(bicest_motu_ps, method = "bray")
+station_km.stat = RVAideMemoire::pairwise.perm.manova(mOTU.dist, station_km_group, nperm = 999, p.method = "bonferroni")
+station_km.stat
+#692 and 713 is distinct (p=0.02), while 633=651 & 651=665
+
+
+```
+###Elbe km - supplementary
+```{r}
+
+#Design plot
+NMDS_mOTU.plt = plot_ordination(bicest_motu_ps, 
+                             mOTU.ord, 
+                             color = "station_km", 
+                             shape = "date"
+                             ) + 
+  theme(legend.position = "right")+
+  #stat_ellipse(aes(group = station_km), lwd = 1)+
+  scale_color_manual("Elbe km", values = cbbPalette)+
+  scale_shape_manual("Date", values = Shape_list)+
+  geom_point(aes(size = 2), show.legend = F)+
+  #facet_grid(. ~ data_type)+
+  annotate("text", x=-0.85, y=1, size = 6, label= paste0("Stress = ", round(mOTU.ord$stress, digits = 3)))+
+  theme_bw()+
+  My_Theme+
+  guides(colour = guide_legend(order = 1, override.aes = list(size = 4)),
+         shape = guide_legend(order = 2, override.aes = list(size = 4)),
+         size = "none",
+         linewidth = "none")
+#Inspect plot
+NMDS_mOTU.plt
+
+
+#Reorder dates
+#library(data.table)
+newtab = data.table::data.table(NMDS_mOTU.plt$data) # Extract dataframe
+
+#Update factor order
+newtab$date = factor(newtab$date, 
+                     levels = c("Mai 21",
+                                "Jul 21",
+                                "Feb 22",
+                                "Mai 22",
+                                "Jun 22",
+                                "Nov 22"))
+#Reintegrate into plot object
+NMDS_mOTU.plt$data <- newtab
+NMDS_mOTU.plt #Inspect new plot
+
+
+png("Figures/mOTU_NMDS_stationkm.png", width = 8, height = 7, units = "in", res = 120)
+NMDS_mOTU.plt
+dev.off()
+
+
+```
+###Fraction - supplementary
+```{r}
+
+#Design plot
+NMDS_mOTU.plt = plot_ordination(bicest_motu_ps, 
+                             mOTU.ord, 
+                             color = "sample_type", 
+                             shape = "date"
+                             ) + 
+  theme(legend.position = "right")+
+  stat_ellipse(aes(group = sample_type), lwd = 1)+
+  scale_color_manual("fraction", values = cbbPalette)+
+  scale_shape_manual("Date", values = Shape_list)+
+  geom_point(aes(size = 2), show.legend = F)+
+  #facet_grid(. ~ data_type)+
+  annotate("text", x=-1.05, y=1.1, size = 6, label= paste0("Stress = ", round(mOTU.ord$stress, digits = 3)))+
+  theme_bw()+
+  My_Theme+
+  guides(colour = guide_legend(order = 1, override.aes = list(size = 4)),
+         shape = guide_legend(order = 2, override.aes = list(size = 4)),
+         size = "none",
+         linewidth = "none")
+#Inspect plot
+NMDS_mOTU.plt
+
+
+#Reorder dates
+#library(data.table)
+newtab = data.table::data.table(NMDS_mOTU.plt$data) # Extract dataframe
+
+#Update factor order
+newtab$date = factor(newtab$date, 
+                     levels = c("Mai 21",
+                                "Jul 21",
+                                "Feb 22",
+                                "Mai 22",
+                                "Jun 22",
+                                "Nov 22"))
+#Reintegrate into plot object
+NMDS_mOTU.plt$data <- newtab
+NMDS_mOTU.plt #Inspect new plot
+
+
+png("Figures/mOTU_NMDS_fraction.png", width = 8, height = 7, units = "in", res = 120)
+NMDS_mOTU.plt
+dev.off()
+
+
+```
+
+
+#Phyla plot
+##Line plot
+```{r}
+bicest_motu_ps = bicest_motu_ps_v0
+
+taxa.df <- tax_glom(bicest_motu_ps, taxrank = 'phylum') %>%#Merge the species at the Phylum level
+  transform_sample_counts(function(x) {x/sum(x)} ) %>% #Extract abundance data from phyloseq object
+  psmelt() %>%#Melt it into a dataframe
+  subset(date!="Nov 21")
+  
+taxa.df <- taxa.df[order(taxa.df$phylum),] #Order them at the Phylum level
+
+taxa.df$phylum <- as.character(taxa.df$phylum)
+  # group dataframe by Phylum, calculate relative abundance
+
+#Remove na values
+taxa.df$Abundance[grep(NaN, taxa.df$Abundance)] = 0
+#Calculate mean abundance
+medians <- ddply(taxa.df, ~ phylum, function(x) c(median=mean(x$Abundance)))
+  # find Phyla whose rel. abund. is less than 1%
+remainder <- medians[medians$median <= 0.03,]$phylum
+  # change their name to "Remainder"
+taxa.df[taxa.df$phylum %in% remainder,]$phylum <- 'Rare Taxa (<3%)'
+
+#Make sumamry for potting
+taxa.sum <- Rmisc::summarySE(taxa.df, measurevar="Abundance", groupvars=c("phylum", 
+                                                                          "date", 
+                                                                          "station_km", 
+                                                                          "sample_type"))
+#Make sure it worked
+taxa.sum
+#Arrange for easier visualisation
+taxa.sum<-dplyr::arrange(taxa.sum,phylum, Abundance)
+#Remove excess phyum names
+taxa.sum$phylum <- factor(taxa.sum$phylum,
+                         levels=(unique(taxa.sum$phylum)))
+#Make sure it worked
+unique(taxa.sum$phylum)
+#Fraction renaming
+taxa.sum$sample_type = gsub("Heavy_fraction", "Sinking", taxa.sum$sample_type)
+taxa.sum$sample_type = gsub("Light_fraction", "Suspended", taxa.sum$sample_type)
+taxa.sum$sample_type = gsub("Free_living", "Free-living", taxa.sum$sample_type)
+#Reorder fractions for best plotting
+taxa.sum$sample_type <- factor(taxa.sum$sample_type,
+                         levels=c("Free-living", "Suspended", "Sinking"))
+
+#Check for weird names and make Rare taxa name better.
+levels(taxa.sum$phylum)
+taxa.sum$phylum = gsub("p__", "", taxa.sum$phylum)
+
+
+#Keep for record back ups
+#write.csv(taxa.sum, file = "taxa.sum_Phylum.csv")
+
+taxa.sum$date = gsub("Mai 21", "May 21", taxa.sum$date)
+taxa.sum$date = gsub("Mai 22", "May 22", taxa.sum$date)
+taxa.sum$date = as.factor(as.character(taxa.sum$date))
+taxa.sum$date = factor(taxa.sum$date,
+                         levels=c("May 21",
+                                  "Jul 21",
+                                  "Feb 22",
+                                  "May 22",
+                                  "Jun 22",
+                                  "Nov 22"))
+
+taxa.plt = ggplot(taxa.sum,
+                        aes(x=as.numeric(station_km),
+                            y=Abundance*100, 
+                            colour = fct_reorder(phylum, Abundance, .fun = mean, .desc = T),
+                            group = phylum))+ 
+  geom_line(stat = "identity", lwd = 1.3) + 
+  geom_errorbar(aes(ymin=(Abundance-se)*100, 
+                    ymax=(Abundance+se)*100, 
+                    colour = phylum)
+                )+
+  facet_grid(sample_type ~ date)+
+  xlab("Elbe (km)")+
+  ylab("Mean relative abundance (%)")+
+  scale_colour_manual("Phylum", values = expanded_cbbPalette)+
+  scale_x_reverse()+
+  guides(linetype = F,
+         colour = guide_legend(order = 1))+
+  theme_bw()+
+  My_Theme+
+  theme(legend.position = "right", 
+        strip.background = element_blank(),
+        axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
+
+
+taxa.plt
+
+
+
+png("Figures/Taxa_line.png", width = 14, height = 8, units = "in", res = 120)
+taxa.plt
+dev.off()
+
+
+```
+##Pyla plots for map
+
+```{r}
+
+library(treemapify)
+
+#Make sumamry for potting
+taxa.sum <- Rmisc::summarySE(taxa.df, measurevar="Abundance", groupvars=c("phylum", 
+                                                                          "station_km"))
+#Make sure it worked
+taxa.sum
+#Arrange for easier visualisation
+taxa.sum<-dplyr::arrange(taxa.sum,phylum, Abundance)
+#Remove excess phyum names
+taxa.sum$phylum <- factor(taxa.sum$phylum,
+                         levels=(unique(taxa.sum$phylum)))
+#Make sure it worked
+unique(taxa.sum$phylum)
+
+#Check for weird names and make Rare taxa name better.
+levels(taxa.sum$phylum)
+taxa.sum$phylum = gsub("p__", "", taxa.sum$phylum)
+
+
+#Keep for record back ups
+#write.csv(taxa.sum, file = "taxa.sum_Phylum.csv")
+
+mapfigs.plt = ggplot(taxa.sum, aes(area = Abundance*100, fill = phylum, label = round(Abundance*100, digits = 0))) +
+  geom_treemap()+
+  geom_treemap_text(colour = "white",
+                    place = "centre",
+                    size = 15) +
+  facet_grid(. ~ station_km)
+mapfigs.plt
+
+pdf("Figures/Taxa_formap.pdf", width = 9, height = 1.5)
+mapfigs.plt
+dev.off()
+
+png("Figures/Taxa_formap.png", width = 9, height = 1.5, units = "in", res = 120)
+mapfigs.plt
+dev.off()
+
+
+```
+
+
+
+#Individual taxa to individual PP
+##Set up physicochemical characteristics
+```{r}
+
+#Read in new PP dataframe as a clean data frame
+Physicochem.df = read.csv("C:/Users/hunefeldt/OneDrive/Desktop/PhD/R_analysis/MicrobialAnalsis/motus/PhysicochemicalParameters_mod.txt", encoding = "UTF-8", sep = "\t") %>%
+  subset(Sample_date!="Nov 21") #Remove data taken from shore
+
+#Clean up data  
+Physicochem.df$station_km = as.numeric(Physicochem.df$Stromkilometer)
+Physicochem.df$Stromkilometer = NULL
+Physicochem.df$station_km = gsub(608.165, 608, Physicochem.df$station_km)
+Physicochem.df$station_km = gsub(613, 713, Physicochem.df$station_km)
+Physicochem.df$station_km = gsub(632.88, 633, Physicochem.df$station_km)
+Physicochem.df$station_km = gsub(632.884, 633, Physicochem.df$station_km)
+Physicochem.df$station_km = gsub(633.022, 633, Physicochem.df$station_km)
+Physicochem.df$station_km = gsub(6334, 633, Physicochem.df$station_km)
+Physicochem.df$station_km = gsub(651.32, 651, Physicochem.df$station_km)
+Physicochem.df$station_km = gsub(651.323, 651, Physicochem.df$station_km)
+Physicochem.df$station_km = gsub(651.955, 651, Physicochem.df$station_km)
+Physicochem.df$station_km = gsub(6513, 651, Physicochem.df$station_km)
+Physicochem.df$station_km = gsub(665.41, 665, Physicochem.df$station_km)
+Physicochem.df$station_km = gsub(665.414, 665, Physicochem.df$station_km)
+Physicochem.df$station_km = gsub(665.546, 665, Physicochem.df$station_km)
+Physicochem.df$station_km = gsub(6654, 665, Physicochem.df$station_km)
+Physicochem.df$station_km = gsub(691.997, 692, Physicochem.df$station_km)
+Physicochem.df$station_km = gsub(692.010, 692, Physicochem.df$station_km)
+Physicochem.df$station_km = gsub(692.01, 692, Physicochem.df$station_km)
+Physicochem.df$station_km = gsub(694, 692, Physicochem.df$station_km)
+Physicochem.df$station_km = gsub(711.515, 713, Physicochem.df$station_km)
+Physicochem.df$station_km = gsub(712, 713, Physicochem.df$station_km)
+Physicochem.df$station_km = gsub(714.975, 713, Physicochem.df$station_km)
+Physicochem.df$station_km = gsub(714.98, 713, Physicochem.df$station_km)
+sort(unique(Physicochem.df$station_km))
+
+Physicochem.df = subset(Physicochem.df, station_km > 630)
+
+#Rename rows for downstream applications
+rownames(Physicochem.df) = Physicochem.df$Associatednumber
+
+#Remove redundant ones identified with correlated pearson tests
+PP_totest.ls = unique(colnames(Physicochem.df))
+
+
+
+PP_totest.ls = PP_totest.ls[PP_totest.ls != "Sample"]  # Removes elements that are "b"
+#PP_totest.ls = PP_totest.ls[PP_totest.ls != "Associatednumber"]  # Removes elements that are "b"
+PP_totest.ls = PP_totest.ls[PP_totest.ls != "DNA_concentration_ng.uL"]  # Removes elements that are "b"
+PP_totest.ls = PP_totest.ls[PP_totest.ls != "Station"]  # Removes elements that are "b"
+PP_totest.ls = PP_totest.ls[PP_totest.ls != "StationNumber"]  # Removes elements that are "b"
+#PP_totest.ls = PP_totest.ls[PP_totest.ls != "Sample_type"]  # Removes elements that are "b"
+PP_totest.ls = PP_totest.ls[PP_totest.ls != "Sample_date"]  # Removes elements that are "b"
+PP_totest.ls = PP_totest.ls[PP_totest.ls != "AccessionNumber_TBDSven"]  # Removes elements that are "b"
+PP_totest.ls = PP_totest.ls[PP_totest.ls != "POC_mgperL"]  # Removes elements that are "b"
+PP_totest.ls = PP_totest.ls[PP_totest.ls != "PTH_mgperL"]  # Removes elements that are "b"
+PP_totest.ls = PP_totest.ls[PP_totest.ls != "TN_mg.L"]  # Removes elements that are "b"
+PP_totest.ls = PP_totest.ls[PP_totest.ls != "Phosphate_uM"]  # Removes elements that are "b"
+PP_totest.ls = PP_totest.ls[PP_totest.ls != "Total_DIN_uM"]  # Removes elements that are "b"
+PP_totest.ls = PP_totest.ls[PP_totest.ls != "Temperature_TBDHereon"]  # Removes elements that are "b"
+PP_totest.ls = PP_totest.ls[PP_totest.ls != "Silicate_mg.L"]  # Removes elements that are "b"
+PP_totest.ls = PP_totest.ls[PP_totest.ls != "Ammonium_uM"]  # Removes elements that are "b"
+PP_totest.ls = PP_totest.ls[PP_totest.ls != "Nitrate_uM"]  # Removes elements that are "b"
+PP_totest.ls = PP_totest.ls[PP_totest.ls != "Nitrite_uM"]  # Removes elements that are "b"
+PP_totest.ls = PP_totest.ls[PP_totest.ls != "Ammonium_mg.L"]  # Removes elements that are "b"
+PP_totest.ls = PP_totest.ls[PP_totest.ls != "Silicate_uM"]  # Removes elements that are "b"
+PP_totest.ls = PP_totest.ls[PP_totest.ls != "SRP_uM"]  # Removes elements that are "b"
+PP_totest.ls = PP_totest.ls[PP_totest.ls != "RespirationRate_O2ug.L.h"]  # Removes elements that are "b"
+PP_totest.ls = PP_totest.ls[PP_totest.ls != "DIC_uM."]  # Removes elements that are "b"
+PP_totest.ls = PP_totest.ls[PP_totest.ls != "TotalDissolvedPhosphate_mg.L"]  # Removes elements that are "b"
+PP_totest.ls = PP_totest.ls[PP_totest.ls != "Sat_O2_Perc"]  # Removes elements that are "b"
+PP_totest.ls = PP_totest.ls[PP_totest.ls != "dCH4_uM"]  # Removes elements that are "b"
+PP_totest.ls = PP_totest.ls[PP_totest.ls != "dCO2_nM"]  # Removes elements that are "b"
+
+#Extract relevant columns
+PP_totest.df = Physicochem.df  %>% select(all_of(PP_totest.ls))
+
+#Make sure rownames have been preserved
+rownames(PP_totest.df)
+dim(PP_totest.df)
+
+#Extract water specific parameters
+PP_water.df = PP_totest.df %>%
+  subset(Sample_type == "Free_living") %>%
+  select(-SPM_mgperL, -TEP_um2perL, -CSP_um2perL, -PTC_mgperL , -PTN_mgperL, -DOC_uM.L, -DIC_uM.L, -Sample_type) %>%
+  distinct()
+#Extract particle specific parameters
+PP_particle.df = PP_totest.df %>%
+  subset(Sample_type!="Free_living") %>%
+  select(Associatednumber, PTC_mgperL, PTN_mgperL, SPM_mgperL, TEP_um2perL, CSP_um2perL, -Sample_type) %>%
+  distinct()
+
+#remove NAs and convert columns to numeric
+#PP_water.df = na.omit(PP_water.df)
+PP_water.df = as.data.frame(sapply(PP_water.df[,c(1:13)], as.numeric))
+
+#Apply row numbers from sample IDs
+rownames(PP_water.df) = PP_water.df$Associatednumber
+PP_water.df$Associatednumber = NULL
+rownames(PP_particle.df) = PP_particle.df$Associatednumber
+PP_particle.df$Associatednumber = NULL
+
+#Flip so columns are samples for dissimilarity assessment
+PP_water.df = t(PP_water.df)
+PP_particle.df = t(PP_particle.df)
+
+#Get sample names for microbiome comparison
+Samples_water.ls = colnames(PP_water.df)
+Samples_particle.ls = colnames(PP_particle.df)
+```
+
+##Set up microbiome taxa dataframes
+```{r}
+setwd("C:/Users/hunefeldt/OneDrive/Desktop/PhD/R_analysis/MicrobialAnalsis/motus/")
+path <- getwd()
+
+
+motus_final_taxa_metadata <- readRDS(file="motus_final_taxa_metadata.RDS")
+metadata <- readRDS(file="metadata.RDS")
+##Lets check out experimental scheme
+
+
+motus_final_taxa_metadata %>% 
+  select(sampleid, data_type, date, station, sample_type) %>% 
+  group_by(data_type, sample_type, date) %>% 
+  dplyr::summarise(count=n_distinct(sampleid)) %>% 
+  print(n=30) 
+
+##So when we consider fraction and date we see that Nov 21 has few samples, we should consider removing
+
+motus_final_taxa_metadata %>% 
+  select(sampleid, data_type, date, station, sample_type) %>% 
+  group_by(data_type, sample_type, station) %>% 
+  dplyr::summarise(count=n_distinct(sampleid)) %>% 
+  print(n=30) 
+
+##By station we see that Kollmar, SeemanshÃ¶ft and BunthausSpitze also were sampled infrequently, lets also remove these. 
+
+motus_final_taxa_metadata <- motus_final_taxa_metadata %>% 
+  filter(!grepl("Bunthaus|Kollmar|Seemans", station), !grepl("Nov 21", date))
+
+
+#so to do a ternary plot we actually need to create a physeq object really quick 
+motus_table <- motus_final_taxa_metadata %>%
+  filter(data_type == "METAG") %>%
+  select(mOTU, sampleid, counts) %>%
+  group_by(sampleid) %>% 
+  mutate(total=sum(counts)) %>% 
+  filter(total > 2400) %>%  ##Here we just remove those with low counts
+  select(-total) %>% 
+  ungroup() %>% 
+  pivot_wider(names_from = sampleid, values_from = counts, values_fill = 0) %>% 
+  column_to_rownames("mOTU") %>% 
+  phyloseq::otu_table(taxa_are_rows = TRUE)
+motus_taxa <- motus_final_taxa_metadata %>% 
+  filter(data_type == "METAG") %>%
+  select(mOTU, phylum, class, order, family, genus, species) %>% 
+  unique() %>% 
+  column_to_rownames("mOTU") %>% 
+  as.matrix() %>%
+  phyloseq::tax_table()
+motus_sampledata <- motus_final_taxa_metadata %>% 
+  filter(data_type == "METAG") %>%
+  select(-phylum, -class, -order, -family, -genus, -species, -counts, -mOTU, -domain) %>% 
+  unique() %>%  
+  column_to_rownames("sampleid") %>% 
+  sample_data()
+bicest_motu_ps <- phyloseq(motus_table, motus_taxa, motus_sampledata)
+bicest_motu_ps
+#bicest_motu_ps_v0 = bicest_motu_ps
+#bicest_motu_ps = bicest_motu_ps_v0
+
+Stupidworkaround.df = read.csv("C:/Users/hunefeldt/OneDrive/Desktop/PhD/R_analysis/MicrobialAnalsis/motus/SAMEAID_SampleID_simplified.csv", sep = ";")
+
+test = motus_sampledata
+i=1
+x=1
+for (i in 1:length(Stupidworkaround.df$BioSample)) {
+  for (x in 1:length(motus_sampledata$BioSample)) {
+  if(grepl(Stupidworkaround.df$BioSample[i], motus_sampledata$BioSample[x]) == T) {
+    
+    test$Associatednumber[x] = Stupidworkaround.df$Associatednumber[i]
+    
+    print(paste0("Matching ", motus_sampledata$BioSample[x], " with ", Stupidworkaround.df$BioSample[i]))
+    
+  }
+  }
+}
+
+i=1
+x=59
+test$TEP_um2perL = 0
+test$CSP_um2perL = 0
+for (i in 1:length(Physicochem.df$Associatednumber)) {
+  for (x in 1:length(test$Associatednumber)) {
+  if(grepl(Physicochem.df$Associatednumber[i], test$Associatednumber[x]) == T) {
+    
+    print(paste0("Matching ", test$Associatednumber[x], " with ", Physicochem.df$Associatednumber[i]))
+    
+    #Update relevant physicochemical parameters as German computers cause weird issues
+    test$ptc_mg_l[x] = Physicochem.df$PTC_mgperL[i]
+    test$spm_mg_l[x] = Physicochem.df$SPM_mgperL[i]
+    test$poc_mg_l[x] = Physicochem.df$POC_mgperL[i]
+    test$TEP_um2perL[x] = Physicochem.df$TEP_um2perL[i]
+    test$CSP_um2perL[x] = Physicochem.df$CSP_um2perL[i]
+    
+  }
+  }
+}
+
+    
+    
+
+bicest_motu_ps <- phyloseq(motus_table, motus_taxa, test)
+bicest_motu_ps@sam_data
+
+
+taxa.df <- tax_glom(bicest_motu_ps, taxrank = 'species') %>%#Merge the species at the Phylum level
+  transform_sample_counts(function(x) {x/sum(x)} ) %>% #Extract abundance data from phyloseq object
+  psmelt() %>%#Melt it into a dataframe
+  subset(date!="Nov 21")
+  
+taxa.df <- taxa.df[order(taxa.df$species),] #Order them at the Species level
+
+taxa.df$species <- as.character(taxa.df$species)
+  # group dataframe by Phylum, calculate relative abundance
+
+#Remove na values
+taxa.df$Abundance[grep(NaN, taxa.df$Abundance)] = 0
+
+#Remove annoying extras from taxonomic names
+taxa.df$phylum = gsub("p__", "", taxa.df$phylum)
+taxa.df$class = gsub("c__", "", taxa.df$class)
+taxa.df$order = gsub("o__", "", taxa.df$order)
+taxa.df$family = gsub("f__", "", taxa.df$family)
+taxa.df$genus = gsub("g__", "", taxa.df$genus)
+taxa.df$species = gsub("s__", "", taxa.df$species)
+taxa.df$species = gsub("s_", "", taxa.df$species)
+
+taxa.df$taxapath = paste0(taxa.df$phylum, "__", taxa.df$class, "__", taxa.df$order, "__", taxa.df$family, "__", taxa.df$genus, "__", taxa.df$species)
+
+Microbiome_wide_mOTU = taxa.df %>%
+  select(Abundance, Associatednumber, taxapath)
+
+
+#Long to wide, in preparation for transcripts per gene copy calculation
+# The arguments to spread():
+# - data: Data object
+# - key: Name of column containing the new column names
+# - value: Name of column containing values
+Microbiome_wide_mOTU <- data.frame(spread(Microbiome_wide_mOTU,
+                       key = Associatednumber, #Column that will contain new column names
+                       value = Abundance)) # Value that will fill new columns
+
+rownames(Microbiome_wide_mOTU) = Microbiome_wide_mOTU$taxapath
+Microbiome_wide_mOTU$taxapath = NULL
+
+colnames(Microbiome_wide_mOTU) = gsub("X","", colnames(Microbiome_wide_mOTU))
+```
+
+##Match samples between microbiome and PP and run dissimilarities
+```{r}
+####Set up dataframes and dissimilarities####
+# Only use samples where we have metadata
+Microbiome_particles.df = Microbiome_wide_mOTU[names(Microbiome_wide_mOTU) %in% Samples_particle.ls]
+Microbiome_water.df = Microbiome_wide_mOTU[names(Microbiome_wide_mOTU) %in% Samples_water.ls]
+
+#Check to make sure it worked
+dim(Microbiome_water.df)
+dim(Microbiome_particles.df)
+
+
+#Extract only microbial matched samples of Physicochemicals for dissimilarity otherwise mantel doesn't work
+PP_water_Microbiome.df = subset(PP_water.df, select = colnames(Microbiome_water.df))
+PP_particles_Microbiome.df = subset(PP_particle.df, select = colnames(Microbiome_particles.df))
+
+dim(PP_water_Microbiome.df)
+dim(PP_particles_Microbiome.df)
+
+
+#Run dissimilarity comparison between samples
+##Microbial
+Microbiome_water.diss = vegan::vegdist(t(Microbiome_water.df), method = "bray", na.rm = T)
+Microbiome_particles.diss = vegan::vegdist(t(Microbiome_particles.df), method = "bray", na.rm = T)
+#Pysicochemical
+PP_water_Microbiome.diss = vegan::vegdist(t(PP_water_Microbiome.df), method = "bray", na.rm = T)
+PP_particles_Microbiome.diss = vegan::vegdist(t(PP_particles_Microbiome.df), method = "bray", na.rm = T)
+
+
+
+####Mantel tests general ####
+
+#Whole microbial vs whole physicochemical
+vegan::mantel(Microbiome_water.diss, PP_water_Microbiome.diss) #p = 0.001, R=0.226
+vegan::mantel(Microbiome_particles.diss, PP_particles_Microbiome.diss) #p = 0.002, R=0.1128
+
+
+#Run loop for individual genes vs individual physicochemical parameters
+
+set.seed(2)
+#####Microbiome water ####
+Results_Microbiome_water.df = data.frame("Gene_KO" = "DELETEME",
+                     "PhysicochemicalParameter" = "DELETEME",
+                     "pvalue" = 99999,
+                     "Mantel_Rvalue" = 99999)
+i=1
+x=1
+for (i in 1:length(rownames(Microbiome_water.df))) {
+  for (x in 1:length(rownames(PP_water_Microbiome.df))) {
+    
+    #Extracting names
+    M.name = rownames(Microbiome_water.df[i,])
+    PP.name = rownames(as.data.frame(PP_water_Microbiome.df)[x,])
+    
+    #Make dissimilarity matrices
+    M.tmp = vegdist(t(Microbiome_water.df[i,]), method = "euclidean", na.rm = T)
+    PP.tmp = vegdist(PP_water_Microbiome.df[x,], method = "euclidean", na.rm = T)
+    
+    #Run mantel test
+    test.tmp = mantel(M.tmp, PP.tmp, na.rm = T)
+    
+    #Make df for results
+    Results.tmp = data.frame("Gene_KO" = M.name,
+                             "PhysicochemicalParameter" = PP.name,
+                             "pvalue" = test.tmp$signif,
+                             "Mantel_Rvalue" = test.tmp$statistic)
+    
+    #Combine results with previous dataframe
+    Results_Microbiome_water.df = rbind(Results_Microbiome_water.df, Results.tmp)
+    
+    
+  }
+  
+  print(paste0("Completed ", i, " out of ", length(rownames(Microbiome_water.df)), " taxa, which is ", round((i/length(rownames(Microbiome_water.df)))*100, digits = 2), "%"))
+  
+}
+
+#Check results and clean up dataframe
+Results_Microbiome_water.df = Results_Microbiome_water.df[-1,]
+Results_Microbiome_water.df
+
+#Subset to only significant gene hits
+Results_Microbiome_water.df = subset(Results_Microbiome_water.df, pvalue < 0.05)
+dim(Results_Microbiome_water.df)
+
+Top25_Fraction_Microbiome_water.df = Results_Microbiome_water.df %>% filter(Mantel_Rvalue > quantile(Mantel_Rvalue, 0.75))
+dim(Top25_Fraction_Microbiome_water.df)
+
+length(unique(Top25_Fraction_Microbiome_water.df$Gene_KO))
+unique(Top25_Fraction_Microbiome_water.df$PhysicochemicalParameter)
+
+
+#####Microbiome particles ####
+Results_Microbiome_particles.df = data.frame("Gene_KO" = "DELETEME",
+                     "PhysicochemicalParameter" = "DELETEME",
+                     "pvalue" = 99999,
+                     "Mantel_Rvalue" = 99999)
+i=1
+x=1
+for (i in 1:length(rownames(Microbiome_particles.df))) {
+  for (x in 1:length(rownames(PP_particles_Microbiome.df))) {
+    
+    #Extracting names
+    M.name = rownames(Microbiome_particles.df[i,])
+    PP.name = rownames(as.data.frame(PP_particles_Microbiome.df)[x,])
+    
+    #Make dissimilarity matrices
+    M.tmp = vegdist(t(Microbiome_particles.df[i,]), method = "euclidean", na.rm = T)
+    PP.tmp = vegdist(PP_particles_Microbiome.df[x,], method = "euclidean", na.rm = T)
+    
+    #Run mantel test
+    test.tmp = mantel(M.tmp, PP.tmp, na.rm = T)
+    
+    #Make df for results
+    Results.tmp = data.frame("Gene_KO" = M.name,
+                             "PhysicochemicalParameter" = PP.name,
+                             "pvalue" = test.tmp$signif,
+                             "Mantel_Rvalue" = test.tmp$statistic)
+    
+    #Combine results with previous dataframe
+    Results_Microbiome_particles.df = rbind(Results_Microbiome_particles.df, Results.tmp)
+    
+    
+  }
+  
+  print(paste0("Completed ", i, " out of ", length(rownames(Microbiome_particles.df)), " taxa, which is ", round((i/length(rownames(Microbiome_particles.df)))*100, digits = 2), "%"))
+  
+}
+
+#Check results and clean up dataframe
+Results_Microbiome_particles.df = Results_Microbiome_particles.df[-1,]
+Results_Microbiome_particles.df
+
+#Subset to only significant gene hits
+Results_Microbiome_particles.df = subset(Results_Microbiome_particles.df, pvalue < 0.05)
+dim(Results_Microbiome_particles.df)
+
+Top25_Fraction_Microbiome_particles.df = Results_Microbiome_particles.df %>% filter(Mantel_Rvalue > quantile(Mantel_Rvalue, 0.75))
+dim(Top25_Fraction_Microbiome_particles.df)
+
+length(unique(Top25_Fraction_Microbiome_particles.df$Gene_KO))
+unique(Top25_Fraction_Microbiome_particles.df$PhysicochemicalParameter)
+
+
+#### Combine all results ####
+
+Results_Microbiome_water.df$data_type = "mOTUs"
+Results_Microbiome_particles.df$data_type = "mOTUs"
+
+Results_Microbiome_water.df$environment = "Water"
+Results_Microbiome_particles.df$environment = "Particles"
+
+
+
+Results.df = rbind(Results_Microbiome_water.df, Results_Microbiome_particles.df)
+
+write.csv(Results.df, "C:/Users/hunefeldt/OneDrive/Desktop/PhD/R_analysis/MicrobialAnalsis/motus/Mantel_IndGenes_IndPP_mOTUs.csv")
+
+
+####Analyse ####
+#Reload dataframe and perform sanity check
+Results.df = read.csv("C:/Users/hunefeldt/OneDrive/Desktop/PhD/R_analysis/MicrobialAnalsis/motus/Mantel_IndGenes_IndPP_mOTUs.csv", row.names = 1)
+unique(Results.df$Gene_KO)
+unique(Results.df$PhysicochemicalParameter)
+dim(Results.df)
+
+#Subset to environments and sanity check
+Results_mOTUs_water.df = subset(Results.df, environment == "Water")
+Results_mOTUs_particles.df = subset(Results.df, environment == "Particles")
+dim(Results_mOTUs_water.df)
+unique(Results_mOTUs_water.df$PhysicochemicalParameter)
+dim(Results_mOTUs_particles.df)
+unique(Results_mOTUs_particles.df$PhysicochemicalParameter)
+
+#Calculate how many hits each PP has in each environment
+ggplot(Results_mOTUs_water.df, aes(x = PhysicochemicalParameter)) + 
+  geom_bar() +
+  geom_text(stat='count', aes(label=..count..), vjust=-1)
+ggplot(Results_mOTUs_particles.df, aes(x = PhysicochemicalParameter)) + 
+  geom_bar() +
+  geom_text(stat='count', aes(label=..count..), vjust=-1)
+
+
+####Quantify each parameters influence ####
+
+MeanPP.df = Results_mOTUs_water.df %>%
+  group_by(PhysicochemicalParameter) %>%
+  dplyr::summarise(mean_val = mean(Mantel_Rvalue), sd_val = sd(Mantel_Rvalue))%>% 
+  arrange(mean_val, decreasing = T)
+MeanPP.df
+MeanPP.df = Results_mOTUs_particles.df %>%
+  group_by(PhysicochemicalParameter) %>%
+  dplyr::summarise(mean_val = mean(Mantel_Rvalue), sd_val = sd(Mantel_Rvalue))%>% 
+  arrange(mean_val, decreasing = T)
+MeanPP.df
+
+
+#### Most influential - Salinity and O2 ####
+
+Salinity_Sp.df = subset(Results_mOTUs_water.df, PhysicochemicalParameter == "Salinity_PSU")
+dim(Salinity_Sp.df)
+
+TopSalinity_Sp.df = Salinity_Sp.df %>% filter(Mantel_Rvalue > quantile(Mantel_Rvalue, 0.99))
+
+
+O2_Sp.df = subset(Results_mOTUs_water.df, PhysicochemicalParameter == "O2_uM")
+dim(O2_Sp.df)
+
+TopO2_Sp.df = O2_Sp.df %>% filter(Mantel_Rvalue > quantile(Mantel_Rvalue, 0.99))
+
+
+dCO2_Sp.df = subset(Results_mOTUs_water.df, PhysicochemicalParameter == "dCO2_uM")
+dim(dCO2_Sp.df)
+
+TopdCO2_Sp.df = dCO2_Sp.df %>% filter(Mantel_Rvalue > quantile(Mantel_Rvalue, 0.98))
+TopdCO2_Sp.df
+
+#### Extract according to MAGs - CSP ####
+
+Results.df = read.csv("C:/Users/hunefeldt/OneDrive/Desktop/PhD/R_analysis/MicrobialAnalsis/motus/Mantel_IndGenes_IndPP_mOTUs.csv", row.names = 1)
+unique(Results.df$Gene_KO)
+unique(Results.df$PhysicochemicalParameter)
+dim(Results.df)
+
+#Subset to environments and sanity check
+Results_mOTUs_water.df = subset(Results.df, environment == "Water")
+Results_mOTUs_particles.df = subset(Results.df, environment == "Particles")
+
+#CSP showed 7 distinct correlation, however one of those was NAs at all taxonomic levels, so will be excluded due to lack of specificity.
+
+#Read in list of MG and MT taxa
+MG_MT_taxa_CSP.df = read.csv("C:/Users/hunefeldt/OneDrive/Desktop/PhD/R_analysis/MicrobialAnalsis/motus/MG_MT_taxa_CSP.csv", row.names = 1)
+
+#Remove domain level information from MG and MT taxonomic names
+MG_MT_taxa_CSP.df$fulltaxa = gsub("Bacteria__", "", MG_MT_taxa_CSP.df$fulltaxa)
+MG_MT_taxa_CSP.df$fulltaxa = gsub("__", "", MG_MT_taxa_CSP.df$fulltaxa)
+
+#This is the relevant mOTU object for all particle correlations
+Results_mOTUs_particles.df
+Results_mOTUs_particles.df$Gene_KO = gsub("__", "", Results_mOTUs_particles.df$Gene_KO)
+
+#Subset to only include taxa that are the same
+MG_MT_mOTU_taxa_CSP.df = subset(Results_mOTUs_particles.df, Gene_KO %in% MG_MT_taxa_CSP.df$fulltaxa)
+
+#Make sure it's worked
+head(Results_mOTUs_particles.df$Gene_KO)
+head(MG_MT_taxa_CSP.df$fulltaxa)
+MG_MT_mOTU_taxa_CSP.df
+
+#Subset to only CSP matches
+CSP_MT_MG_mOTU_matches.ls = subset(MG_MT_mOTU_taxa_CSP.df, PhysicochemicalParameter == "CSP_um2perL")
+
+
+
+#### Extract according to MAGs - PTN - species & genus level ####
+
+Results.df = read.csv("C:/Users/hunefeldt/OneDrive/Desktop/PhD/R_analysis/MicrobialAnalsis/motus/Mantel_IndGenes_IndPP_mOTUs.csv", row.names = 1)
+unique(Results.df$Gene_KO)
+unique(Results.df$PhysicochemicalParameter)
+dim(Results.df)
+
+#Subset to environments and sanity check
+Results_mOTUs_water.df = subset(Results.df, environment == "Water")
+Results_mOTUs_particles.df = subset(Results.df, environment == "Particles")
+
+#PTN showed 7 distinct correlation, however one of those was NAs at all taxonomic levels, so will be excluded due to lack of specificity.
+
+#Read in list of MG and MT taxa
+MG_MT_taxa_PTN.df = read.csv("C:/Users/hunefeldt/OneDrive/Desktop/PhD/R_analysis/MicrobialAnalsis/motus/MG_MT_taxa_PTN.csv", row.names = 1)
+
+#Remove domain level information from MG and MT taxonomic names
+MG_MT_taxa_PTN.df$fulltaxa = gsub("Bacteria__", "", MG_MT_taxa_PTN.df$fulltaxa)
+MG_MT_taxa_PTN.df$fulltaxa = gsub("__", "", MG_MT_taxa_PTN.df$fulltaxa)
+
+#This is the relevant mOTU object for all particle correlations
+Results_mOTUs_particles.df
+Results_mOTUs_particles.df$Gene_KO = gsub("__", "", Results_mOTUs_particles.df$Gene_KO)
+
+#Subset to only include taxa that are the same
+MG_MT_mOTU_taxa_PTN.df = subset(Results_mOTUs_particles.df, Gene_KO %in% MG_MT_taxa_PTN.df$fulltaxa)
+
+#Make sure it's worked
+head(Results_mOTUs_particles.df$Gene_KO)
+head(MG_MT_taxa_PTN.df$fulltaxa)
+MG_MT_mOTU_taxa_PTN.df
+
+#Subset to only PTN matches
+PTN_MT_MG_mOTU_matches.ls = subset(MG_MT_mOTU_taxa_PTN.df, PhysicochemicalParameter == "PTN_um2perL")
+
+
+
+
+##Do at Genus level now, as species didn't work
+
+Results.df = read.csv("C:/Users/hunefeldt/OneDrive/Desktop/PhD/R_analysis/MicrobialAnalsis/motus/Mantel_IndGenes_IndPP_mOTUs.csv", row.names = 1)
+unique(Results.df$Gene_KO)
+unique(Results.df$PhysicochemicalParameter)
+dim(Results.df)
+
+#Subset to environments and sanity check
+Results_mOTUs_water.df = subset(Results.df, environment == "Water")
+Results_mOTUs_particles.df = subset(Results.df, environment == "Particles")
+
+#This is the relevant mOTU object for all particle correlations
+Results_mOTUs_particles.df
+#Make new column with all taxa info except for species
+Results_mOTUs_particles.df = Results_mOTUs_particles.df %>%
+  separate(Gene_KO, into = c("col1", "col2", "col3", "col4", "col5"), sep = "__")
+Results_mOTUs_particles.df$Gene_KO = paste0(Results_mOTUs_particles.df$col1, Results_mOTUs_particles.df$col2, Results_mOTUs_particles.df$col3, Results_mOTUs_particles.df$col4, Results_mOTUs_particles.df$col5)
+#Results_mOTUs_particles.df$Gene_KO = gsub("__", "", Results_mOTUs_particles.df$Gene_KO)
+
+#PTN showed 7 distinct correlation, however one of those was NAs at all taxonomic levels, so will be excluded due to lack of specificity.
+
+#Read in list of MG and MT taxa
+MG_MT_taxa_PTN.df = read.csv("C:/Users/hunefeldt/OneDrive/Desktop/PhD/R_analysis/MicrobialAnalsis/motus/MG_MT_taxa_PTN.csv", row.names = 1)
+
+#Remove domain level information from MG and MT taxonomic names
+MG_MT_taxa_PTN.df$fulltaxa = gsub("Bacteria__", "", MG_MT_taxa_PTN.df$fulltaxa)
+#Make new column with all taxa info except for species
+MG_MT_taxa_PTN.df = MG_MT_taxa_PTN.df %>%
+  separate(fulltaxa, into = c("col1", "col2", "col3", "col4", "col5"), sep = "__")
+MG_MT_taxa_PTN.df$fulltaxa = paste0(MG_MT_taxa_PTN.df$col1, MG_MT_taxa_PTN.df$col2, MG_MT_taxa_PTN.df$col3, MG_MT_taxa_PTN.df$col4, MG_MT_taxa_PTN.df$col5)
+
+
+
+
+#Subset to only include taxa that are the same
+MG_MT_mOTU_taxa_PTN.df = subset(Results_mOTUs_particles.df, Gene_KO %in% MG_MT_taxa_PTN.df$fulltaxa)
+
+#Make sure it's worked
+unique(Results_mOTUs_particles.df$Gene_KO)
+unique(MG_MT_taxa_PTN.df$fulltaxa)
+MG_MT_mOTU_taxa_PTN.df
+
+
+#Subset to only PTN matches
+PTN_MT_MG_mOTU_matches.ls = subset(MG_MT_mOTU_taxa_PTN.df, PhysicochemicalParameter == "PTN_mgperL")
+
+
+#### Extract according to MAGs - Sal - species & genus level ####
+
+Results.df = read.csv("C:/Users/hunefeldt/OneDrive/Desktop/PhD/R_analysis/MicrobialAnalsis/motus/Mantel_IndGenes_IndPP_mOTUs.csv", row.names = 1)
+unique(Results.df$Gene_KO)
+unique(Results.df$PhysicochemicalParameter)
+dim(Results.df)
+
+#Subset to environments and sanity check
+Results_mOTUs_water.df = subset(Results.df, environment == "Water")
+Results_mOTUs_particles.df = subset(Results.df, environment == "Particles")
+
+#Read in list of MG and MT taxa
+MG_MT_taxa_Sal.df = read.csv("C:/Users/hunefeldt/OneDrive/Desktop/PhD/R_analysis/MicrobialAnalsis/motus/MG_MT_taxa_Sal.csv", row.names = 1)
+
+#Remove domain level information from MG and MT taxonomic names
+MG_MT_taxa_Sal.df$fulltaxa = gsub("Bacteria__", "", MG_MT_taxa_Sal.df$fulltaxa)
+MG_MT_taxa_Sal.df$fulltaxa = gsub("__", "", MG_MT_taxa_Sal.df$fulltaxa)
+
+#This is the relevant mOTU object for all particle correlations
+Results_mOTUs_particles.df
+Results_mOTUs_particles.df$Gene_KO = gsub("__", "", Results_mOTUs_particles.df$Gene_KO)
+
+#Subset to only include taxa that are the same
+MG_MT_mOTU_taxa_Sal.df = subset(Results_mOTUs_particles.df, Gene_KO %in% MG_MT_taxa_Sal.df$fulltaxa)
+
+#Make sure it's worked
+head(Results_mOTUs_particles.df$Gene_KO)
+head(MG_MT_taxa_Sal.df$fulltaxa)
+MG_MT_mOTU_taxa_Sal.df
+
+#Subset to only Sal matches
+Sal_MT_MG_mOTU_matches.ls = subset(MG_MT_mOTU_taxa_Sal.df, PhysicochemicalParameter == "Sal_um2perL")
+
+
+
+
+##Do at Genus level now, as species didn't work
+
+Results.df = read.csv("C:/Users/hunefeldt/OneDrive/Desktop/PhD/R_analysis/MicrobialAnalsis/motus/Mantel_IndGenes_IndPP_mOTUs.csv", row.names = 1)
+unique(Results.df$Gene_KO)
+unique(Results.df$PhysicochemicalParameter)
+dim(Results.df)
+
+#Subset to environments and sanity check
+Results_mOTUs_water.df = subset(Results.df, environment == "Water")
+Results_mOTUs_particles.df = subset(Results.df, environment == "Particles")
+
+#This is the relevant mOTU object for all particle correlations
+Results_mOTUs_particles.df
+#Make new column with all taxa info except for species
+Results_mOTUs_particles.df = Results_mOTUs_particles.df %>%
+  separate(Gene_KO, into = c("col1", "col2", "col3", "col4", "col5"), sep = "__")
+Results_mOTUs_particles.df$Gene_KO = paste0(Results_mOTUs_particles.df$col1, Results_mOTUs_particles.df$col2, Results_mOTUs_particles.df$col3, Results_mOTUs_particles.df$col4, Results_mOTUs_particles.df$col5)
+#Results_mOTUs_particles.df$Gene_KO = gsub("__", "", Results_mOTUs_particles.df$Gene_KO)
+
+#Sal showed 7 distinct correlation, however one of those was NAs at all taxonomic levels, so will be excluded due to lack of specificity.
+
+#Read in list of MG and MT taxa
+MG_MT_taxa_Sal.df = read.csv("C:/Users/hunefeldt/OneDrive/Desktop/PhD/R_analysis/MicrobialAnalsis/motus/MG_MT_taxa_Sal.csv", row.names = 1)
+
+#Remove domain level information from MG and MT taxonomic names
+MG_MT_taxa_Sal.df$fulltaxa = gsub("Bacteria__", "", MG_MT_taxa_Sal.df$fulltaxa)
+#Make new column with all taxa info except for species
+MG_MT_taxa_Sal.df = MG_MT_taxa_Sal.df %>%
+  separate(fulltaxa, into = c("col1", "col2", "col3", "col4", "col5"), sep = "__")
+MG_MT_taxa_Sal.df$fulltaxa = paste0(MG_MT_taxa_Sal.df$col1, MG_MT_taxa_Sal.df$col2, MG_MT_taxa_Sal.df$col3, MG_MT_taxa_Sal.df$col4, MG_MT_taxa_Sal.df$col5)
+
+
+
+
+#Subset to only include taxa that are the same
+MG_MT_mOTU_taxa_Sal.df = subset(Results_mOTUs_particles.df, Gene_KO %in% MG_MT_taxa_Sal.df$fulltaxa)
+
+#Make sure it's worked
+unique(Results_mOTUs_particles.df$Gene_KO)
+unique(MG_MT_taxa_Sal.df$fulltaxa)
+MG_MT_mOTU_taxa_Sal.df
+
+
+#Subset to only Sal matches
+Sal_MT_MG_mOTU_matches.ls = subset(MG_MT_mOTU_taxa_Sal.df, PhysicochemicalParameter == "Sal_mgperL")
+
+#### Extract according to MAGs - dCO2 - species & genus level ####
+
+Results.df = read.csv("C:/Users/hunefeldt/OneDrive/Desktop/PhD/R_analysis/MicrobialAnalsis/motus/Mantel_IndGenes_IndPP_mOTUs.csv", row.names = 1)
+unique(Results.df$Gene_KO)
+unique(Results.df$PhysicochemicalParameter)
+dim(Results.df)
+
+#Subset to environments and sanity check
+Results_mOTUs_water.df = subset(Results.df, environment == "Water")
+Results_mOTUs_particles.df = subset(Results.df, environment == "Particles")
+
+#Read in list of MG and MT taxa
+MG_MT_taxa_dCO2.df = read.csv("C:/Users/hunefeldt/OneDrive/Desktop/PhD/R_analysis/MicrobialAnalsis/motus/MG_MT_taxa_dCO2.csv", row.names = 1)
+
+#Remove domain level information from MG and MT taxonomic names
+MG_MT_taxa_dCO2.df$fulltaxa = gsub("Bacteria__", "", MG_MT_taxa_dCO2.df$fulltaxa)
+MG_MT_taxa_dCO2.df$fulltaxa = gsub("__", "", MG_MT_taxa_dCO2.df$fulltaxa)
+
+#This is the relevant mOTU object for all particle correlations
+Results_mOTUs_particles.df
+Results_mOTUs_particles.df$Gene_KO = gsub("__", "", Results_mOTUs_particles.df$Gene_KO)
+
+#Subset to only include taxa that are the same
+MG_MT_mOTU_taxa_dCO2.df = subset(Results_mOTUs_particles.df, Gene_KO %in% MG_MT_taxa_dCO2.df$fulltaxa)
+
+#Make sure it's worked
+head(Results_mOTUs_particles.df$Gene_KO)
+head(MG_MT_taxa_dCO2.df$fulltaxa)
+MG_MT_mOTU_taxa_dCO2.df
+
+#Subset to only dCO2 matches
+dCO2_MT_MG_mOTU_matches.ls = subset(MG_MT_mOTU_taxa_dCO2.df, PhysicochemicalParameter == "dCO2_um2perL")
+
+
+
+
+##Do at Genus level now, as species didn't work
+
+Results.df = read.csv("C:/Users/hunefeldt/OneDrive/Desktop/PhD/R_analysis/MicrobialAnalsis/motus/Mantel_IndGenes_IndPP_mOTUs.csv", row.names = 1)
+unique(Results.df$Gene_KO)
+unique(Results.df$PhysicochemicalParameter)
+dim(Results.df)
+
+#Subset to environments and sanity check
+Results_mOTUs_water.df = subset(Results.df, environment == "Water")
+Results_mOTUs_particles.df = subset(Results.df, environment == "Particles")
+
+#This is the relevant mOTU object for all particle correlations
+Results_mOTUs_particles.df
+#Make new column with all taxa info except for species
+Results_mOTUs_particles.df = Results_mOTUs_particles.df %>%
+  separate(Gene_KO, into = c("col1", "col2", "col3", "col4", "col5"), sep = "__")
+Results_mOTUs_particles.df$Gene_KO = paste0(Results_mOTUs_particles.df$col1, Results_mOTUs_particles.df$col2, Results_mOTUs_particles.df$col3, Results_mOTUs_particles.df$col4, Results_mOTUs_particles.df$col5)
+#Results_mOTUs_particles.df$Gene_KO = gsub("__", "", Results_mOTUs_particles.df$Gene_KO)
+
+#dCO2 showed 7 distinct correlation, however one of those was NAs at all taxonomic levels, so will be excluded due to lack of specificity.
+
+#Read in list of MG and MT taxa
+MG_MT_taxa_dCO2.df = read.csv("C:/Users/hunefeldt/OneDrive/Desktop/PhD/R_analysis/MicrobialAnalsis/motus/MG_MT_taxa_dCO2.csv", row.names = 1)
+
+#Remove domain level information from MG and MT taxonomic names
+MG_MT_taxa_dCO2.df$fulltaxa = gsub("Bacteria__", "", MG_MT_taxa_dCO2.df$fulltaxa)
+#Make new column with all taxa info except for species
+MG_MT_taxa_dCO2.df = MG_MT_taxa_dCO2.df %>%
+  separate(fulltaxa, into = c("col1", "col2", "col3", "col4", "col5"), sep = "__")
+MG_MT_taxa_dCO2.df$fulltaxa = paste0(MG_MT_taxa_dCO2.df$col1, MG_MT_taxa_dCO2.df$col2, MG_MT_taxa_dCO2.df$col3, MG_MT_taxa_dCO2.df$col4, MG_MT_taxa_dCO2.df$col5)
+
+
+
+
+#Subset to only include taxa that are the same
+MG_MT_mOTU_taxa_dCO2.df = subset(Results_mOTUs_particles.df, Gene_KO %in% MG_MT_taxa_dCO2.df$fulltaxa)
+
+#Make sure it's worked
+unique(Results_mOTUs_particles.df$Gene_KO)
+unique(MG_MT_taxa_dCO2.df$fulltaxa)
+MG_MT_mOTU_taxa_dCO2.df
+
+
+#Subset to only dCO2 matches
+dCO2_MT_MG_mOTU_matches.ls = subset(MG_MT_mOTU_taxa_dCO2.df, PhysicochemicalParameter == "dCO2_mgperL")
+
+#### Top 5 mOTUs####
+
+
+#Extract top 5 taxa in each environment
+Top5_Fraction_mOTUs_water.df = Results_mOTUs_water.df %>% filter(Mantel_Rvalue > quantile(Mantel_Rvalue, 0.998))
+Top5_Fraction_mOTUs_water.df # Need Salinity
+Top5_Fraction_mOTUs_particles.df = Results_mOTUs_particles.df %>% filter(Mantel_Rvalue > quantile(Mantel_Rvalue, 0.993))
+Top5_Fraction_mOTUs_particles.df # Need SPM and PTC
+
+dim(Results_mOTUs_particles.df)
+
+#Make a list for extraction from phyloseq object and downstream plots
+Top5_water.ls = Top5_Fraction_mOTUs_water.df$Gene_KO
+Top5_particles.ls = Top5_Fraction_mOTUs_particles.df$Gene_KO
+
+#Extract only top 5 taxa
+Top5_water.df = subset(taxa.df, taxapath %in% Top5_water.ls)
+Top5_particles.df = subset(taxa.df, taxapath %in% Top5_particles.ls)
+
+
+#Remove non-environment samples for water and particles
+Top5_water.df = subset(Top5_water.df, Associatednumber %in% colnames(Microbiome_water.df))
+Top5_particles.df = subset(Top5_particles.df, Associatednumber %in% colnames(Microbiome_particles.df))
+                                    
+
+# Make water plots
+salinity.plt = ggplot(Top5_water.df, 
+                      aes(x = salinity, 
+                          y = Abundance*100, 
+                          colour = taxapath))+
+  geom_point()+
+  geom_smooth()+
+  My_Theme
+salinity.plt
+
+#Make particle plots
+CSP.plt = ggplot(subset(Top5_particles.df, taxapath!= "Pseudomonadota__Gammaproteobacteria__Xanthomonadales__SZUA-36__JABDPF01__"), 
+                 aes(x = as.numeric(CSP_um2perL), 
+                     y = Abundance*100, 
+                     colour = taxapath))+
+  geom_point()+
+  geom_smooth()+
+  My_Theme
+CSP.plt
+SPM.plt = ggplot(subset(Top5_particles.df, taxapath == "Pseudomonadota__Gammaproteobacteria__Xanthomonadales__SZUA-36__JABDPF01__"), 
+                 aes(x = as.numeric(spm_mg_l), 
+                     y = Abundance*100, 
+                     colour = taxapath))+
+  geom_point()+
+  geom_smooth()+
+  My_Theme
+SPM.plt
+
+ggpubr::ggarrange(salinity.plt,
+          CSP.plt, SPM.plt)
+
+pdf("Figures/PP_mOTUs.pdf", width = 36, height = 12)
+ggpubr::ggarrange(salinity.plt,
+          CSP.plt, SPM.plt)
+dev.off()
+
+
+
+```
+#Significant correlations between genes and mOTUs?
+#Fraction differences plot
+#Transcripts per gene copy
+##Prepare data frame
+```{r}
+#Reset for clean analysis
+bicest_motu_ps = bicest_motu_ps_v0
+
+#Extract dataframe from phyloseq object
+bicest_motu.df <- tax_glom(bicest_motu_ps, taxrank = 'species') %>%#Merge at the species level
+  transform_sample_counts(function(x) {x/sum(x)} ) %>% #Extract abundance data from phyloseq object
+  psmelt() #Melt it into a dataframe
+
+```
+
+##Run Statistical Fraction test
+```{r}
+
+
+#Remove annoying extras from taxonomic names
+bicest_motu.df$phylum = gsub("p__", "", bicest_motu.df$phylum)
+bicest_motu.df$class = gsub("c__", "", bicest_motu.df$class)
+bicest_motu.df$order = gsub("o__", "", bicest_motu.df$order)
+bicest_motu.df$family = gsub("f__", "", bicest_motu.df$family)
+bicest_motu.df$genus = gsub("g__", "", bicest_motu.df$genus)
+bicest_motu.df$species = gsub("s__", "", bicest_motu.df$species)
+bicest_motu.df$species = gsub("s_", "", bicest_motu.df$species)
+
+#Add comprehensive taxa terminology as a single column
+bicest_motu.df$taxa = paste0(bicest_motu.df$phylum, "__", 
+                             bicest_motu.df$class, "__", 
+                             bicest_motu.df$order, "__", 
+                             bicest_motu.df$family, "__", 
+                             bicest_motu.df$genus, "__", 
+                             bicest_motu.df$species)
+
+#Extract list of genes
+uniquemOTU.ls = unique(bicest_motu.df$taxa)
+uniquemOTU.ls
+
+
+#Remove excess information from the dataframe
+bicest_motu_mod.df = bicest_motu.df %>% 
+  select(Abundance, station_km, date, sample_type, taxa, BioSample)
+
+#Make results table for LH
+Results_LH.df = data.frame(Taxa = "DELETEME",
+                           Suspended.mOTU_abundance = 9999,
+                           Sinking.mOTU_abundance = 9999,
+                           Sample_type.r = 9999,
+                           Sample_type.p = 9999)
+
+i="Proteobacteria__Alphaproteobacteria__Pelagibacterales__Pelagibacteraceae__Pelagibacter__Pelagibacter ubique"
+#Get significant differences between metagenomes and metatranscriptomes and then Suspended and Sinking particles
+for (i in uniquemOTU.ls) {
+  print(paste0("Working on ", i, ". Number ", which(uniquemOTU.ls == i), " out of ", length(uniquemOTU.ls)))
+  
+  #Subset to only one KO entry
+  tmp.sbst = subset(bicest_motu_mod.df, taxa == i & date!="Nov 21")
+  
+  #Remove samples with missing metagenome information
+  tmp.sbst$Abundance = as.numeric(tmp.sbst$Abundance)
+  
+  #Add more info - remove NA's and Infinite numbers
+  tmp.sbst = tmp.sbst %>%
+  mutate_at(c("Abundance"), ~replace(., is.na(.), 0))
+  
+  
+  
+  
+  #Run significance test between suspended and sinking particles
+  
+  #Separate into suspended and sinking particles
+  tmp.l = subset(tmp.sbst, sample_type == "Light_fraction")
+  tmp.h = subset(tmp.sbst, sample_type == "Heavy_fraction")
+  
+  #Subset for dataframes to match
+  tmp.l = subset(tmp.l, BioSample!= "SAMEA110290340" )
+  
+  #tmp.l[,c(1,7,11,14,25,29:32)]
+  #tmp.h[,c(1,7,11,14,25,29:32)]
+  print(paste0("Suspended particles have ", dim(tmp.l)[1], " samples, and sinking have ",  dim(tmp.h)[1]))
+  
+  #Run mantel test
+  test1 = vegdist(tmp.l$Abundance, method = "euclidean")
+  test2 = vegdist(tmp.h$Abundance, method = "euclidean")
+  tmp.m = vegan::mantel(test1, test2)
+
+  #Make temporary dataframe with results
+  tmp.res = data.frame(Taxa = paste0(i),
+                       Suspended.mOTU_abundance = mean(tmp.l$Abundance, na.rm = T),
+                       Sinking.mOTU_abundance = mean(tmp.h$Abundance, na.rm = T),
+                       Sample_type.r = tmp.m$statistic,
+                       Sample_type.p = tmp.m$signif)
+  
+  
+  Results_LH.df = rbind(Results_LH.df, tmp.res)
+  
+}
+#Check results and clean up dataframe
+Results_LH.df = Results_LH.df[-1,]
+Results_LH.df
+
+#Subset to only significant gene hits
+Results_SignLH.df = subset(Results_LH.df, Sample_type.p < 0.05)
+dim(Results_SignLH.df)
+
+
+Top25_Fraction.df = Results_SignLH.df %>% filter(Sample_type.r > quantile(Sample_type.r, 0.75))
+
+ggplot(Top25_Fraction.df, aes(y = -log10(Sample_type.p), x = log2(Sample_type.r)))+
+  geom_point()
+
+Top25_Fraction.ls = Top25_Fraction.df$Taxa
+
+
+```
+
+##Make Gene plot 
+```{r}
+
+
+####Create dataframe####
+#Reset for clean analysis
+bicest_motu_ps = bicest_motu_ps_v0
+
+#Extract dataframe from phyloseq object
+bicest_motu.df <- tax_glom(bicest_motu_ps, taxrank = 'species') %>%#Merge at the species level
+  transform_sample_counts(function(x) {x/sum(x)} ) %>% #Extract abundance data from phyloseq object
+  psmelt() #Melt it into a dataframe
+
+####Run test####
+
+amoAClean_CO2CH4_tbl_long = read.csv( "amoAClean_CO2CH4_OccurrenceFiltered_V2.csv")
+#Remove all but the relevant object to run anova models
+#library(gdata)
+#keep(amoAClean_CO2CH4_tbl_long)
+#keep(amoAClean_CO2CH4_tbl_long, sure = TRUE, all = TRUE)
+
+#CO2CH4_tbl_long %>% separate(col = DESCRIPTION, sep = ";", into = c("SName", "LName"))
+
+#Reorder factors
+amoAClean_CO2CH4_tbl_long$Station = factor(amoAClean_CO2CH4_tbl_long$Station,
+                                   levels = c("Medemgrund",
+                                              "Brunsbuettel",
+                                              "Schwarztonnensand",
+                                              "Twielenfleth",
+                                              "Muehlenberger Loch"))
+
+amoAClean_CO2CH4_tbl_long$Sample_date = factor(amoAClean_CO2CH4_tbl_long$Sample_date,
+                                   levels = c("Mai 21",
+                                              "Jul 21",
+                                              "Feb 22",
+                                              "Mai 22",
+                                              "Jun 22",
+                                              "Nov 22"))
+
+#Adjust values for accuracy and log transform
+#amoAClean_CO2CH4_tbl_long$counts = (amoAClean_CO2CH4_tbl_long$counts/1000)#+1
+#CO2CH4_tbl_long$counts = CO2CH4_tbl_long$counts + 1
+
+#Make data_type names informative
+amoAClean_CO2CH4_tbl_long$data_type = gsub("METAG", "Metagenomes", amoAClean_CO2CH4_tbl_long$data_type)
+amoAClean_CO2CH4_tbl_long$data_type = gsub("METAT", "Transcriptomes", amoAClean_CO2CH4_tbl_long$data_type)
+
+#BugHunt.df = amoAClean_CO2CH4_tbl_long[c(1:200000),]
+
+Complete_Metadata.df = read.csv("SAMEAID_SampleID.csv", sep = ";", header = T)[,c(1,10:15)]
+
+amoAClean_CO2CH4_tbl_long = amoAClean_CO2CH4_tbl_long %>%
+  select(-X) %>%
+  left_join(Complete_Metadata.df, by = c("BioSample" = "AccessionNumber_TBDSven")) %>%
+  mutate_at(c('counts'), as.numeric) %>%
+  distinct()
+dim(amoAClean_CO2CH4_tbl_long)
+
+
+
+#Read in dataframe
+SignGenes_Fraction.df = read.csv("GeneSignificant_Fraction.csv", header = T, sep = ";")
+
+SignGenes_Fraction.df = subset(SignGenes_Fraction.df, Sample_type.eta2 > 0.3)
+dim(SignGenes_Fraction.df)
+# Plot preferences
+amoAClean_CO2CH4Profiles.plt = ggplot(SignGenes_Fraction.df) + 
+  geom_tile(aes(x=data_type, y=fct_reorder(.f = Gene, .x = Sample_type.eta2, .fun = mean, .na_rm = T, .desc = F), fill=Sample_type.eta2)) +
+  #facet_wrap(Direction ~ data_type * Sample_date, ncol = 9)+
+  scale_fill_gradient2(expression(paste("eta"^{2})), low= "magenta", mid = "white", high = "black", na.value = "red")+
+  ggtitle("CO2/CH4")+
+  ylab("Significantly changing \nCO2/CH4 Genes")+
+  xlab("Sequencing type")+
+  My_Theme+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+# visualise
+amoAClean_CO2CH4Profiles.plt 
+
+#Save plots
+#pdf("Figures/CO2CH4_Unknown Reversibility.pdf", width = 12, height = 12)
+#CO2CH4Profiles.plt
+#dev.off()
+
+png("Figures/CO2CH4_SignfractionTop25.png", width = 10, height = 12, units = "in", res = 120)
+amoAClean_CO2CH4Profiles.plt
+dev.off()
+
+
+
+
+
+ 
+```
+
+#Make Elbe map - defunct
+
+```{r}
+
+install.packages(c("cowplot", "googleway", "ggplot2", "ggrepel", 
+"ggspatial", "libwgeom", "sf", "rnaturalearth", "rnaturalearthdata"))
+
+
+library("ggplot2")
+theme_set(theme_bw())
+library("sf")
+
+library("rnaturalearth")
+library("rnaturalearthdata")
+
+world <- ne_countries(scale = "large", returnclass = "sf", country = "Germany")
+class(world)
+
+library("ggspatial")
+
+ggplot(data = world) +
+    geom_sf() +
+  annotation_scale(location = "bl", 
+                   width_hint = 0.5) +
+  annotation_north_arrow(location = "bl", 
+                         which_north = "true", 
+                         pad_x = unit(0.75, "in"), 
+                         pad_y = unit(0.5, "in"),
+                         style = north_arrow_fancy_orienteering) +
+    coord_sf(lims_method = "box", xlim = c(8.5, 10), ylim = c(53.5, 54), expand = FALSE, clip = "on")
+
+```
+
+
+```{r}
+library(sf)
+#> Linking to GEOS 3.8.0, GDAL 3.0.4, PROJ 6.3.1; sf_use_s2() is TRUE
+library(tidyverse)
+theme_set(theme_bw())
+library(giscoR)
+
+ger_fedtstates <- gisco_get_nuts(
+  nuts_level = 3,
+  resolution = 1,
+  country = "Germany",
+  year = 2021
+)
+
+
+
+#dat <- read.table(text = "
+ #     state value
+  #    Sachsen 10
+   #   Bayern 30
+    #  Rheinland-Pfalz 50
+     # Saarland 70
+      #Schleswig-Holstein 90
+#      Niedersachsen  100
+ #     Nordrhein-Westfalen 80
+  #    Baden-Württemberg 60
+   #   Brandenburg 40
+    #  Mecklenburg-Vorpommern 20
+     # Bremen 40
+      #Hamburg 60
+#      Hessen 15
+ #     Berlin 10
+  #    Thüringen 80
+   #   Sachsen-Anhalt 20
+#", header = T)
+
+#ger_fedstates_end <- ger_fedtstates %>%
+ # left_join(dat, by = c("NUTS_NAME" = "state"))
+
+ger_Elbe = subset(ger_fedtstates, NAME_LATN=="Harburg" | NAME_LATN=="Pinneberg" | NAME_LATN=="Hamburg" | NAME_LATN=="Dithmarschen" | NAME_LATN=="Stade" | NAME_LATN=="Steinburg" | NAME_LATN=="Cuxhaven")
+
+
+# With base
+plot(ger_Elbe, max.plot = 1)
+```
+
+
+
