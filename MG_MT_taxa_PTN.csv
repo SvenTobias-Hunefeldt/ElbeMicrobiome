@@ -1,0 +1,541 @@
+"","fulltaxa","station_km","Sample_date","KO","N","counts","sd","se","ci"
+"13","Bacteria__Actinobacteriota__Actinomycetia__Nanopelagicales__Nanopelagicaceae__Planktophila____",633,"May 22","K00027",112,0.000360905934978723,2.4851461736821e-05,2.34824240971663e-06,4.65319909664794e-06
+"14","Bacteria__Actinobacteriota__Actinomycetia__Nanopelagicales__Nanopelagicaceae__Planktophila____",633,"May 22","K00052",84,0.000660098491391641,2.355431360746e-05,2.56998631068842e-06,5.11159940756002e-06
+"15","Bacteria__Actinobacteriota__Actinomycetia__Nanopelagicales__Nanopelagicaceae__Planktophila____",633,"May 22","K01585",36,0.000213388463982297,7.42729536748286e-05,1.23788256124714e-05,2.51303520183067e-05
+"16","Bacteria__Actinobacteriota__Actinomycetia__Nanopelagicales__Nanopelagicaceae__Planktophila____",633,"May 22","K01609",112,0.000326696226432715,5.19588625464768e-05,4.90965102513449e-06,9.72880126024522e-06
+"17","Bacteria__Actinobacteriota__Actinomycetia__Nanopelagicales__Nanopelagicaceae__Planktophila____",633,"May 22","K01616",24,0.000578905311863032,0.000136534558011147,2.7869999948645e-05,5.76534874961429e-05
+"18","Bacteria__Actinobacteriota__Actinomycetia__Nanopelagicales__Nanopelagicaceae__Planktophila____",633,"May 22","K01652",100,0.000307051721399382,8.55604315718397e-05,8.55604315718397e-06,1.69770458709894e-05
+"19","Bacteria__Actinobacteriota__Actinomycetia__Nanopelagicales__Nanopelagicaceae__Planktophila____",633,"May 22","K02548",110,0.000167740015038806,2.03577202049348e-05,1.94103246177345e-06,3.84706323575814e-06
+"20","Bacteria__Actinobacteriota__Actinomycetia__Nanopelagicales__Nanopelagicaceae__Planktophila____",633,"May 22","K13745",46,8.96334783637455e-05,9.92248112117248e-06,1.46299002641571e-06,2.94661317010275e-06
+"21","Bacteria__Actinobacteriota__Actinomycetia__Nanopelagicales__Nanopelagicaceae__Planktophila____",633,"Jun 22","K00027",112,6.1029118468289e-05,6.13034080232074e-05,5.7926275767903e-06,1.1478478242283e-05
+"22","Bacteria__Actinobacteriota__Actinomycetia__Nanopelagicales__Nanopelagicaceae__Planktophila____",633,"Jun 22","K00052",84,9.8908338038773e-05,9.95023874522401e-05,1.08566005316361e-05,2.15933418068524e-05
+"23","Bacteria__Actinobacteriota__Actinomycetia__Nanopelagicales__Nanopelagicaceae__Planktophila____",633,"Jun 22","K01585",36,0,0,0,0
+"24","Bacteria__Actinobacteriota__Actinomycetia__Nanopelagicales__Nanopelagicaceae__Planktophila____",633,"Jun 22","K01609",112,0,0,0,0
+"25","Bacteria__Actinobacteriota__Actinomycetia__Nanopelagicales__Nanopelagicaceae__Planktophila____",633,"Jun 22","K01616",24,0.000448042104258084,0.000396850789122879,8.10068281143251e-05,0.000167575391474606
+"26","Bacteria__Actinobacteriota__Actinomycetia__Nanopelagicales__Nanopelagicaceae__Planktophila____",633,"Jun 22","K01652",100,0.000216871591355179,0.000218561913217243,2.18561913217243e-05,4.33674253176812e-05
+"27","Bacteria__Actinobacteriota__Actinomycetia__Nanopelagicales__Nanopelagicaceae__Planktophila____",633,"Jun 22","K02548",110,0,0,0,0
+"28","Bacteria__Actinobacteriota__Actinomycetia__Nanopelagicales__Nanopelagicaceae__Planktophila____",633,"Jun 22","K13745",46,0,0,0,0
+"29","Bacteria__Actinobacteriota__Actinomycetia__Nanopelagicales__Nanopelagicaceae__Planktophila____",633,"Nov 22","K00027",112,0.000150716311988973,2.85823537660527e-05,2.70077856963735e-06,5.35177303181367e-06
+"30","Bacteria__Actinobacteriota__Actinomycetia__Nanopelagicales__Nanopelagicaceae__Planktophila____",633,"Nov 22","K00052",84,0.000996169166109464,0.000182159743778986,1.98752574866896e-05,3.9531087761651e-05
+"31","Bacteria__Actinobacteriota__Actinomycetia__Nanopelagicales__Nanopelagicaceae__Planktophila____",633,"Nov 22","K01585",36,7.13403335392215e-05,7.23523037093095e-05,1.20587172848849e-05,2.44804975645743e-05
+"32","Bacteria__Actinobacteriota__Actinomycetia__Nanopelagicales__Nanopelagicaceae__Planktophila____",633,"Nov 22","K01609",112,0.000185158862876254,1.59996809439151e-05,1.51182774407067e-06,2.99578760007397e-06
+"33","Bacteria__Actinobacteriota__Actinomycetia__Nanopelagicales__Nanopelagicaceae__Planktophila____",633,"Nov 22","K01616",24,0.000928084081539654,0.000132979777764375,2.71443834692852e-05,5.61524354438698e-05
+"34","Bacteria__Actinobacteriota__Actinomycetia__Nanopelagicales__Nanopelagicaceae__Planktophila____",633,"Nov 22","K01652",100,0.000298157319713648,7.95548324194627e-05,7.95548324194627e-06,1.57854047067314e-05
+"35","Bacteria__Actinobacteriota__Actinomycetia__Nanopelagicales__Nanopelagicaceae__Planktophila____",633,"Nov 22","K02548",110,9.84974958263775e-05,9.8948287636133e-05,9.4343490530965e-06,1.86985731100634e-05
+"36","Bacteria__Actinobacteriota__Actinomycetia__Nanopelagicales__Nanopelagicaceae__Planktophila____",633,"Nov 22","K13745",46,1.99460916442048e-05,2.0166497137819e-05,2.97338778679217e-06,5.98871041783503e-06
+"37","Bacteria__Actinobacteriota__Actinomycetia__Nanopelagicales__Nanopelagicaceae__Planktophila____",651,"May 22","K00027",56,0,0,0,0
+"38","Bacteria__Actinobacteriota__Actinomycetia__Nanopelagicales__Nanopelagicaceae__Planktophila____",651,"May 22","K00052",42,0,0,0,0
+"39","Bacteria__Actinobacteriota__Actinomycetia__Nanopelagicales__Nanopelagicaceae__Planktophila____",651,"May 22","K01585",18,6.71907545521736e-05,0,0,0
+"40","Bacteria__Actinobacteriota__Actinomycetia__Nanopelagicales__Nanopelagicaceae__Planktophila____",651,"May 22","K01609",56,0,0,0,0
+"41","Bacteria__Actinobacteriota__Actinomycetia__Nanopelagicales__Nanopelagicaceae__Planktophila____",651,"May 22","K01616",12,0,0,0,0
+"42","Bacteria__Actinobacteriota__Actinomycetia__Nanopelagicales__Nanopelagicaceae__Planktophila____",651,"May 22","K01652",50,0,0,0,0
+"43","Bacteria__Actinobacteriota__Actinomycetia__Nanopelagicales__Nanopelagicaceae__Planktophila____",651,"May 22","K02548",55,0,0,0,0
+"44","Bacteria__Actinobacteriota__Actinomycetia__Nanopelagicales__Nanopelagicaceae__Planktophila____",651,"May 22","K13745",23,0,0,0,0
+"45","Bacteria__Actinobacteriota__Actinomycetia__Nanopelagicales__Nanopelagicaceae__Planktophila____",651,"Nov 22","K00027",112,0,0,0,0
+"46","Bacteria__Actinobacteriota__Actinomycetia__Nanopelagicales__Nanopelagicaceae__Planktophila____",651,"Nov 22","K00052",84,0,0,0,0
+"47","Bacteria__Actinobacteriota__Actinomycetia__Nanopelagicales__Nanopelagicaceae__Planktophila____",651,"Nov 22","K01585",36,0,0,0,0
+"48","Bacteria__Actinobacteriota__Actinomycetia__Nanopelagicales__Nanopelagicaceae__Planktophila____",651,"Nov 22","K01609",112,0,0,0,0
+"49","Bacteria__Actinobacteriota__Actinomycetia__Nanopelagicales__Nanopelagicaceae__Planktophila____",651,"Nov 22","K01616",24,0,0,0,0
+"50","Bacteria__Actinobacteriota__Actinomycetia__Nanopelagicales__Nanopelagicaceae__Planktophila____",651,"Nov 22","K01652",100,0,0,0,0
+"51","Bacteria__Actinobacteriota__Actinomycetia__Nanopelagicales__Nanopelagicaceae__Planktophila____",651,"Nov 22","K02548",110,0,0,0,0
+"52","Bacteria__Actinobacteriota__Actinomycetia__Nanopelagicales__Nanopelagicaceae__Planktophila____",651,"Nov 22","K13745",46,0,0,0,0
+"53","Bacteria__Actinobacteriota__Actinomycetia__Nanopelagicales__Nanopelagicaceae__Planktophila____",665,"Jun 22","K00027",56,0.00022298313011525,0,0,0
+"54","Bacteria__Actinobacteriota__Actinomycetia__Nanopelagicales__Nanopelagicaceae__Planktophila____",665,"Jun 22","K00052",42,0.00152125061064973,0,0,0
+"55","Bacteria__Actinobacteriota__Actinomycetia__Nanopelagicales__Nanopelagicaceae__Planktophila____",665,"Jun 22","K01585",18,0,0,0,0
+"56","Bacteria__Actinobacteriota__Actinomycetia__Nanopelagicales__Nanopelagicaceae__Planktophila____",665,"Jun 22","K01609",56,0,0,0,0
+"57","Bacteria__Actinobacteriota__Actinomycetia__Nanopelagicales__Nanopelagicaceae__Planktophila____",665,"Jun 22","K01616",12,0.000269339075699851,0,0,0
+"58","Bacteria__Actinobacteriota__Actinomycetia__Nanopelagicales__Nanopelagicaceae__Planktophila____",665,"Jun 22","K01652",50,0.000343239083249284,5.09334398158961e-06,7.20307613659541e-07,1.44751234352587e-06
+"59","Bacteria__Actinobacteriota__Actinomycetia__Nanopelagicales__Nanopelagicaceae__Planktophila____",665,"Jun 22","K02548",55,0.000310375670840787,0,0,0
+"60","Bacteria__Actinobacteriota__Actinomycetia__Nanopelagicales__Nanopelagicaceae__Planktophila____",665,"Jun 22","K13745",23,0,0,0,0
+"61","Bacteria__Actinobacteriota__Actinomycetia__Nanopelagicales__Nanopelagicaceae__Planktophila____",665,"Nov 22","K00027",112,0,0,0,0
+"62","Bacteria__Actinobacteriota__Actinomycetia__Nanopelagicales__Nanopelagicaceae__Planktophila____",665,"Nov 22","K00052",84,0,0,0,0
+"63","Bacteria__Actinobacteriota__Actinomycetia__Nanopelagicales__Nanopelagicaceae__Planktophila____",665,"Nov 22","K01585",36,0,0,0,0
+"64","Bacteria__Actinobacteriota__Actinomycetia__Nanopelagicales__Nanopelagicaceae__Planktophila____",665,"Nov 22","K01609",112,0,0,0,0
+"65","Bacteria__Actinobacteriota__Actinomycetia__Nanopelagicales__Nanopelagicaceae__Planktophila____",665,"Nov 22","K01616",24,0,0,0,0
+"66","Bacteria__Actinobacteriota__Actinomycetia__Nanopelagicales__Nanopelagicaceae__Planktophila____",665,"Nov 22","K01652",100,0,0,0,0
+"67","Bacteria__Actinobacteriota__Actinomycetia__Nanopelagicales__Nanopelagicaceae__Planktophila____",665,"Nov 22","K02548",110,0,0,0,0
+"68","Bacteria__Actinobacteriota__Actinomycetia__Nanopelagicales__Nanopelagicaceae__Planktophila____",665,"Nov 22","K13745",46,0,0,0,0
+"69","Bacteria__Actinobacteriota__Actinomycetia__Nanopelagicales__Nanopelagicaceae__Planktophila____",692,"Jun 22","K00027",112,0,0,0,0
+"70","Bacteria__Actinobacteriota__Actinomycetia__Nanopelagicales__Nanopelagicaceae__Planktophila____",692,"Jun 22","K00052",84,0.000192753623188406,0.000193911313015869,2.1157458809607e-05,4.2081334623021e-05
+"71","Bacteria__Actinobacteriota__Actinomycetia__Nanopelagicales__Nanopelagicaceae__Planktophila____",692,"Jun 22","K01585",36,0,0,0,0
+"72","Bacteria__Actinobacteriota__Actinomycetia__Nanopelagicales__Nanopelagicaceae__Planktophila____",692,"Jun 22","K01609",112,0,0,0,0
+"73","Bacteria__Actinobacteriota__Actinomycetia__Nanopelagicales__Nanopelagicaceae__Planktophila____",692,"Jun 22","K01616",24,0.000105218855218855,0.000107481885196811,2.19396479437157e-05,4.53856196886822e-05
+"74","Bacteria__Actinobacteriota__Actinomycetia__Nanopelagicales__Nanopelagicaceae__Planktophila____",692,"Jun 22","K01652",100,5.45638831058678e-05,5.57853833104074e-05,5.57853833104074e-06,1.10690303215256e-05
+"75","Bacteria__Actinobacteriota__Actinomycetia__Nanopelagicales__Nanopelagicaceae__Planktophila____",692,"Jun 22","K02548",110,0,0,0,0
+"76","Bacteria__Actinobacteriota__Actinomycetia__Nanopelagicales__Nanopelagicaceae__Planktophila____",692,"Jun 22","K13745",46,0,0,0,0
+"77","Bacteria__Actinobacteriota__Actinomycetia__Nanopelagicales__Nanopelagicaceae__Planktophila____",692,"Nov 22","K00027",112,0.0013904958677686,0.00139674531888731,0.000131980027095337,0.000261527234289965
+"78","Bacteria__Actinobacteriota__Actinomycetia__Nanopelagicales__Nanopelagicaceae__Planktophila____",692,"Nov 22","K00052",84,0,0,0,0
+"79","Bacteria__Actinobacteriota__Actinomycetia__Nanopelagicales__Nanopelagicaceae__Planktophila____",692,"Nov 22","K01585",36,0,0,0,0
+"80","Bacteria__Actinobacteriota__Actinomycetia__Nanopelagicales__Nanopelagicaceae__Planktophila____",692,"Nov 22","K01609",112,0,0,0,0
+"81","Bacteria__Actinobacteriota__Actinomycetia__Nanopelagicales__Nanopelagicaceae__Planktophila____",692,"Nov 22","K01616",24,0,0,0,0
+"82","Bacteria__Actinobacteriota__Actinomycetia__Nanopelagicales__Nanopelagicaceae__Planktophila____",692,"Nov 22","K01652",100,0,0,0,0
+"83","Bacteria__Actinobacteriota__Actinomycetia__Nanopelagicales__Nanopelagicaceae__Planktophila____",692,"Nov 22","K02548",110,0,0,0,0
+"84","Bacteria__Actinobacteriota__Actinomycetia__Nanopelagicales__Nanopelagicaceae__Planktophila____",692,"Nov 22","K13745",46,0,0,0,0
+"85","Bacteria__Actinobacteriota__Actinomycetia__Nanopelagicales__Nanopelagicaceae__Planktophila____",713,"May 22","K00027",112,6.7258883248731e-05,6.75611718875582e-05,6.38393068209168e-06,1.26501848191034e-05
+"86","Bacteria__Actinobacteriota__Actinomycetia__Nanopelagicales__Nanopelagicaceae__Planktophila____",713,"May 22","K00052",84,0,0,0,0
+"87","Bacteria__Actinobacteriota__Actinomycetia__Nanopelagicales__Nanopelagicaceae__Planktophila____",713,"May 22","K01585",36,0,0,0,0
+"88","Bacteria__Actinobacteriota__Actinomycetia__Nanopelagicales__Nanopelagicaceae__Planktophila____",713,"May 22","K01609",112,0,0,0,0
+"89","Bacteria__Actinobacteriota__Actinomycetia__Nanopelagicales__Nanopelagicaceae__Planktophila____",713,"May 22","K01616",24,2.28613569321534e-05,2.33530552686028e-05,4.76692244525761e-06,9.86113039465954e-06
+"90","Bacteria__Actinobacteriota__Actinomycetia__Nanopelagicales__Nanopelagicaceae__Planktophila____",713,"May 22","K01652",100,0,0,0,0
+"91","Bacteria__Actinobacteriota__Actinomycetia__Nanopelagicales__Nanopelagicaceae__Planktophila____",713,"May 22","K02548",110,0,0,0,0
+"92","Bacteria__Actinobacteriota__Actinomycetia__Nanopelagicales__Nanopelagicaceae__Planktophila____",713,"May 22","K13745",46,0,0,0,0
+"93","Bacteria__Actinobacteriota__Actinomycetia__Nanopelagicales__Nanopelagicaceae__Planktophila____",713,"Jun 22","K00027",112,0,0,0,0
+"94","Bacteria__Actinobacteriota__Actinomycetia__Nanopelagicales__Nanopelagicaceae__Planktophila____",713,"Jun 22","K00052",84,0,0,0,0
+"95","Bacteria__Actinobacteriota__Actinomycetia__Nanopelagicales__Nanopelagicaceae__Planktophila____",713,"Jun 22","K01585",36,0,0,0,0
+"96","Bacteria__Actinobacteriota__Actinomycetia__Nanopelagicales__Nanopelagicaceae__Planktophila____",713,"Jun 22","K01609",112,0,0,0,0
+"97","Bacteria__Actinobacteriota__Actinomycetia__Nanopelagicales__Nanopelagicaceae__Planktophila____",713,"Jun 22","K01616",24,0,0,0,0
+"98","Bacteria__Actinobacteriota__Actinomycetia__Nanopelagicales__Nanopelagicaceae__Planktophila____",713,"Jun 22","K01652",100,0,0,0,0
+"99","Bacteria__Actinobacteriota__Actinomycetia__Nanopelagicales__Nanopelagicaceae__Planktophila____",713,"Jun 22","K02548",110,0,0,0,0
+"100","Bacteria__Actinobacteriota__Actinomycetia__Nanopelagicales__Nanopelagicaceae__Planktophila____",713,"Jun 22","K13745",46,0,0,0,0
+"101","Bacteria__Actinobacteriota__Actinomycetia__Nanopelagicales__Nanopelagicaceae__Planktophila____",713,"Nov 22","K00027",112,0,0,0,0
+"102","Bacteria__Actinobacteriota__Actinomycetia__Nanopelagicales__Nanopelagicaceae__Planktophila____",713,"Nov 22","K00052",84,0,0,0,0
+"103","Bacteria__Actinobacteriota__Actinomycetia__Nanopelagicales__Nanopelagicaceae__Planktophila____",713,"Nov 22","K01585",36,0,0,0,0
+"104","Bacteria__Actinobacteriota__Actinomycetia__Nanopelagicales__Nanopelagicaceae__Planktophila____",713,"Nov 22","K01609",112,0,0,0,0
+"105","Bacteria__Actinobacteriota__Actinomycetia__Nanopelagicales__Nanopelagicaceae__Planktophila____",713,"Nov 22","K01616",24,0,0,0,0
+"106","Bacteria__Actinobacteriota__Actinomycetia__Nanopelagicales__Nanopelagicaceae__Planktophila____",713,"Nov 22","K01652",100,0,0,0,0
+"107","Bacteria__Actinobacteriota__Actinomycetia__Nanopelagicales__Nanopelagicaceae__Planktophila____",713,"Nov 22","K02548",110,0,0,0,0
+"108","Bacteria__Actinobacteriota__Actinomycetia__Nanopelagicales__Nanopelagicaceae__Planktophila____",713,"Nov 22","K13745",46,0,0,0,0
+"109","Bacteria__Bacteroidota__Bacteroidia__Flavobacteriales__Schleiferiaceae__TMED14__TMED14 sp003507115__",633,"May 22","K00029",2,0,0,0,0
+"110","Bacteria__Bacteroidota__Bacteroidia__Flavobacteriales__Schleiferiaceae__TMED14__TMED14 sp003507115__",633,"May 22","K00175",2,0,0,0,0
+"111","Bacteria__Bacteroidota__Bacteroidia__Flavobacteriales__Schleiferiaceae__TMED14__TMED14 sp003507115__",633,"May 22","K00252",4,0,0,0,0
+"112","Bacteria__Bacteroidota__Bacteroidia__Flavobacteriales__Schleiferiaceae__TMED14__TMED14 sp003507115__",633,"May 22","K00457",2,0,0,0,0
+"113","Bacteria__Bacteroidota__Bacteroidia__Flavobacteriales__Schleiferiaceae__TMED14__TMED14 sp003507115__",633,"May 22","K01585",2,0,0,0,0
+"114","Bacteria__Bacteroidota__Bacteroidia__Flavobacteriales__Schleiferiaceae__TMED14__TMED14 sp003507115__",633,"May 22","K11381",60,0,0,0,0
+"115","Bacteria__Bacteroidota__Bacteroidia__Flavobacteriales__Schleiferiaceae__TMED14__TMED14 sp003507115__",633,"Jun 22","K00029",2,0,0,0,0
+"116","Bacteria__Bacteroidota__Bacteroidia__Flavobacteriales__Schleiferiaceae__TMED14__TMED14 sp003507115__",633,"Jun 22","K00175",2,0,0,0,0
+"117","Bacteria__Bacteroidota__Bacteroidia__Flavobacteriales__Schleiferiaceae__TMED14__TMED14 sp003507115__",633,"Jun 22","K00252",4,0,0,0,0
+"118","Bacteria__Bacteroidota__Bacteroidia__Flavobacteriales__Schleiferiaceae__TMED14__TMED14 sp003507115__",633,"Jun 22","K00457",2,0,0,0,0
+"119","Bacteria__Bacteroidota__Bacteroidia__Flavobacteriales__Schleiferiaceae__TMED14__TMED14 sp003507115__",633,"Jun 22","K01585",2,0,0,0,0
+"120","Bacteria__Bacteroidota__Bacteroidia__Flavobacteriales__Schleiferiaceae__TMED14__TMED14 sp003507115__",633,"Jun 22","K11381",60,0,0,0,0
+"121","Bacteria__Bacteroidota__Bacteroidia__Flavobacteriales__Schleiferiaceae__TMED14__TMED14 sp003507115__",633,"Nov 22","K00029",2,0,0,0,0
+"122","Bacteria__Bacteroidota__Bacteroidia__Flavobacteriales__Schleiferiaceae__TMED14__TMED14 sp003507115__",633,"Nov 22","K00175",2,0,0,0,0
+"123","Bacteria__Bacteroidota__Bacteroidia__Flavobacteriales__Schleiferiaceae__TMED14__TMED14 sp003507115__",633,"Nov 22","K00252",4,0,0,0,0
+"124","Bacteria__Bacteroidota__Bacteroidia__Flavobacteriales__Schleiferiaceae__TMED14__TMED14 sp003507115__",633,"Nov 22","K00457",2,0,0,0,0
+"125","Bacteria__Bacteroidota__Bacteroidia__Flavobacteriales__Schleiferiaceae__TMED14__TMED14 sp003507115__",633,"Nov 22","K01585",2,0,0,0,0
+"126","Bacteria__Bacteroidota__Bacteroidia__Flavobacteriales__Schleiferiaceae__TMED14__TMED14 sp003507115__",633,"Nov 22","K11381",60,0,0,0,0
+"127","Bacteria__Bacteroidota__Bacteroidia__Flavobacteriales__Schleiferiaceae__TMED14__TMED14 sp003507115__",651,"May 22","K00029",1,0,NA,NA,NA
+"128","Bacteria__Bacteroidota__Bacteroidia__Flavobacteriales__Schleiferiaceae__TMED14__TMED14 sp003507115__",651,"May 22","K00175",1,0,NA,NA,NA
+"129","Bacteria__Bacteroidota__Bacteroidia__Flavobacteriales__Schleiferiaceae__TMED14__TMED14 sp003507115__",651,"May 22","K00252",2,0,0,0,0
+"130","Bacteria__Bacteroidota__Bacteroidia__Flavobacteriales__Schleiferiaceae__TMED14__TMED14 sp003507115__",651,"May 22","K00457",1,0,NA,NA,NA
+"131","Bacteria__Bacteroidota__Bacteroidia__Flavobacteriales__Schleiferiaceae__TMED14__TMED14 sp003507115__",651,"May 22","K01585",1,0,NA,NA,NA
+"132","Bacteria__Bacteroidota__Bacteroidia__Flavobacteriales__Schleiferiaceae__TMED14__TMED14 sp003507115__",651,"May 22","K11381",30,0,0,0,0
+"133","Bacteria__Bacteroidota__Bacteroidia__Flavobacteriales__Schleiferiaceae__TMED14__TMED14 sp003507115__",651,"Nov 22","K00029",2,0,0,0,0
+"134","Bacteria__Bacteroidota__Bacteroidia__Flavobacteriales__Schleiferiaceae__TMED14__TMED14 sp003507115__",651,"Nov 22","K00175",2,0,0,0,0
+"135","Bacteria__Bacteroidota__Bacteroidia__Flavobacteriales__Schleiferiaceae__TMED14__TMED14 sp003507115__",651,"Nov 22","K00252",4,0,0,0,0
+"136","Bacteria__Bacteroidota__Bacteroidia__Flavobacteriales__Schleiferiaceae__TMED14__TMED14 sp003507115__",651,"Nov 22","K00457",2,0,0,0,0
+"137","Bacteria__Bacteroidota__Bacteroidia__Flavobacteriales__Schleiferiaceae__TMED14__TMED14 sp003507115__",651,"Nov 22","K01585",2,0,0,0,0
+"138","Bacteria__Bacteroidota__Bacteroidia__Flavobacteriales__Schleiferiaceae__TMED14__TMED14 sp003507115__",651,"Nov 22","K11381",60,0,0,0,0
+"139","Bacteria__Bacteroidota__Bacteroidia__Flavobacteriales__Schleiferiaceae__TMED14__TMED14 sp003507115__",665,"Jun 22","K00029",1,0,NA,NA,NA
+"140","Bacteria__Bacteroidota__Bacteroidia__Flavobacteriales__Schleiferiaceae__TMED14__TMED14 sp003507115__",665,"Jun 22","K00175",1,0,NA,NA,NA
+"141","Bacteria__Bacteroidota__Bacteroidia__Flavobacteriales__Schleiferiaceae__TMED14__TMED14 sp003507115__",665,"Jun 22","K00252",2,0,0,0,0
+"142","Bacteria__Bacteroidota__Bacteroidia__Flavobacteriales__Schleiferiaceae__TMED14__TMED14 sp003507115__",665,"Jun 22","K00457",1,0,NA,NA,NA
+"143","Bacteria__Bacteroidota__Bacteroidia__Flavobacteriales__Schleiferiaceae__TMED14__TMED14 sp003507115__",665,"Jun 22","K01585",1,0,NA,NA,NA
+"144","Bacteria__Bacteroidota__Bacteroidia__Flavobacteriales__Schleiferiaceae__TMED14__TMED14 sp003507115__",665,"Jun 22","K11381",30,0,0,0,0
+"145","Bacteria__Bacteroidota__Bacteroidia__Flavobacteriales__Schleiferiaceae__TMED14__TMED14 sp003507115__",665,"Nov 22","K00029",2,0,0,0,0
+"146","Bacteria__Bacteroidota__Bacteroidia__Flavobacteriales__Schleiferiaceae__TMED14__TMED14 sp003507115__",665,"Nov 22","K00175",2,0,0,0,0
+"147","Bacteria__Bacteroidota__Bacteroidia__Flavobacteriales__Schleiferiaceae__TMED14__TMED14 sp003507115__",665,"Nov 22","K00252",4,0,0,0,0
+"148","Bacteria__Bacteroidota__Bacteroidia__Flavobacteriales__Schleiferiaceae__TMED14__TMED14 sp003507115__",665,"Nov 22","K00457",2,0,0,0,0
+"149","Bacteria__Bacteroidota__Bacteroidia__Flavobacteriales__Schleiferiaceae__TMED14__TMED14 sp003507115__",665,"Nov 22","K01585",2,0,0,0,0
+"150","Bacteria__Bacteroidota__Bacteroidia__Flavobacteriales__Schleiferiaceae__TMED14__TMED14 sp003507115__",665,"Nov 22","K11381",60,0,0,0,0
+"151","Bacteria__Bacteroidota__Bacteroidia__Flavobacteriales__Schleiferiaceae__TMED14__TMED14 sp003507115__",692,"Jun 22","K00029",2,0.00108325101168967,8.00573968127886e-05,5.66091281704651e-05,0.000719287172470284
+"152","Bacteria__Bacteroidota__Bacteroidia__Flavobacteriales__Schleiferiaceae__TMED14__TMED14 sp003507115__",692,"Jun 22","K00175",2,0.00126624093803072,0.000589696282295256,0.000416978240051472,0.0052982108886238
+"153","Bacteria__Bacteroidota__Bacteroidia__Flavobacteriales__Schleiferiaceae__TMED14__TMED14 sp003507115__",692,"Jun 22","K00252",4,0.00230082344327642,0.000402283710925848,0.000201141855462924,0.000640123154755892
+"154","Bacteria__Bacteroidota__Bacteroidia__Flavobacteriales__Schleiferiaceae__TMED14__TMED14 sp003507115__",692,"Jun 22","K00457",2,0.000980243062124672,0.000162806926758389,0.000115121881934998,0.00146276220147982
+"155","Bacteria__Bacteroidota__Bacteroidia__Flavobacteriales__Schleiferiaceae__TMED14__TMED14 sp003507115__",692,"Jun 22","K01585",2,0.00119316527414208,0.000541698512947144,0.000383038691863595,0.00486696804069536
+"156","Bacteria__Bacteroidota__Bacteroidia__Flavobacteriales__Schleiferiaceae__TMED14__TMED14 sp003507115__",692,"Jun 22","K11381",60,0.000473268269783526,4.05848623625355e-05,5.23948320127401e-06,1.04841816693204e-05
+"157","Bacteria__Bacteroidota__Bacteroidia__Flavobacteriales__Schleiferiaceae__TMED14__TMED14 sp003507115__",692,"Nov 22","K00029",2,0.0029952153959878,0.000856437795706995,0.000605592973008875,0.00769478830183948
+"158","Bacteria__Bacteroidota__Bacteroidia__Flavobacteriales__Schleiferiaceae__TMED14__TMED14 sp003507115__",692,"Nov 22","K00175",2,0.00137083017129628,0.000711420237021282,0.000503050073871089,0.00639185723115387
+"159","Bacteria__Bacteroidota__Bacteroidia__Flavobacteriales__Schleiferiaceae__TMED14__TMED14 sp003507115__",692,"Nov 22","K00252",4,0.0035670955242076,5.2865959209888e-05,2.6432979604944e-05,8.41215382813936e-05
+"160","Bacteria__Bacteroidota__Bacteroidia__Flavobacteriales__Schleiferiaceae__TMED14__TMED14 sp003507115__",692,"Nov 22","K00457",2,0.00132989814334719,0.000697331741844292,0.000493088003394726,0.00626527712408498
+"161","Bacteria__Bacteroidota__Bacteroidia__Flavobacteriales__Schleiferiaceae__TMED14__TMED14 sp003507115__",692,"Nov 22","K01585",2,0.0031413470557999,0.000394216595040969,0.00027875322760974,0.00354189558087886
+"162","Bacteria__Bacteroidota__Bacteroidia__Flavobacteriales__Schleiferiaceae__TMED14__TMED14 sp003507115__",692,"Nov 22","K11381",60,0.000679924993026406,6.57247484550748e-05,8.48502854000588e-06,1.69785028914988e-05
+"163","Bacteria__Bacteroidota__Bacteroidia__Flavobacteriales__Schleiferiaceae__TMED14__TMED14 sp003507115__",713,"May 22","K00029",2,0.000966448029428413,2.71790322035609e-05,1.92184779772254e-05,0.000244193915896291
+"164","Bacteria__Bacteroidota__Bacteroidia__Flavobacteriales__Schleiferiaceae__TMED14__TMED14 sp003507115__",713,"May 22","K00175",2,0.000960340946499745,0.000197202376089642,0.000139443137399086,0.00177179305284732
+"165","Bacteria__Bacteroidota__Bacteroidia__Flavobacteriales__Schleiferiaceae__TMED14__TMED14 sp003507115__",713,"May 22","K00252",4,0.00124153540511667,4.45962179165397e-05,2.22981089582699e-05,7.09625344690595e-05
+"166","Bacteria__Bacteroidota__Bacteroidia__Flavobacteriales__Schleiferiaceae__TMED14__TMED14 sp003507115__",713,"May 22","K00457",2,0.00107671120649866,0.000529447263106236,0.000374375750023078,0.00475689492805219
+"167","Bacteria__Bacteroidota__Bacteroidia__Flavobacteriales__Schleiferiaceae__TMED14__TMED14 sp003507115__",713,"May 22","K01585",2,0.000958423983518318,0.000783533413041439,0.000554041789647842,0.00703976841166211
+"168","Bacteria__Bacteroidota__Bacteroidia__Flavobacteriales__Schleiferiaceae__TMED14__TMED14 sp003507115__",713,"May 22","K11381",60,0.000305482201398268,3.61552668143636e-05,4.66762487499053e-06,9.33989580150588e-06
+"169","Bacteria__Bacteroidota__Bacteroidia__Flavobacteriales__Schleiferiaceae__TMED14__TMED14 sp003507115__",713,"Jun 22","K00029",2,4999999.99998057,7071067.81047874,4999999.99901943,63531023.6684141
+"170","Bacteria__Bacteroidota__Bacteroidia__Flavobacteriales__Schleiferiaceae__TMED14__TMED14 sp003507115__",713,"Jun 22","K00175",2,4999999.99979727,7071067.81073796,4999999.99920273,63531023.6707432
+"171","Bacteria__Bacteroidota__Bacteroidia__Flavobacteriales__Schleiferiaceae__TMED14__TMED14 sp003507115__",713,"Jun 22","K00252",4,5000000.00047101,5773502.69019768,2886751.34509884,9186931.15248257
+"172","Bacteria__Bacteroidota__Bacteroidia__Flavobacteriales__Schleiferiaceae__TMED14__TMED14 sp003507115__",713,"Jun 22","K00457",2,5000000.00054888,7071067.80967503,4999999.99845112,63531023.6611931
+"173","Bacteria__Bacteroidota__Bacteroidia__Flavobacteriales__Schleiferiaceae__TMED14__TMED14 sp003507115__",713,"Jun 22","K01585",2,5000000.00007642,7071067.81034319,4999999.99892358,63531023.6671963
+"174","Bacteria__Bacteroidota__Bacteroidia__Flavobacteriales__Schleiferiaceae__TMED14__TMED14 sp003507115__",713,"Jun 22","K11381",60,4999999.99986521,5042194.84002359,650944.554791478,1302537.04552947
+"175","Bacteria__Bacteroidota__Bacteroidia__Flavobacteriales__Schleiferiaceae__TMED14__TMED14 sp003507115__",713,"Nov 22","K00029",2,0.00142259907457685,0.000834223819689819,0.000589885319930015,0.00749520364589468
+"176","Bacteria__Bacteroidota__Bacteroidia__Flavobacteriales__Schleiferiaceae__TMED14__TMED14 sp003507115__",713,"Nov 22","K00175",2,0.00179507025441728,0.000393514140494222,0.00027825651723626,0.00353558427717884
+"177","Bacteria__Bacteroidota__Bacteroidia__Flavobacteriales__Schleiferiaceae__TMED14__TMED14 sp003507115__",713,"Nov 22","K00252",4,0.00339555294280379,0.00142723989292153,0.000713619946460767,0.00227105716199082
+"178","Bacteria__Bacteroidota__Bacteroidia__Flavobacteriales__Schleiferiaceae__TMED14__TMED14 sp003507115__",713,"Nov 22","K00457",2,0.00231904190320332,0.000943784627302032,0.000667356509944885,0.00847956844737871
+"179","Bacteria__Bacteroidota__Bacteroidia__Flavobacteriales__Schleiferiaceae__TMED14__TMED14 sp003507115__",713,"Nov 22","K01585",2,0.0030320199096382,0.000403898174334576,0.000285599137980845,0.00362888111965962
+"180","Bacteria__Bacteroidota__Bacteroidia__Flavobacteriales__Schleiferiaceae__TMED14__TMED14 sp003507115__",713,"Nov 22","K11381",60,0.000916415442525614,0.000110708143744169,1.42923599003567e-05,2.85989461025879e-05
+"277","Bacteria__Proteobacteria__Alphaproteobacteria__Pelagibacterales__Pelagibacteraceae__Pelagibacter__Pelagibacter ubique__",633,"May 22","K00029",72,0,0,0,0
+"278","Bacteria__Proteobacteria__Alphaproteobacteria__Pelagibacterales__Pelagibacteraceae__Pelagibacter__Pelagibacter ubique__",633,"May 22","K00052",72,0,0,0,0
+"279","Bacteria__Proteobacteria__Alphaproteobacteria__Pelagibacterales__Pelagibacteraceae__Pelagibacter__Pelagibacter ubique__",633,"May 22","K00220",74,0,0,0,0
+"280","Bacteria__Proteobacteria__Alphaproteobacteria__Pelagibacterales__Pelagibacteraceae__Pelagibacter__Pelagibacter ubique__",633,"May 22","K01613",70,0,0,0,0
+"281","Bacteria__Proteobacteria__Alphaproteobacteria__Pelagibacterales__Pelagibacteraceae__Pelagibacter__Pelagibacter ubique__",633,"May 22","K01652",74,0,0,0,0
+"282","Bacteria__Proteobacteria__Alphaproteobacteria__Pelagibacterales__Pelagibacteraceae__Pelagibacter__Pelagibacter ubique__",633,"May 22","K01713",70,0,0,0,0
+"283","Bacteria__Proteobacteria__Alphaproteobacteria__Pelagibacterales__Pelagibacteraceae__Pelagibacter__Pelagibacter ubique__",633,"May 22","K15737",62,0,0,0,0
+"284","Bacteria__Proteobacteria__Alphaproteobacteria__Pelagibacterales__Pelagibacteraceae__Pelagibacter__Pelagibacter ubique__",633,"Jun 22","K00029",72,0,0,0,0
+"285","Bacteria__Proteobacteria__Alphaproteobacteria__Pelagibacterales__Pelagibacteraceae__Pelagibacter__Pelagibacter ubique__",633,"Jun 22","K00052",72,0,0,0,0
+"286","Bacteria__Proteobacteria__Alphaproteobacteria__Pelagibacterales__Pelagibacteraceae__Pelagibacter__Pelagibacter ubique__",633,"Jun 22","K00220",74,0,0,0,0
+"287","Bacteria__Proteobacteria__Alphaproteobacteria__Pelagibacterales__Pelagibacteraceae__Pelagibacter__Pelagibacter ubique__",633,"Jun 22","K01613",70,0,0,0,0
+"288","Bacteria__Proteobacteria__Alphaproteobacteria__Pelagibacterales__Pelagibacteraceae__Pelagibacter__Pelagibacter ubique__",633,"Jun 22","K01652",74,0,0,0,0
+"289","Bacteria__Proteobacteria__Alphaproteobacteria__Pelagibacterales__Pelagibacteraceae__Pelagibacter__Pelagibacter ubique__",633,"Jun 22","K01713",70,0,0,0,0
+"290","Bacteria__Proteobacteria__Alphaproteobacteria__Pelagibacterales__Pelagibacteraceae__Pelagibacter__Pelagibacter ubique__",633,"Jun 22","K15737",62,0,0,0,0
+"291","Bacteria__Proteobacteria__Alphaproteobacteria__Pelagibacterales__Pelagibacteraceae__Pelagibacter__Pelagibacter ubique__",633,"Nov 22","K00029",72,0,0,0,0
+"292","Bacteria__Proteobacteria__Alphaproteobacteria__Pelagibacterales__Pelagibacteraceae__Pelagibacter__Pelagibacter ubique__",633,"Nov 22","K00052",72,0,0,0,0
+"293","Bacteria__Proteobacteria__Alphaproteobacteria__Pelagibacterales__Pelagibacteraceae__Pelagibacter__Pelagibacter ubique__",633,"Nov 22","K00220",74,0,0,0,0
+"294","Bacteria__Proteobacteria__Alphaproteobacteria__Pelagibacterales__Pelagibacteraceae__Pelagibacter__Pelagibacter ubique__",633,"Nov 22","K01613",70,0,0,0,0
+"295","Bacteria__Proteobacteria__Alphaproteobacteria__Pelagibacterales__Pelagibacteraceae__Pelagibacter__Pelagibacter ubique__",633,"Nov 22","K01652",74,0,0,0,0
+"296","Bacteria__Proteobacteria__Alphaproteobacteria__Pelagibacterales__Pelagibacteraceae__Pelagibacter__Pelagibacter ubique__",633,"Nov 22","K01713",70,0,0,0,0
+"297","Bacteria__Proteobacteria__Alphaproteobacteria__Pelagibacterales__Pelagibacteraceae__Pelagibacter__Pelagibacter ubique__",633,"Nov 22","K15737",62,0,0,0,0
+"298","Bacteria__Proteobacteria__Alphaproteobacteria__Pelagibacterales__Pelagibacteraceae__Pelagibacter__Pelagibacter ubique__",651,"May 22","K00029",36,0,0,0,0
+"299","Bacteria__Proteobacteria__Alphaproteobacteria__Pelagibacterales__Pelagibacteraceae__Pelagibacter__Pelagibacter ubique__",651,"May 22","K00052",36,0,0,0,0
+"300","Bacteria__Proteobacteria__Alphaproteobacteria__Pelagibacterales__Pelagibacteraceae__Pelagibacter__Pelagibacter ubique__",651,"May 22","K00220",37,0,0,0,0
+"301","Bacteria__Proteobacteria__Alphaproteobacteria__Pelagibacterales__Pelagibacteraceae__Pelagibacter__Pelagibacter ubique__",651,"May 22","K01613",35,0,0,0,0
+"302","Bacteria__Proteobacteria__Alphaproteobacteria__Pelagibacterales__Pelagibacteraceae__Pelagibacter__Pelagibacter ubique__",651,"May 22","K01652",37,0,0,0,0
+"303","Bacteria__Proteobacteria__Alphaproteobacteria__Pelagibacterales__Pelagibacteraceae__Pelagibacter__Pelagibacter ubique__",651,"May 22","K01713",35,0,0,0,0
+"304","Bacteria__Proteobacteria__Alphaproteobacteria__Pelagibacterales__Pelagibacteraceae__Pelagibacter__Pelagibacter ubique__",651,"May 22","K15737",31,0,0,0,0
+"305","Bacteria__Proteobacteria__Alphaproteobacteria__Pelagibacterales__Pelagibacteraceae__Pelagibacter__Pelagibacter ubique__",651,"Nov 22","K00029",72,0,0,0,0
+"306","Bacteria__Proteobacteria__Alphaproteobacteria__Pelagibacterales__Pelagibacteraceae__Pelagibacter__Pelagibacter ubique__",651,"Nov 22","K00052",72,0,0,0,0
+"307","Bacteria__Proteobacteria__Alphaproteobacteria__Pelagibacterales__Pelagibacteraceae__Pelagibacter__Pelagibacter ubique__",651,"Nov 22","K00220",74,0,0,0,0
+"308","Bacteria__Proteobacteria__Alphaproteobacteria__Pelagibacterales__Pelagibacteraceae__Pelagibacter__Pelagibacter ubique__",651,"Nov 22","K01613",70,0,0,0,0
+"309","Bacteria__Proteobacteria__Alphaproteobacteria__Pelagibacterales__Pelagibacteraceae__Pelagibacter__Pelagibacter ubique__",651,"Nov 22","K01652",74,0,0,0,0
+"310","Bacteria__Proteobacteria__Alphaproteobacteria__Pelagibacterales__Pelagibacteraceae__Pelagibacter__Pelagibacter ubique__",651,"Nov 22","K01713",70,0,0,0,0
+"311","Bacteria__Proteobacteria__Alphaproteobacteria__Pelagibacterales__Pelagibacteraceae__Pelagibacter__Pelagibacter ubique__",651,"Nov 22","K15737",62,0,0,0,0
+"312","Bacteria__Proteobacteria__Alphaproteobacteria__Pelagibacterales__Pelagibacteraceae__Pelagibacter__Pelagibacter ubique__",665,"Jun 22","K00029",36,0,0,0,0
+"313","Bacteria__Proteobacteria__Alphaproteobacteria__Pelagibacterales__Pelagibacteraceae__Pelagibacter__Pelagibacter ubique__",665,"Jun 22","K00052",36,0,0,0,0
+"314","Bacteria__Proteobacteria__Alphaproteobacteria__Pelagibacterales__Pelagibacteraceae__Pelagibacter__Pelagibacter ubique__",665,"Jun 22","K00220",37,0,0,0,0
+"315","Bacteria__Proteobacteria__Alphaproteobacteria__Pelagibacterales__Pelagibacteraceae__Pelagibacter__Pelagibacter ubique__",665,"Jun 22","K01613",35,0,0,0,0
+"316","Bacteria__Proteobacteria__Alphaproteobacteria__Pelagibacterales__Pelagibacteraceae__Pelagibacter__Pelagibacter ubique__",665,"Jun 22","K01652",37,0,0,0,0
+"317","Bacteria__Proteobacteria__Alphaproteobacteria__Pelagibacterales__Pelagibacteraceae__Pelagibacter__Pelagibacter ubique__",665,"Jun 22","K01713",35,0,0,0,0
+"318","Bacteria__Proteobacteria__Alphaproteobacteria__Pelagibacterales__Pelagibacteraceae__Pelagibacter__Pelagibacter ubique__",665,"Jun 22","K15737",31,0,0,0,0
+"319","Bacteria__Proteobacteria__Alphaproteobacteria__Pelagibacterales__Pelagibacteraceae__Pelagibacter__Pelagibacter ubique__",665,"Nov 22","K00029",72,0,0,0,0
+"320","Bacteria__Proteobacteria__Alphaproteobacteria__Pelagibacterales__Pelagibacteraceae__Pelagibacter__Pelagibacter ubique__",665,"Nov 22","K00052",72,0,0,0,0
+"321","Bacteria__Proteobacteria__Alphaproteobacteria__Pelagibacterales__Pelagibacteraceae__Pelagibacter__Pelagibacter ubique__",665,"Nov 22","K00220",74,0,0,0,0
+"322","Bacteria__Proteobacteria__Alphaproteobacteria__Pelagibacterales__Pelagibacteraceae__Pelagibacter__Pelagibacter ubique__",665,"Nov 22","K01613",70,0,0,0,0
+"323","Bacteria__Proteobacteria__Alphaproteobacteria__Pelagibacterales__Pelagibacteraceae__Pelagibacter__Pelagibacter ubique__",665,"Nov 22","K01652",74,0,0,0,0
+"324","Bacteria__Proteobacteria__Alphaproteobacteria__Pelagibacterales__Pelagibacteraceae__Pelagibacter__Pelagibacter ubique__",665,"Nov 22","K01713",70,0,0,0,0
+"325","Bacteria__Proteobacteria__Alphaproteobacteria__Pelagibacterales__Pelagibacteraceae__Pelagibacter__Pelagibacter ubique__",665,"Nov 22","K15737",62,0,0,0,0
+"326","Bacteria__Proteobacteria__Alphaproteobacteria__Pelagibacterales__Pelagibacteraceae__Pelagibacter__Pelagibacter ubique__",692,"Jun 22","K00029",72,0.000539147179961014,3.37392517752474e-06,3.97620895373962e-07,7.92833547247751e-07
+"327","Bacteria__Proteobacteria__Alphaproteobacteria__Pelagibacterales__Pelagibacteraceae__Pelagibacter__Pelagibacter ubique__",692,"Jun 22","K00052",72,0.00180533872236795,2.35224639581107e-05,2.77214896249937e-06,5.52750803845575e-06
+"328","Bacteria__Proteobacteria__Alphaproteobacteria__Pelagibacterales__Pelagibacteraceae__Pelagibacter__Pelagibacter ubique__",692,"Jun 22","K00220",74,4.50677190397919e-05,1.33553698037158e-05,1.55253020423246e-06,3.09418823489249e-06
+"329","Bacteria__Proteobacteria__Alphaproteobacteria__Pelagibacterales__Pelagibacteraceae__Pelagibacter__Pelagibacter ubique__",692,"Jun 22","K01613",70,0.0010706363758611,5.08939733089397e-05,6.08299329415458e-06,1.21352395823018e-05
+"330","Bacteria__Proteobacteria__Alphaproteobacteria__Pelagibacterales__Pelagibacteraceae__Pelagibacter__Pelagibacter ubique__",692,"Jun 22","K01652",74,0.000212116380229469,7.39186267427395e-05,8.5928658180292e-06,1.71255568784894e-05
+"331","Bacteria__Proteobacteria__Alphaproteobacteria__Pelagibacterales__Pelagibacteraceae__Pelagibacter__Pelagibacter ubique__",692,"Jun 22","K01713",70,0.00304294661162842,0.000381778411098581,4.56312479371252e-05,9.10318488577894e-05
+"332","Bacteria__Proteobacteria__Alphaproteobacteria__Pelagibacterales__Pelagibacteraceae__Pelagibacter__Pelagibacter ubique__",692,"Jun 22","K15737",62,0.000116204912197437,8.98800160468302e-05,1.14147734527266e-05,2.28252502134462e-05
+"333","Bacteria__Proteobacteria__Alphaproteobacteria__Pelagibacterales__Pelagibacteraceae__Pelagibacter__Pelagibacter ubique__",692,"Nov 22","K00029",72,0.00080995235574378,0.000815636301658402,9.61236599807621e-05,0.000191665134311689
+"334","Bacteria__Proteobacteria__Alphaproteobacteria__Pelagibacterales__Pelagibacteraceae__Pelagibacter__Pelagibacter ubique__",692,"Nov 22","K00052",72,0.00528796266027387,0.00224041762210597,0.000264035748880162,0.000526472330353753
+"335","Bacteria__Proteobacteria__Alphaproteobacteria__Pelagibacterales__Pelagibacteraceae__Pelagibacter__Pelagibacter ubique__",692,"Nov 22","K00220",74,0,0,0,0
+"336","Bacteria__Proteobacteria__Alphaproteobacteria__Pelagibacterales__Pelagibacteraceae__Pelagibacter__Pelagibacter ubique__",692,"Nov 22","K01613",70,0.0011874213836478,0.00119599493457851,0.000142948736242725,0.000285174925962798
+"337","Bacteria__Proteobacteria__Alphaproteobacteria__Pelagibacterales__Pelagibacteraceae__Pelagibacter__Pelagibacter ubique__",692,"Nov 22","K01652",74,0.000606643663316853,0.000221712466293182,2.5773550686651e-05,5.1366612442472e-05
+"338","Bacteria__Proteobacteria__Alphaproteobacteria__Pelagibacterales__Pelagibacteraceae__Pelagibacter__Pelagibacter ubique__",692,"Nov 22","K01713",70,0.00112,0.00112808674761515,0.000134832155456062,0.000268982790336096
+"339","Bacteria__Proteobacteria__Alphaproteobacteria__Pelagibacterales__Pelagibacteraceae__Pelagibacter__Pelagibacter ubique__",692,"Nov 22","K15737",62,0,0,0,0
+"340","Bacteria__Proteobacteria__Alphaproteobacteria__Pelagibacterales__Pelagibacteraceae__Pelagibacter__Pelagibacter ubique__",713,"May 22","K00029",72,0.000623409550125373,0.000144619651106528,1.70435893317097e-05,3.39839519122471e-05
+"341","Bacteria__Proteobacteria__Alphaproteobacteria__Pelagibacterales__Pelagibacteraceae__Pelagibacter__Pelagibacter ubique__",713,"May 22","K00052",72,0.00192016487081489,0.0004283137922592,5.04772644970345e-05,0.000100648806770851
+"342","Bacteria__Proteobacteria__Alphaproteobacteria__Pelagibacterales__Pelagibacteraceae__Pelagibacter__Pelagibacter ubique__",713,"May 22","K00220",74,9.07623346081887e-05,6.5224302473544e-05,7.58217115126214e-06,1.51112453124704e-05
+"343","Bacteria__Proteobacteria__Alphaproteobacteria__Pelagibacterales__Pelagibacteraceae__Pelagibacter__Pelagibacter ubique__",713,"May 22","K01613",70,0.0013865636412012,0.000271879765179212,3.24958473641311e-05,6.4827441709098e-05
+"344","Bacteria__Proteobacteria__Alphaproteobacteria__Pelagibacterales__Pelagibacteraceae__Pelagibacter__Pelagibacter ubique__",713,"May 22","K01652",74,0.000353795239119812,7.34032245372124e-05,8.53295152863332e-06,1.70061478719236e-05
+"345","Bacteria__Proteobacteria__Alphaproteobacteria__Pelagibacterales__Pelagibacteraceae__Pelagibacter__Pelagibacter ubique__",713,"May 22","K01713",70,0.00259682273700813,0.000292173954846668,3.49214669735113e-05,6.96664204276253e-05
+"346","Bacteria__Proteobacteria__Alphaproteobacteria__Pelagibacterales__Pelagibacteraceae__Pelagibacter__Pelagibacter ubique__",713,"May 22","K15737",62,0.00014360390439598,3.2237937464994e-05,4.09422215227844e-06,8.1869031779047e-06
+"347","Bacteria__Proteobacteria__Alphaproteobacteria__Pelagibacterales__Pelagibacteraceae__Pelagibacter__Pelagibacter ubique__",713,"Jun 22","K00029",72,0.000305845863302241,5.79759196281351e-06,6.8325276524301e-07,1.36236731981848e-06
+"348","Bacteria__Proteobacteria__Alphaproteobacteria__Pelagibacterales__Pelagibacteraceae__Pelagibacter__Pelagibacter ubique__",713,"Jun 22","K00052",72,0.00116350477043242,0.00011837571303417,1.39507115690424e-05,2.78169288098192e-05
+"349","Bacteria__Proteobacteria__Alphaproteobacteria__Pelagibacterales__Pelagibacteraceae__Pelagibacter__Pelagibacter ubique__",713,"Jun 22","K00220",74,5.77336917250567e-05,5.75430833869196e-07,6.68924756976809e-08,1.33316511809135e-07
+"350","Bacteria__Proteobacteria__Alphaproteobacteria__Pelagibacterales__Pelagibacteraceae__Pelagibacter__Pelagibacter ubique__",713,"Jun 22","K01613",70,0.000576405705222492,0.000314387563912754,3.75765010807468e-05,7.49630685468081e-05
+"351","Bacteria__Proteobacteria__Alphaproteobacteria__Pelagibacterales__Pelagibacteraceae__Pelagibacter__Pelagibacter ubique__",713,"Jun 22","K01652",74,0.000123642376012661,4.77432577253812e-05,5.55004097651318e-06,1.10612157147617e-05
+"352","Bacteria__Proteobacteria__Alphaproteobacteria__Pelagibacterales__Pelagibacteraceae__Pelagibacter__Pelagibacter ubique__",713,"Jun 22","K01713",70,0.00171641091625365,4.95178253044575e-05,5.91851214759102e-06,1.18071086730932e-05
+"353","Bacteria__Proteobacteria__Alphaproteobacteria__Pelagibacterales__Pelagibacteraceae__Pelagibacter__Pelagibacter ubique__",713,"Jun 22","K15737",62,5.99381918958515e-05,4.24245735062245e-05,5.38792622321943e-06,1.07738243501623e-05
+"354","Bacteria__Proteobacteria__Alphaproteobacteria__Pelagibacterales__Pelagibacteraceae__Pelagibacter__Pelagibacter ubique__",713,"Nov 22","K00029",72,0.000724511252924478,0.000135070530630762,1.59182146912462e-05,3.17400186115531e-05
+"355","Bacteria__Proteobacteria__Alphaproteobacteria__Pelagibacterales__Pelagibacteraceae__Pelagibacter__Pelagibacter ubique__",713,"Nov 22","K00052",72,0.00093635938231165,0.000942930405962567,0.000111125414040519,0.000221577782325192
+"356","Bacteria__Proteobacteria__Alphaproteobacteria__Pelagibacterales__Pelagibacteraceae__Pelagibacter__Pelagibacter ubique__",713,"Nov 22","K00220",74,6.33555633555635e-05,6.37880295593233e-05,7.41520781639228e-06,1.47784878659458e-05
+"357","Bacteria__Proteobacteria__Alphaproteobacteria__Pelagibacterales__Pelagibacteraceae__Pelagibacter__Pelagibacter ubique__",713,"Nov 22","K01613",70,0.000460812474353713,0.000464139683441224,5.54753028376359e-05,0.000110670201047627
+"358","Bacteria__Proteobacteria__Alphaproteobacteria__Pelagibacterales__Pelagibacteraceae__Pelagibacter__Pelagibacter ubique__",713,"Nov 22","K01652",74,0.000299890750182083,0.000301937809783559,3.50995574348192e-05,6.99533170876005e-05
+"359","Bacteria__Proteobacteria__Alphaproteobacteria__Pelagibacterales__Pelagibacteraceae__Pelagibacter__Pelagibacter ubique__",713,"Nov 22","K01713",70,0.00151842400949102,0.00069829542294894,8.34622667275833e-05,0.00016650266634265
+"360","Bacteria__Proteobacteria__Alphaproteobacteria__Pelagibacterales__Pelagibacteraceae__Pelagibacter__Pelagibacter ubique__",713,"Nov 22","K15737",62,0.000167009249743062,0.000168372613178595,2.13833432570355e-05,4.27586375028107e-05
+"841","NA__NA__NA__NA__NA__NA__NA__",633,"May 22","K00027",114,0.000360905934978723,2.48494980481658e-05,2.32736872968391e-06,4.61093721636561e-06
+"842","NA__NA__NA__NA__NA__NA__NA__",633,"May 22","K00029",218,0.000145832855737626,0.000199173196529735,1.34897110325809e-05,2.65876309519591e-05
+"843","NA__NA__NA__NA__NA__NA__NA__",633,"May 22","K00052",236,0.000534311662735457,0.00110710657594841,7.2066499731216e-05,0.00014197893627291
+"844","NA__NA__NA__NA__NA__NA__NA__",633,"May 22","K00174",2,0,0,0,0
+"845","NA__NA__NA__NA__NA__NA__NA__",633,"May 22","K00175",22,0,0,0,0
+"846","NA__NA__NA__NA__NA__NA__NA__",633,"May 22","K00220",178,0,0,0,0
+"847","NA__NA__NA__NA__NA__NA__NA__",633,"May 22","K00252",2,0,0,0,0
+"848","NA__NA__NA__NA__NA__NA__NA__",633,"May 22","K00648",18,0,0,0,0
+"849","NA__NA__NA__NA__NA__NA__NA__",633,"May 22","K01577",2,0,0,0,0
+"850","NA__NA__NA__NA__NA__NA__NA__",633,"May 22","K01584",2,0.00077777777777778,0.00109994388184574,0.00077777777777778,0.00988260368369146
+"851","NA__NA__NA__NA__NA__NA__NA__",633,"May 22","K01585",52,0.000213388463982297,7.39486160829873e-05,1.02548279629543e-05,2.05874261858081e-05
+"852","NA__NA__NA__NA__NA__NA__NA__",633,"May 22","K01609",116,0.000321063532873531,6.69068803765791e-05,6.2121478889502e-06,1.23050693848853e-05
+"853","NA__NA__NA__NA__NA__NA__NA__",633,"May 22","K01613",122,0.00193546948264372,0.00160416435959003,0.000145234217070303,0.000287529440031624
+"854","NA__NA__NA__NA__NA__NA__NA__",633,"May 22","K01616",28,0.000578905311863032,0.000136112502726201,2.57228451814378e-05,5.27789187139719e-05
+"855","NA__NA__NA__NA__NA__NA__NA__",633,"May 22","K01652",506,19762.8507939452,444554.224209614,19762.8458380318,38827.5224816102
+"856","NA__NA__NA__NA__NA__NA__NA__",633,"May 22","K01713",92,0.0157032998248522,0.0253173781420536,0.00263951913437585,0.00524308050717499
+"857","NA__NA__NA__NA__NA__NA__NA__",633,"May 22","K02548",104,0.000167991015181973,2.08105412073862e-05,2.04064145586325e-06,4.04713103175189e-06
+"858","NA__NA__NA__NA__NA__NA__NA__",633,"May 22","K03119",36,0,0,0,0
+"859","NA__NA__NA__NA__NA__NA__NA__",633,"May 22","K03518",24,0,0,0,0
+"860","NA__NA__NA__NA__NA__NA__NA__",633,"May 22","K06016",6,0.000253917673658328,0.000278201433358964,0.000113575259573393,0.000291954499237045
+"861","NA__NA__NA__NA__NA__NA__NA__",633,"May 22","K07246",22,0,0,0,0
+"862","NA__NA__NA__NA__NA__NA__NA__",633,"May 22","K11381",46,0,0,0,0
+"863","NA__NA__NA__NA__NA__NA__NA__",633,"May 22","K13745",72,8.96334783637455e-05,9.88290671756147e-06,1.16471172630363e-06,2.32236922211516e-06
+"864","NA__NA__NA__NA__NA__NA__NA__",633,"May 22","K15737",38,0,0,0,0
+"865","NA__NA__NA__NA__NA__NA__NA__",633,"Jun 22","K00027",114,6.1029118468289e-05,6.12985640100811e-05,5.74113653221743e-06,1.13742269383472e-05
+"866","NA__NA__NA__NA__NA__NA__NA__",633,"Jun 22","K00029",218,0.000313932385816526,0.000400061629788251,2.70955925551015e-05,5.34042288630003e-05
+"867","NA__NA__NA__NA__NA__NA__NA__",633,"Jun 22","K00052",236,0.000296992802527445,0.000494588431401837,3.21949646339595e-05,6.34276237797294e-05
+"868","NA__NA__NA__NA__NA__NA__NA__",633,"Jun 22","K00174",2,0,0,0,0
+"869","NA__NA__NA__NA__NA__NA__NA__",633,"Jun 22","K00175",22,0,0,0,0
+"870","NA__NA__NA__NA__NA__NA__NA__",633,"Jun 22","K00220",178,0,0,0,0
+"871","NA__NA__NA__NA__NA__NA__NA__",633,"Jun 22","K00252",2,0,0,0,0
+"872","NA__NA__NA__NA__NA__NA__NA__",633,"Jun 22","K00648",18,0,0,0,0
+"873","NA__NA__NA__NA__NA__NA__NA__",633,"Jun 22","K01577",2,0,0,0,0
+"874","NA__NA__NA__NA__NA__NA__NA__",633,"Jun 22","K01584",2,0,0,0,0
+"875","NA__NA__NA__NA__NA__NA__NA__",633,"Jun 22","K01585",52,0,0,0,0
+"876","NA__NA__NA__NA__NA__NA__NA__",633,"Jun 22","K01609",116,0,0,0,0
+"877","NA__NA__NA__NA__NA__NA__NA__",633,"Jun 22","K01613",122,0.00142219253037966,0.00109483594309147,9.91217889019508e-05,0.000196237725742789
+"878","NA__NA__NA__NA__NA__NA__NA__",633,"Jun 22","K01616",28,0.000448042104258084,0.000395624044954045,7.47659168304173e-05,0.000153406989745277
+"879","NA__NA__NA__NA__NA__NA__NA__",633,"Jun 22","K01652",506,0.00137873452469652,0.00239014071663308,0.000106254715266747,0.000208755731821647
+"880","NA__NA__NA__NA__NA__NA__NA__",633,"Jun 22","K01713",92,0.0170364272038796,0.0286450476768643,0.00298645266598917,0.00593222134847345
+"881","NA__NA__NA__NA__NA__NA__NA__",633,"Jun 22","K02548",104,0,0,0,0
+"882","NA__NA__NA__NA__NA__NA__NA__",633,"Jun 22","K03119",36,0,0,0,0
+"883","NA__NA__NA__NA__NA__NA__NA__",633,"Jun 22","K03518",24,2083333.333125,4148511.16957568,846811.296474757,1751762.63304133
+"884","NA__NA__NA__NA__NA__NA__NA__",633,"Jun 22","K06016",6,0.000157615353585187,0.000172766198052233,7.05315050047651e-05,0.000181307005605341
+"885","NA__NA__NA__NA__NA__NA__NA__",633,"Jun 22","K07246",22,0,0,0,0
+"886","NA__NA__NA__NA__NA__NA__NA__",633,"Jun 22","K11381",46,0,0,0,0
+"887","NA__NA__NA__NA__NA__NA__NA__",633,"Jun 22","K13745",72,0,0,0,0
+"888","NA__NA__NA__NA__NA__NA__NA__",633,"Jun 22","K15737",38,0,0,0,0
+"889","NA__NA__NA__NA__NA__NA__NA__",633,"Nov 22","K00027",114,0.000150716311988973,2.85800952733965e-05,2.67677117267162e-06,5.30316647394436e-06
+"890","NA__NA__NA__NA__NA__NA__NA__",633,"Nov 22","K00029",218,0.000167237601286088,0.000162835981820662,1.10286443092728e-05,2.17369759876367e-05
+"891","NA__NA__NA__NA__NA__NA__NA__",633,"Nov 22","K00052",236,0.00053033682362049,0.000955576900542708,6.22027580200431e-05,0.000122546279476115
+"892","NA__NA__NA__NA__NA__NA__NA__",633,"Nov 22","K00174",2,0,0,0,0
+"893","NA__NA__NA__NA__NA__NA__NA__",633,"Nov 22","K00175",22,0,0,0,0
+"894","NA__NA__NA__NA__NA__NA__NA__",633,"Nov 22","K00220",178,4.38869021921026e-05,4.99073747802785e-05,3.74071589124116e-06,7.38214271468625e-06
+"895","NA__NA__NA__NA__NA__NA__NA__",633,"Nov 22","K00252",2,0,0,0,0
+"896","NA__NA__NA__NA__NA__NA__NA__",633,"Nov 22","K00648",18,0,0,0,0
+"897","NA__NA__NA__NA__NA__NA__NA__",633,"Nov 22","K01577",2,0,0,0,0
+"898","NA__NA__NA__NA__NA__NA__NA__",633,"Nov 22","K01584",2,0,0,0,0
+"899","NA__NA__NA__NA__NA__NA__NA__",633,"Nov 22","K01585",52,7.13403335392215e-05,7.2036353275293e-05,9.98964482428873e-06,2.00550488204617e-05
+"900","NA__NA__NA__NA__NA__NA__NA__",633,"Nov 22","K01609",116,0.000181966468688732,2.89388686877327e-05,2.68690650371491e-06,5.32224466479963e-06
+"901","NA__NA__NA__NA__NA__NA__NA__",633,"Nov 22","K01613",122,0.000692584219804599,0.000503619957257758,4.55956085522325e-05,9.02685335410897e-05
+"902","NA__NA__NA__NA__NA__NA__NA__",633,"Nov 22","K01616",28,0.000928084081539654,0.000132568711007255,2.50531314966848e-05,5.14047797382913e-05
+"903","NA__NA__NA__NA__NA__NA__NA__",633,"Nov 22","K01652",506,0.00283979732095646,0.00459987485123704,0.000204489379717092,0.000401754689243006
+"904","NA__NA__NA__NA__NA__NA__NA__",633,"Nov 22","K01713",92,0.0102574481085854,0.0164589824475875,0.00171596754051719,0.00340855872020725
+"905","NA__NA__NA__NA__NA__NA__NA__",633,"Nov 22","K02548",104,9.8330277270063e-05,9.88210276890346e-05,9.69019901037847e-06,1.92182242530029e-05
+"906","NA__NA__NA__NA__NA__NA__NA__",633,"Nov 22","K03119",36,0,0,0,0
+"907","NA__NA__NA__NA__NA__NA__NA__",633,"Nov 22","K03518",24,0,0,0,0
+"908","NA__NA__NA__NA__NA__NA__NA__",633,"Nov 22","K06016",6,0.000514497832951078,0.000130883399427951,5.34329240665599e-05,0.000137353704030433
+"909","NA__NA__NA__NA__NA__NA__NA__",633,"Nov 22","K07246",22,0,0,0,0
+"910","NA__NA__NA__NA__NA__NA__NA__",633,"Nov 22","K11381",46,0,0,0,0
+"911","NA__NA__NA__NA__NA__NA__NA__",633,"Nov 22","K13745",72,1.99460916442048e-05,2.00860659344329e-05,2.3671655715996e-06,4.71999409208352e-06
+"912","NA__NA__NA__NA__NA__NA__NA__",633,"Nov 22","K15737",38,0,0,0,0
+"913","NA__NA__NA__NA__NA__NA__NA__",651,"May 22","K00027",57,0,0,0,0
+"914","NA__NA__NA__NA__NA__NA__NA__",651,"May 22","K00029",109,0.000216783581392418,0.00226328703583621,0.000216783581392418,0.000429702666652534
+"915","NA__NA__NA__NA__NA__NA__NA__",651,"May 22","K00052",118,6.37555600779137e-05,0.00039641897190806,3.64933243591908e-05,7.2273116595134e-05
+"916","NA__NA__NA__NA__NA__NA__NA__",651,"May 22","K00174",1,0,NA,NA,NA
+"917","NA__NA__NA__NA__NA__NA__NA__",651,"May 22","K00175",11,0,0,0,0
+"918","NA__NA__NA__NA__NA__NA__NA__",651,"May 22","K00220",89,0,0,0,0
+"919","NA__NA__NA__NA__NA__NA__NA__",651,"May 22","K00252",1,0,NA,NA,NA
+"920","NA__NA__NA__NA__NA__NA__NA__",651,"May 22","K00648",9,0,0,0,0
+"921","NA__NA__NA__NA__NA__NA__NA__",651,"May 22","K01577",1,0,NA,NA,NA
+"922","NA__NA__NA__NA__NA__NA__NA__",651,"May 22","K01584",1,0,NA,NA,NA
+"923","NA__NA__NA__NA__NA__NA__NA__",651,"May 22","K01585",26,6.71907545521736e-05,0,0,0
+"924","NA__NA__NA__NA__NA__NA__NA__",651,"May 22","K01609",58,0,0,0,0
+"925","NA__NA__NA__NA__NA__NA__NA__",651,"May 22","K01613",61,0.0263052896954575,0.0185248820198954,0.00237186809495241,0.00474444258443843
+"926","NA__NA__NA__NA__NA__NA__NA__",651,"May 22","K01616",14,0,0,0,0
+"927","NA__NA__NA__NA__NA__NA__NA__",651,"May 22","K01652",253,0.00363792618667044,0.00530772296663662,0.000333693683887263,0.000657183804229037
+"928","NA__NA__NA__NA__NA__NA__NA__",651,"May 22","K01713",46,0.0256479106073035,0.0413152080505806,0.00609159509392416,0.0122691023223626
+"929","NA__NA__NA__NA__NA__NA__NA__",651,"May 22","K02548",52,0,0,0,0
+"930","NA__NA__NA__NA__NA__NA__NA__",651,"May 22","K03119",18,0,0,0,0
+"931","NA__NA__NA__NA__NA__NA__NA__",651,"May 22","K03518",12,0,0,0,0
+"932","NA__NA__NA__NA__NA__NA__NA__",651,"May 22","K06016",3,0,0,0,0
+"933","NA__NA__NA__NA__NA__NA__NA__",651,"May 22","K07246",11,0,0,0,0
+"934","NA__NA__NA__NA__NA__NA__NA__",651,"May 22","K11381",23,0,0,0,0
+"935","NA__NA__NA__NA__NA__NA__NA__",651,"May 22","K13745",36,0,0,0,0
+"936","NA__NA__NA__NA__NA__NA__NA__",651,"May 22","K15737",19,0,0,0,0
+"937","NA__NA__NA__NA__NA__NA__NA__",651,"Nov 22","K00027",114,0,0,0,0
+"938","NA__NA__NA__NA__NA__NA__NA__",651,"Nov 22","K00029",218,0,0,0,0
+"939","NA__NA__NA__NA__NA__NA__NA__",651,"Nov 22","K00052",236,0,0,0,0
+"940","NA__NA__NA__NA__NA__NA__NA__",651,"Nov 22","K00174",2,0,0,0,0
+"941","NA__NA__NA__NA__NA__NA__NA__",651,"Nov 22","K00175",22,0,0,0,0
+"942","NA__NA__NA__NA__NA__NA__NA__",651,"Nov 22","K00220",178,0,0,0,0
+"943","NA__NA__NA__NA__NA__NA__NA__",651,"Nov 22","K00252",2,0,0,0,0
+"944","NA__NA__NA__NA__NA__NA__NA__",651,"Nov 22","K00648",18,0,0,0,0
+"945","NA__NA__NA__NA__NA__NA__NA__",651,"Nov 22","K01577",2,0,0,0,0
+"946","NA__NA__NA__NA__NA__NA__NA__",651,"Nov 22","K01584",2,0,0,0,0
+"947","NA__NA__NA__NA__NA__NA__NA__",651,"Nov 22","K01585",52,0,0,0,0
+"948","NA__NA__NA__NA__NA__NA__NA__",651,"Nov 22","K01609",116,0,0,0,0
+"949","NA__NA__NA__NA__NA__NA__NA__",651,"Nov 22","K01613",122,0,0,0,0
+"950","NA__NA__NA__NA__NA__NA__NA__",651,"Nov 22","K01616",28,0,0,0,0
+"951","NA__NA__NA__NA__NA__NA__NA__",651,"Nov 22","K01652",506,0,0,0,0
+"952","NA__NA__NA__NA__NA__NA__NA__",651,"Nov 22","K01713",92,1413043.47811957,3502439.2561311,365154.534631337,725334.62542405
+"953","NA__NA__NA__NA__NA__NA__NA__",651,"Nov 22","K02548",104,0,0,0,0
+"954","NA__NA__NA__NA__NA__NA__NA__",651,"Nov 22","K03119",36,0,0,0,0
+"955","NA__NA__NA__NA__NA__NA__NA__",651,"Nov 22","K03518",24,0,0,0,0
+"956","NA__NA__NA__NA__NA__NA__NA__",651,"Nov 22","K06016",6,0,0,0,0
+"957","NA__NA__NA__NA__NA__NA__NA__",651,"Nov 22","K07246",22,0,0,0,0
+"958","NA__NA__NA__NA__NA__NA__NA__",651,"Nov 22","K11381",46,0,0,0,0
+"959","NA__NA__NA__NA__NA__NA__NA__",651,"Nov 22","K13745",72,0,0,0,0
+"960","NA__NA__NA__NA__NA__NA__NA__",651,"Nov 22","K15737",38,0,0,0,0
+"961","NA__NA__NA__NA__NA__NA__NA__",665,"Jun 22","K00027",57,0.00022298313011525,0,0,0
+"962","NA__NA__NA__NA__NA__NA__NA__",665,"Jun 22","K00029",109,1.14456438013811e-05,0.000101534649166413,9.72525558322984e-06,1.92771437354686e-05
+"963","NA__NA__NA__NA__NA__NA__NA__",665,"Jun 22","K00052",118,0.000577428154051412,0.000891992162323711,8.21145343999449e-05,0.000162623532469377
+"964","NA__NA__NA__NA__NA__NA__NA__",665,"Jun 22","K00174",1,0,NA,NA,NA
+"965","NA__NA__NA__NA__NA__NA__NA__",665,"Jun 22","K00175",11,0,0,0,0
+"966","NA__NA__NA__NA__NA__NA__NA__",665,"Jun 22","K00220",89,0,0,0,0
+"967","NA__NA__NA__NA__NA__NA__NA__",665,"Jun 22","K00252",1,0,NA,NA,NA
+"968","NA__NA__NA__NA__NA__NA__NA__",665,"Jun 22","K00648",9,0,0,0,0
+"969","NA__NA__NA__NA__NA__NA__NA__",665,"Jun 22","K01577",1,0,NA,NA,NA
+"970","NA__NA__NA__NA__NA__NA__NA__",665,"Jun 22","K01584",1,0,NA,NA,NA
+"971","NA__NA__NA__NA__NA__NA__NA__",665,"Jun 22","K01585",26,0,0,0,0
+"972","NA__NA__NA__NA__NA__NA__NA__",665,"Jun 22","K01609",58,0,0,0,0
+"973","NA__NA__NA__NA__NA__NA__NA__",665,"Jun 22","K01613",61,0.000898176761161181,0.000632519874373248,8.0985871210298e-05,0.000161995861795886
+"974","NA__NA__NA__NA__NA__NA__NA__",665,"Jun 22","K01616",14,0.000269339075699851,0,0,0
+"975","NA__NA__NA__NA__NA__NA__NA__",665,"Jun 22","K01652",253,79051.3855141411,887342.591020493,55786.7507269938,109867.674572855
+"976","NA__NA__NA__NA__NA__NA__NA__",665,"Jun 22","K01713",46,0.0145746113558899,0.0234776668417379,0.0034615931250988,0.00697200644418812
+"977","NA__NA__NA__NA__NA__NA__NA__",665,"Jun 22","K02548",52,0.000310036296267214,2.44726485320889e-06,3.39374573572519e-07,6.81322885962047e-07
+"978","NA__NA__NA__NA__NA__NA__NA__",665,"Jun 22","K03119",18,5555555.555,5113099.92513783,1205169.20998313,2542684.77314748
+"979","NA__NA__NA__NA__NA__NA__NA__",665,"Jun 22","K03518",12,0,0,0,0
+"980","NA__NA__NA__NA__NA__NA__NA__",665,"Jun 22","K06016",3,0.000456274015674724,1.37235949355335e-05,7.92332123027966e-06,3.40912997201446e-05
+"981","NA__NA__NA__NA__NA__NA__NA__",665,"Jun 22","K07246",11,0,0,0,0
+"982","NA__NA__NA__NA__NA__NA__NA__",665,"Jun 22","K11381",23,0,0,0,0
+"983","NA__NA__NA__NA__NA__NA__NA__",665,"Jun 22","K13745",36,0,0,0,0
+"984","NA__NA__NA__NA__NA__NA__NA__",665,"Jun 22","K15737",19,0,0,0,0
+"985","NA__NA__NA__NA__NA__NA__NA__",665,"Nov 22","K00027",114,0,0,0,0
+"986","NA__NA__NA__NA__NA__NA__NA__",665,"Nov 22","K00029",218,3440366.97213303,4761464.34590444,322487.057682977,635607.898178802
+"987","NA__NA__NA__NA__NA__NA__NA__",665,"Nov 22","K00052",236,1949152.54217797,3969774.00598401,258410.277339521,509096.687580081
+"988","NA__NA__NA__NA__NA__NA__NA__",665,"Nov 22","K00174",2,0,0,0,0
+"989","NA__NA__NA__NA__NA__NA__NA__",665,"Nov 22","K00175",22,0,0,0,0
+"990","NA__NA__NA__NA__NA__NA__NA__",665,"Nov 22","K00220",178,0,0,0,0
+"991","NA__NA__NA__NA__NA__NA__NA__",665,"Nov 22","K00252",2,0,0,0,0
+"992","NA__NA__NA__NA__NA__NA__NA__",665,"Nov 22","K00648",18,0,0,0,0
+"993","NA__NA__NA__NA__NA__NA__NA__",665,"Nov 22","K01577",2,0,0,0,0
+"994","NA__NA__NA__NA__NA__NA__NA__",665,"Nov 22","K01584",2,0,0,0,0
+"995","NA__NA__NA__NA__NA__NA__NA__",665,"Nov 22","K01585",52,0,0,0,0
+"996","NA__NA__NA__NA__NA__NA__NA__",665,"Nov 22","K01609",116,0,0,0,0
+"997","NA__NA__NA__NA__NA__NA__NA__",665,"Nov 22","K01613",122,0,0,0,0
+"998","NA__NA__NA__NA__NA__NA__NA__",665,"Nov 22","K01616",28,0,0,0,0
+"999","NA__NA__NA__NA__NA__NA__NA__",665,"Nov 22","K01652",506,1778656.12630435,3827780.03151638,170165.578336931,334319.655813871
+"1000","NA__NA__NA__NA__NA__NA__NA__",665,"Nov 22","K01713",92,4021739.13003261,4930234.73272261,514012.503228747,1021022.69349911
+"1001","NA__NA__NA__NA__NA__NA__NA__",665,"Nov 22","K02548",104,0,0,0,0
+"1002","NA__NA__NA__NA__NA__NA__NA__",665,"Nov 22","K03119",36,2222222.222,4216370.2131362,702728.368856034,1426614.43302107
+"1003","NA__NA__NA__NA__NA__NA__NA__",665,"Nov 22","K03518",24,0,0,0,0
+"1004","NA__NA__NA__NA__NA__NA__NA__",665,"Nov 22","K06016",6,0,0,0,0
+"1005","NA__NA__NA__NA__NA__NA__NA__",665,"Nov 22","K07246",22,0,0,0,0
+"1006","NA__NA__NA__NA__NA__NA__NA__",665,"Nov 22","K11381",46,0,0,0,0
+"1007","NA__NA__NA__NA__NA__NA__NA__",665,"Nov 22","K13745",72,0,0,0,0
+"1008","NA__NA__NA__NA__NA__NA__NA__",665,"Nov 22","K15737",38,0,0,0,0
+"1009","NA__NA__NA__NA__NA__NA__NA__",692,"Jun 22","K00027",114,0,0,0,0
+"1010","NA__NA__NA__NA__NA__NA__NA__",692,"Jun 22","K00029",218,0.00481194707333572,0.00931458822159762,0.000630863518214784,0.0012434044259983
+"1011","NA__NA__NA__NA__NA__NA__NA__",692,"Jun 22","K00052",236,0.00203978743128105,0.00471555406506431,0.00030695642420096,0.000604737939996147
+"1012","NA__NA__NA__NA__NA__NA__NA__",692,"Jun 22","K00174",2,0.00756225067216298,0.00116772745580685,0.00082570800257874,0.0104916149330633
+"1013","NA__NA__NA__NA__NA__NA__NA__",692,"Jun 22","K00175",22,0.0099957348220814,0.000322514092186545,6.87602354889507e-05,0.000142994737689557
+"1014","NA__NA__NA__NA__NA__NA__NA__",692,"Jun 22","K00220",178,0.000241319816731012,0.000152492484097775,1.1429794916498e-05,2.25562110907032e-05
+"1015","NA__NA__NA__NA__NA__NA__NA__",692,"Jun 22","K00252",2,0.00341265398739894,0.000399592271662845,0.000282554405002535,0.00359019411907023
+"1016","NA__NA__NA__NA__NA__NA__NA__",692,"Jun 22","K00648",18,0.00932897904001523,0.00178502470005366,0.000420734356664475,0.000887671899820389
+"1017","NA__NA__NA__NA__NA__NA__NA__",692,"Jun 22","K01577",2,0.0050557261942783,5.61097866352429e-05,3.96756106207105e-05,0.000504126431579495
+"1018","NA__NA__NA__NA__NA__NA__NA__",692,"Jun 22","K01584",2,0.000593136029435332,0.000113479390612914,8.02420466273085e-05,0.00101957187289626
+"1019","NA__NA__NA__NA__NA__NA__NA__",692,"Jun 22","K01585",52,0,0,0,0
+"1020","NA__NA__NA__NA__NA__NA__NA__",692,"Jun 22","K01609",116,5.42783960545711e-07,4.20688255956393e-06,3.90599239784683e-07,7.73701919714953e-07
+"1021","NA__NA__NA__NA__NA__NA__NA__",692,"Jun 22","K01613",122,0.000929923883882094,0.0002535977101431,2.29596578824799e-05,4.54546986752545e-05
+"1022","NA__NA__NA__NA__NA__NA__NA__",692,"Jun 22","K01616",28,0.000105218855218855,0.000107149637461556,2.02493781281434e-05,4.15482919830731e-05
+"1023","NA__NA__NA__NA__NA__NA__NA__",692,"Jun 22","K01652",506,0.00105028693749509,0.00189427778704495,8.42109192558825e-05,0.000165446888945143
+"1024","NA__NA__NA__NA__NA__NA__NA__",692,"Jun 22","K01713",92,0.0122542601332107,0.0127131225545833,0.00132543465015236,0.00263281310873748
+"1025","NA__NA__NA__NA__NA__NA__NA__",692,"Jun 22","K02548",104,0,0,0,0
+"1026","NA__NA__NA__NA__NA__NA__NA__",692,"Jun 22","K03119",36,0.00803709611081992,0.00646531614940146,0.00107755269156691,0.00218754826225748
+"1027","NA__NA__NA__NA__NA__NA__NA__",692,"Jun 22","K03518",24,0.00616877877005662,0.00195164864372818,0.000398378611194073,0.000824108945874791
+"1028","NA__NA__NA__NA__NA__NA__NA__",692,"Jun 22","K06016",6,0,0,0,0
+"1029","NA__NA__NA__NA__NA__NA__NA__",692,"Jun 22","K07246",22,0.0045376286093838,0.00078349587071935,0.000167041880899028,0.000347382608166971
+"1030","NA__NA__NA__NA__NA__NA__NA__",692,"Jun 22","K11381",46,0.000607676429127552,0.000467379104989673,6.89112895056024e-05,0.000138794461725383
+"1031","NA__NA__NA__NA__NA__NA__NA__",692,"Jun 22","K13745",72,0,0,0,0
+"1032","NA__NA__NA__NA__NA__NA__NA__",692,"Jun 22","K15737",38,0.000116138817393002,9.02937232717085e-05,1.46475761083244e-05,2.96788083123321e-05
+"1033","NA__NA__NA__NA__NA__NA__NA__",692,"Nov 22","K00027",114,0.0013904958677686,0.00139663495222293,0.000130806848021108,0.000259151958176357
+"1034","NA__NA__NA__NA__NA__NA__NA__",692,"Nov 22","K00029",218,0.00660578937827484,0.0134493654488053,0.00091090596845884,0.00179535585772195
+"1035","NA__NA__NA__NA__NA__NA__NA__",692,"Nov 22","K00052",236,0.00256602253364127,0.0052249884484763,0.000340117777997257,0.000670069456788665
+"1036","NA__NA__NA__NA__NA__NA__NA__",692,"Nov 22","K00174",2,0.0135764730006835,0.00441990554225802,0.00312534518113465,0.0397112757427138
+"1037","NA__NA__NA__NA__NA__NA__NA__",692,"Nov 22","K00175",22,0.0185479296140642,0.000832275551651994,0.000177441743817466,0.000369010307075424
+"1038","NA__NA__NA__NA__NA__NA__NA__",692,"Nov 22","K00220",178,0.000151905374608276,9.4884687789661e-05,7.11190802988296e-06,1.40350461186453e-05
+"1039","NA__NA__NA__NA__NA__NA__NA__",692,"Nov 22","K00252",2,0.00648860634135695,0.00104531071943631,0.000739146298160405,0.00939174419441173
+"1040","NA__NA__NA__NA__NA__NA__NA__",692,"Nov 22","K00648",18,0.00754292568738612,0.00228823202760139,0.000539341461215063,0.00113791101664292
+"1041","NA__NA__NA__NA__NA__NA__NA__",692,"Nov 22","K01577",2,0.00662789071176528,0.00339605196646416,0.00240137137474872,0.0305123163351465
+"1042","NA__NA__NA__NA__NA__NA__NA__",692,"Nov 22","K01584",2,0,0,0,0
+"1043","NA__NA__NA__NA__NA__NA__NA__",692,"Nov 22","K01585",52,0,0,0,0
+"1044","NA__NA__NA__NA__NA__NA__NA__",692,"Nov 22","K01609",116,0,0,0,0
+"1045","NA__NA__NA__NA__NA__NA__NA__",692,"Nov 22","K01613",122,0.000867926995644205,0.000724694162303506,6.56107266368059e-05,0.000129893739027194
+"1046","NA__NA__NA__NA__NA__NA__NA__",692,"Nov 22","K01616",28,0,0,0,0
+"1047","NA__NA__NA__NA__NA__NA__NA__",692,"Nov 22","K01652",506,0.00146157288232148,0.0025279338046964,0.00011238036520694,0.00022079062865364
+"1048","NA__NA__NA__NA__NA__NA__NA__",692,"Nov 22","K01713",92,0.0283520723220557,0.0474097738698165,0.0049428106095216,0.00981828607337167
+"1049","NA__NA__NA__NA__NA__NA__NA__",692,"Nov 22","K02548",104,0,0,0,0
+"1050","NA__NA__NA__NA__NA__NA__NA__",692,"Nov 22","K03119",36,0.011204427028951,0.0109746929053376,0.00182911548422293,0.00371330184620643
+"1051","NA__NA__NA__NA__NA__NA__NA__",692,"Nov 22","K03518",24,0.00916865368502703,0.00337864270339888,0.000689662553875399,0.00142667569069538
+"1052","NA__NA__NA__NA__NA__NA__NA__",692,"Nov 22","K06016",6,0.000425889776200335,0.000467541082007825,0.000190872847451319,0.000490654274574543
+"1053","NA__NA__NA__NA__NA__NA__NA__",692,"Nov 22","K07246",22,0.00605902438313397,0.00188329531603494,0.000401519910487815,0.000835006364784279
+"1054","NA__NA__NA__NA__NA__NA__NA__",692,"Nov 22","K11381",46,0.00126636253334699,0.00207334622342376,0.000305698222967967,0.000615707826854635
+"1055","NA__NA__NA__NA__NA__NA__NA__",692,"Nov 22","K13745",72,0,0,0,0
+"1056","NA__NA__NA__NA__NA__NA__NA__",692,"Nov 22","K15737",38,0,0,0,0
+"1057","NA__NA__NA__NA__NA__NA__NA__",713,"May 22","K00027",114,6.7258883248731e-05,6.75558334045276e-05,6.32718350562572e-06,1.25352916917581e-05
+"1058","NA__NA__NA__NA__NA__NA__NA__",713,"May 22","K00029",218,0.00329191427152275,0.00657060967142462,0.000445017840350655,0.000877110716286215
+"1059","NA__NA__NA__NA__NA__NA__NA__",713,"May 22","K00052",236,0.00164734073225532,0.00379921165250958,0.000247307613812939,0.000487223218448385
+"1060","NA__NA__NA__NA__NA__NA__NA__",713,"May 22","K00174",2,0.0178246947644324,0.00152261989081308,0.00107665484996345,0.013680196953831
+"1061","NA__NA__NA__NA__NA__NA__NA__",713,"May 22","K00175",22,0.00950279420494844,0.000840786546721358,0.000179256294063154,0.00037278387088831
+"1062","NA__NA__NA__NA__NA__NA__NA__",713,"May 22","K00220",178,8.36500690400724e-05,7.81625625943119e-05,5.85853175575594e-06,1.15615616841625e-05
+"1063","NA__NA__NA__NA__NA__NA__NA__",713,"May 22","K00252",2,0.00228478779334986,3.70318214883545e-05,2.61854520941052e-05,0.000332717715416995
+"1064","NA__NA__NA__NA__NA__NA__NA__",713,"May 22","K00648",18,0.00632785779160329,0.0012785109174615,0.000301347913186021,0.000635788521587429
+"1065","NA__NA__NA__NA__NA__NA__NA__",713,"May 22","K01577",2,0.00482046334603214,0.000505932414152933,0.00035774824086962,0.00454562239249573
+"1066","NA__NA__NA__NA__NA__NA__NA__",713,"May 22","K01584",2,0.000163031045751634,4.39630931767133e-05,3.108660130719e-05,0.000394992720760992
+"1067","NA__NA__NA__NA__NA__NA__NA__",713,"May 22","K01585",52,0,0,0,0
+"1068","NA__NA__NA__NA__NA__NA__NA__",713,"May 22","K01609",116,1.26287487827087e-06,1.0301464031125e-05,9.56466923489245e-07,1.89457689486395e-06
+"1069","NA__NA__NA__NA__NA__NA__NA__",713,"May 22","K01613",122,0.000454611029902034,0.000671762018262036,6.08184754863814e-05,0.000120406213858759
+"1070","NA__NA__NA__NA__NA__NA__NA__",713,"May 22","K01616",28,2.28613569321534e-05,2.32808663624436e-05,4.39967019293963e-06,9.02737756432223e-06
+"1071","NA__NA__NA__NA__NA__NA__NA__",713,"May 22","K01652",506,0.000611521007827847,0.00123018361477275,5.46883322826398e-05,0.000107444670094003
+"1072","NA__NA__NA__NA__NA__NA__NA__",713,"May 22","K01713",92,0.00896790834780413,0.0125203396860491,0.00130533564671604,0.00259288890748499
+"1073","NA__NA__NA__NA__NA__NA__NA__",713,"May 22","K02548",104,0,0,0,0
+"1074","NA__NA__NA__NA__NA__NA__NA__",713,"May 22","K03119",36,0.00696226919198903,0.00625237850740934,0.00104206308456822,0.00211550052971896
+"1075","NA__NA__NA__NA__NA__NA__NA__",713,"May 22","K03518",24,0.00506673951561203,0.00173062605767295,0.000353262564738598,0.000730779293022652
+"1076","NA__NA__NA__NA__NA__NA__NA__",713,"May 22","K06016",6,0,0,0,0
+"1077","NA__NA__NA__NA__NA__NA__NA__",713,"May 22","K07246",22,0.00339540614752703,0.000343498890007747,7.32342094170086e-05,0.000152298875811297
+"1078","NA__NA__NA__NA__NA__NA__NA__",713,"May 22","K11381",46,0.00109755246387949,0.00261750407434077,0.000385929920964216,0.000777302761684545
+"1079","NA__NA__NA__NA__NA__NA__NA__",713,"May 22","K13745",72,0,0,0,0
+"1080","NA__NA__NA__NA__NA__NA__NA__",713,"May 22","K15737",38,0.000143443134267753,3.23113105569741e-05,5.24158671714975e-06,1.06204635006023e-05
+"1081","NA__NA__NA__NA__NA__NA__NA__",713,"Jun 22","K00027",114,0,0,0,0
+"1082","NA__NA__NA__NA__NA__NA__NA__",713,"Jun 22","K00029",218,688073.395908476,2537088.02026828,171833.283061922,338675.891891201
+"1083","NA__NA__NA__NA__NA__NA__NA__",713,"Jun 22","K00052",236,0.00106944935475635,0.0030424758857143,0.000198048311123281,0.00039017697055918
+"1084","NA__NA__NA__NA__NA__NA__NA__",713,"Jun 22","K00174",2,5000000.00610964,7071067.80181092,4999999.99289035,63531023.5905369
+"1085","NA__NA__NA__NA__NA__NA__NA__",713,"Jun 22","K00175",22,5000000.00292387,5117663.15317538,1091089.4503237,2269044.72672949
+"1086","NA__NA__NA__NA__NA__NA__NA__",713,"Jun 22","K00220",178,1.36225564744516e-05,2.45841186932098e-05,1.84265760065963e-06,3.63640591209329e-06
+"1087","NA__NA__NA__NA__NA__NA__NA__",713,"Jun 22","K00252",2,5000000.00085749,7071067.80923859,4999999.99814251,63531023.6572719
+"1088","NA__NA__NA__NA__NA__NA__NA__",713,"Jun 22","K00648",18,5000000.00215294,5144957.55103091,1212678.12441696,2558527.1977926
+"1089","NA__NA__NA__NA__NA__NA__NA__",713,"Jun 22","K01577",2,5000000.00129201,7071067.80862409,4999999.99770799,63531023.6517508
+"1090","NA__NA__NA__NA__NA__NA__NA__",713,"Jun 22","K01584",2,0,0,0,0
+"1091","NA__NA__NA__NA__NA__NA__NA__",713,"Jun 22","K01585",52,0,0,0,0
+"1092","NA__NA__NA__NA__NA__NA__NA__",713,"Jun 22","K01609",116,6.22954153847277e-07,5.17340310866474e-06,4.80338419894855e-07,9.51457964409665e-07
+"1093","NA__NA__NA__NA__NA__NA__NA__",713,"Jun 22","K01613",122,0.000448502781311564,0.000375877794301849,3.40303765279342e-05,6.73721062744174e-05
+"1094","NA__NA__NA__NA__NA__NA__NA__",713,"Jun 22","K01616",28,0,0,0,0
+"1095","NA__NA__NA__NA__NA__NA__NA__",713,"Jun 22","K01652",506,98814.230033617,990108.793261248,44015.7046733525,86476.4506465792
+"1096","NA__NA__NA__NA__NA__NA__NA__",713,"Jun 22","K01713",92,1304347.82813708,3386265.5045707,353042.583763622,701275.72292498
+"1097","NA__NA__NA__NA__NA__NA__NA__",713,"Jun 22","K02548",104,0,0,0,0
+"1098","NA__NA__NA__NA__NA__NA__NA__",713,"Jun 22","K03119",36,5000000.00300799,5070925.52430625,845154.254051042,1715754.35174353
+"1099","NA__NA__NA__NA__NA__NA__NA__",713,"Jun 22","K03518",24,5000000.00282708,5107539.1806431,1042572.06948737,2156724.64595539
+"1100","NA__NA__NA__NA__NA__NA__NA__",713,"Jun 22","K06016",6,0,0,0,0
+"1101","NA__NA__NA__NA__NA__NA__NA__",713,"Jun 22","K07246",22,5000000.00112342,5117663.1550182,1091089.45071659,2269044.72754655
+"1102","NA__NA__NA__NA__NA__NA__NA__",713,"Jun 22","K11381",46,5000000.0000382,5055250.29498469,745355.992345164,1501224.03010504
+"1103","NA__NA__NA__NA__NA__NA__NA__",713,"Jun 22","K13745",72,0,0,0,0
+"1104","NA__NA__NA__NA__NA__NA__NA__",713,"Jun 22","K15737",38,5.98869642796042e-05,4.25951443032955e-05,6.9098448421505e-06,1.40006755398659e-05
+"1105","NA__NA__NA__NA__NA__NA__NA__",713,"Nov 22","K00027",114,0,0,0,0
+"1106","NA__NA__NA__NA__NA__NA__NA__",713,"Nov 22","K00029",218,0.00485265802522692,0.00938513259182799,0.000635641385849403,0.00125282139431584
+"1107","NA__NA__NA__NA__NA__NA__NA__",713,"Nov 22","K00052",236,0.00231041261965629,0.00620775466006237,0.000404090409414827,0.000796102581654188
+"1108","NA__NA__NA__NA__NA__NA__NA__",713,"Nov 22","K00174",2,0.0152747658245814,0.00481252767379229,0.00340297095278645,0.0432388456373601
+"1109","NA__NA__NA__NA__NA__NA__NA__",713,"Nov 22","K00175",22,0.00715347706259275,0.000214883884791231,4.58133981707668e-05,9.52741771099484e-05
+"1110","NA__NA__NA__NA__NA__NA__NA__",713,"Nov 22","K00220",178,2.32719951821076e-05,3.92762145387548e-05,2.94387674205967e-06,5.80961475722216e-06
+"1111","NA__NA__NA__NA__NA__NA__NA__",713,"Nov 22","K00252",2,0.00715578608141182,0.000655183680258665,0.00046328482323366,0.00588659181516939
+"1112","NA__NA__NA__NA__NA__NA__NA__",713,"Nov 22","K00648",18,0.00937517501438039,0.0013239018294493,0.00031204665374296,0.000658360891077656
+"1113","NA__NA__NA__NA__NA__NA__NA__",713,"Nov 22","K01577",2,0.0146360335908799,0.00514562854608623,0.00363850883840465,0.0462316382351507
+"1114","NA__NA__NA__NA__NA__NA__NA__",713,"Nov 22","K01584",2,0,0,0,0
+"1115","NA__NA__NA__NA__NA__NA__NA__",713,"Nov 22","K01585",52,0,0,0,0
+"1116","NA__NA__NA__NA__NA__NA__NA__",713,"Nov 22","K01609",116,7.2073465714125e-07,7.76254982183842e-06,7.2073465714125e-07,1.42763664400033e-06
+"1117","NA__NA__NA__NA__NA__NA__NA__",713,"Nov 22","K01613",122,0.000324485770247979,0.000352764391127833,3.19377873279932e-05,6.32292740065641e-05
+"1118","NA__NA__NA__NA__NA__NA__NA__",713,"Nov 22","K01616",28,0,0,0,0
+"1119","NA__NA__NA__NA__NA__NA__NA__",713,"Nov 22","K01652",506,0.000951462530572885,0.00242294437467941,0.000107713015743018,0.000211620814866438
+"1120","NA__NA__NA__NA__NA__NA__NA__",713,"Nov 22","K01713",92,0.00607956943908413,0.0100639313213374,0.00104923737128966,0.00208418114389202
+"1121","NA__NA__NA__NA__NA__NA__NA__",713,"Nov 22","K02548",104,0,0,0,0
+"1122","NA__NA__NA__NA__NA__NA__NA__",713,"Nov 22","K03119",36,0.0123407362712476,0.0102309686912338,0.00170516144853896,0.00346166177562578
+"1123","NA__NA__NA__NA__NA__NA__NA__",713,"Nov 22","K03518",24,0.00693618606906058,0.00346157819624399,0.000706591690461796,0.00146169627793265
+"1124","NA__NA__NA__NA__NA__NA__NA__",713,"Nov 22","K06016",6,0,0,0,0
+"1125","NA__NA__NA__NA__NA__NA__NA__",713,"Nov 22","K07246",22,0.00397123783477081,0.00178588324274263,0.000380751586680209,0.000791816271062195
+"1126","NA__NA__NA__NA__NA__NA__NA__",713,"Nov 22","K11381",46,0.00165567694420847,0.00252999380092586,0.000373027235068272,0.000751315418295859
+"1127","NA__NA__NA__NA__NA__NA__NA__",713,"Nov 22","K13745",72,0,0,0,0
+"1128","NA__NA__NA__NA__NA__NA__NA__",713,"Nov 22","K15737",38,0.000165362146373127,0.000167880879112626,2.72338747903319e-05,5.51810718392489e-05

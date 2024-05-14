@@ -1,0 +1,25 @@
+"","fulltaxa","station_km","Sample_date","KO","N","counts","sd","se","ci"
+"25","Bacteria__Proteobacteria__Alphaproteobacteria__Rhodobacterales__Rhodobacteraceae__Planktomarina__Planktomarina temperata__",633,"May 22","K00477",72,0,0,0,0
+"26","Bacteria__Proteobacteria__Alphaproteobacteria__Rhodobacterales__Rhodobacteraceae__Planktomarina__Planktomarina temperata__",633,"Jun 22","K00477",72,0,0,0,0
+"27","Bacteria__Proteobacteria__Alphaproteobacteria__Rhodobacterales__Rhodobacteraceae__Planktomarina__Planktomarina temperata__",633,"Nov 22","K00477",72,0,0,0,0
+"28","Bacteria__Proteobacteria__Alphaproteobacteria__Rhodobacterales__Rhodobacteraceae__Planktomarina__Planktomarina temperata__",651,"May 22","K00477",36,0,0,0,0
+"29","Bacteria__Proteobacteria__Alphaproteobacteria__Rhodobacterales__Rhodobacteraceae__Planktomarina__Planktomarina temperata__",651,"Nov 22","K00477",72,0,0,0,0
+"30","Bacteria__Proteobacteria__Alphaproteobacteria__Rhodobacterales__Rhodobacteraceae__Planktomarina__Planktomarina temperata__",665,"Jun 22","K00477",36,0,0,0,0
+"31","Bacteria__Proteobacteria__Alphaproteobacteria__Rhodobacterales__Rhodobacteraceae__Planktomarina__Planktomarina temperata__",665,"Nov 22","K00477",72,0,0,0,0
+"32","Bacteria__Proteobacteria__Alphaproteobacteria__Rhodobacterales__Rhodobacteraceae__Planktomarina__Planktomarina temperata__",692,"Jun 22","K00477",72,4.21573245407443e-05,4.24531690443073e-05,5.00315395234809e-06,9.9760056415951e-06
+"33","Bacteria__Proteobacteria__Alphaproteobacteria__Rhodobacterales__Rhodobacteraceae__Planktomarina__Planktomarina temperata__",692,"Nov 22","K00477",72,0.000267800632911393,0.000269679958655154,3.17820879191946e-05,6.33716834227646e-05
+"34","Bacteria__Proteobacteria__Alphaproteobacteria__Rhodobacterales__Rhodobacteraceae__Planktomarina__Planktomarina temperata__",713,"May 22","K00477",72,0.00013057317547045,7.10823186067216e-05,8.37713158487926e-06,1.67035259652401e-05
+"35","Bacteria__Proteobacteria__Alphaproteobacteria__Rhodobacterales__Rhodobacteraceae__Planktomarina__Planktomarina temperata__",713,"Jun 22","K00477",72,0,0,0,0
+"36","Bacteria__Proteobacteria__Alphaproteobacteria__Rhodobacterales__Rhodobacteraceae__Planktomarina__Planktomarina temperata__",713,"Nov 22","K00477",72,0.000109080188679246,0.00010984567307893,1.29454367196853e-05,2.58124676910818e-05
+"73","NA__NA__NA__NA__NA__NA__NA__",633,"May 22","K00477",134,9.49121292117861e-07,7.74617164110771e-06,6.6916730998867e-07,1.3235870184049e-06
+"74","NA__NA__NA__NA__NA__NA__NA__",633,"Jun 22","K00477",134,0,0,0,0
+"75","NA__NA__NA__NA__NA__NA__NA__",633,"Nov 22","K00477",134,1.00801062564701e-06,8.38393198776327e-06,7.24261412645026e-07,1.43256101934325e-06
+"76","NA__NA__NA__NA__NA__NA__NA__",651,"May 22","K00477",67,0,0,0,0
+"77","NA__NA__NA__NA__NA__NA__NA__",651,"Nov 22","K00477",134,0,0,0,0
+"78","NA__NA__NA__NA__NA__NA__NA__",665,"Jun 22","K00477",67,0,0,0,0
+"79","NA__NA__NA__NA__NA__NA__NA__",665,"Nov 22","K00477",134,0,0,0,0
+"80","NA__NA__NA__NA__NA__NA__NA__",692,"Jun 22","K00477",134,0.000724817070002423,0.000995256229264064,8.59770431824388e-05,0.000170059261022539
+"81","NA__NA__NA__NA__NA__NA__NA__",692,"Nov 22","K00477",134,0.00112441611282365,0.00190420048445488,0.00016449786744973,0.000325370409853761
+"82","NA__NA__NA__NA__NA__NA__NA__",713,"May 22","K00477",134,0.000634043402254236,0.000877074743196586,7.57677177522411e-05,0.000149865610788325
+"83","NA__NA__NA__NA__NA__NA__NA__",713,"Jun 22","K00477",134,522388.059930314,2233431.62182994,192939.105879386,381626.077772578
+"84","NA__NA__NA__NA__NA__NA__NA__",713,"Nov 22","K00477",134,0.00093508550182722,0.00202683717637632,0.000175092064046598,0.000346325320347343

@@ -1,0 +1,37 @@
+"","fulltaxa","station_km","Sample_date","KO","N","counts","sd","se","ci"
+"37","Bacteria__Bacteroidota__Bacteroidia__Flavobacteriales__Schleiferiaceae__TMED14__TMED14 sp003507115__",633,"May 22","K16066",88,0,0,0,0
+"38","Bacteria__Bacteroidota__Bacteroidia__Flavobacteriales__Schleiferiaceae__TMED14__TMED14 sp003507115__",633,"Jun 22","K16066",88,0,0,0,0
+"39","Bacteria__Bacteroidota__Bacteroidia__Flavobacteriales__Schleiferiaceae__TMED14__TMED14 sp003507115__",633,"Nov 22","K16066",88,0,0,0,0
+"40","Bacteria__Bacteroidota__Bacteroidia__Flavobacteriales__Schleiferiaceae__TMED14__TMED14 sp003507115__",651,"May 22","K16066",44,0,0,0,0
+"41","Bacteria__Bacteroidota__Bacteroidia__Flavobacteriales__Schleiferiaceae__TMED14__TMED14 sp003507115__",651,"Nov 22","K16066",88,0,0,0,0
+"42","Bacteria__Bacteroidota__Bacteroidia__Flavobacteriales__Schleiferiaceae__TMED14__TMED14 sp003507115__",665,"Jun 22","K16066",44,0,0,0,0
+"43","Bacteria__Bacteroidota__Bacteroidia__Flavobacteriales__Schleiferiaceae__TMED14__TMED14 sp003507115__",665,"Nov 22","K16066",88,0,0,0,0
+"44","Bacteria__Bacteroidota__Bacteroidia__Flavobacteriales__Schleiferiaceae__TMED14__TMED14 sp003507115__",692,"Jun 22","K16066",88,0.000102708803611738,0.000103297397562839,1.10115395790338e-05,2.18866272603333e-05
+"45","Bacteria__Bacteroidota__Bacteroidia__Flavobacteriales__Schleiferiaceae__TMED14__TMED14 sp003507115__",692,"Nov 22","K16066",88,0,0,0,0
+"46","Bacteria__Bacteroidota__Bacteroidia__Flavobacteriales__Schleiferiaceae__TMED14__TMED14 sp003507115__",713,"May 22","K16066",88,9.3031307894195e-05,6.83089285839777e-05,7.28175625379414e-06,1.44732790345542e-05
+"47","Bacteria__Bacteroidota__Bacteroidia__Flavobacteriales__Schleiferiaceae__TMED14__TMED14 sp003507115__",713,"Jun 22","K16066",88,0,0,0,0
+"48","Bacteria__Bacteroidota__Bacteroidia__Flavobacteriales__Schleiferiaceae__TMED14__TMED14 sp003507115__",713,"Nov 22","K16066",88,7.1444543828265e-05,7.18539715000685e-05,7.65965909840511e-06,1.52244018581391e-05
+"97","NA__NA__NA__NA__NA__NA__NA__",633,"May 22","K06984",108,0.0025472773126816,0.00433987041355396,0.000417604225252245,0.000827851671455154
+"98","NA__NA__NA__NA__NA__NA__NA__",633,"May 22","K16066",106,0,0,0,0
+"99","NA__NA__NA__NA__NA__NA__NA__",633,"Jun 22","K06984",108,0.00151924459538084,0.00314516543046481,0.000302643684654128,0.000599955807547038
+"100","NA__NA__NA__NA__NA__NA__NA__",633,"Jun 22","K16066",106,0,0,0,0
+"101","NA__NA__NA__NA__NA__NA__NA__",633,"Nov 22","K06984",108,0.00226982337092611,0.00317196170140039,0.000305222157027116,0.000605067328299708
+"102","NA__NA__NA__NA__NA__NA__NA__",633,"Nov 22","K16066",106,0,0,0,0
+"103","NA__NA__NA__NA__NA__NA__NA__",651,"May 22","K06984",54,0,0,0,0
+"104","NA__NA__NA__NA__NA__NA__NA__",651,"May 22","K16066",53,0,0,0,0
+"105","NA__NA__NA__NA__NA__NA__NA__",651,"Nov 22","K06984",108,0,0,0,0
+"106","NA__NA__NA__NA__NA__NA__NA__",651,"Nov 22","K16066",106,0,0,0,0
+"107","NA__NA__NA__NA__NA__NA__NA__",665,"Jun 22","K06984",54,0,0,0,0
+"108","NA__NA__NA__NA__NA__NA__NA__",665,"Jun 22","K16066",53,0,0,0,0
+"109","NA__NA__NA__NA__NA__NA__NA__",665,"Nov 22","K06984",108,0,0,0,0
+"110","NA__NA__NA__NA__NA__NA__NA__",665,"Nov 22","K16066",106,0,0,0,0
+"111","NA__NA__NA__NA__NA__NA__NA__",692,"Jun 22","K06984",108,0,0,0,0
+"112","NA__NA__NA__NA__NA__NA__NA__",692,"Jun 22","K16066",106,0.000441205248114488,0.00067408379673461,6.54728061812434e-05,0.000129820480114392
+"113","NA__NA__NA__NA__NA__NA__NA__",692,"Nov 22","K06984",108,0,0,0,0
+"114","NA__NA__NA__NA__NA__NA__NA__",692,"Nov 22","K16066",106,0.000261380427004528,0.000639125573878655,6.20773634179311e-05,0.000123087944342
+"115","NA__NA__NA__NA__NA__NA__NA__",713,"May 22","K06984",108,0,0,0,0
+"116","NA__NA__NA__NA__NA__NA__NA__",713,"May 22","K16066",106,0.000295781316676122,0.00041198966074027,4.0015973291439e-05,7.93442830380399e-05
+"117","NA__NA__NA__NA__NA__NA__NA__",713,"Jun 22","K06984",108,0,0,0,0
+"118","NA__NA__NA__NA__NA__NA__NA__",713,"Jun 22","K16066",106,0.000329681577153433,0.000839668904446046,8.15558535949457e-05,0.000161710192175451
+"119","NA__NA__NA__NA__NA__NA__NA__",713,"Nov 22","K06984",108,0,0,0,0
+"120","NA__NA__NA__NA__NA__NA__NA__",713,"Nov 22","K16066",106,0.000744251749909375,0.001583531088199,0.000153806135857091,0.000304969155380835
