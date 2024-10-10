@@ -1,0 +1,4884 @@
+---
+title: "All genes"
+output: html_document
+date: "2024-07-12"
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+#Load packages
+
+```{r}
+library(microeco)
+library(meconetcomp)
+library(dplyr)
+library(tibble)
+library(tidyr)
+library(phyloseq)
+library(magrittr)
+library(ggplot2)
+
+library(SpiecEasi)
+library(mixedCCA)
+library(SPRING)
+library(beemStatic)
+library(chorddiag)
+library(ggradar)
+
+library(Hmisc)
+
+
+require(RCurl)
+require(R.utils)
+require(plotly)
+require(forcats)
+require(vegan)
+require(dplyr)
+require(ggpubr)
+library(stringr)
+
+require(WGCNA)
+
+library(Hmisc)
+library(igraph)
+library(tidyverse)     # tidyverse will pull in ggplot2, readr, other useful libraries
+library(magrittr)      # provides the %>% operator
+library(genefilter)
+
+
+
+```
+#Prep metadata
+```{r}
+
+
+#Read in new PP dataframe as a clean data frame
+Physicochem.df = read.csv("E:/Functional_R_analysis/PhysicochemicalParameters_mod2.txt", encoding = "UTF-8", sep = "\t") %>%
+  subset(Sample_date!="Nov 21") #Remove data taken from shore
+
+#Clean up data  
+Physicochem.df$station_km = as.numeric(Physicochem.df$Stromkilometer)
+Physicochem.df$Stromkilometer = NULL
+Physicochem.df$station_km = gsub(608.165, 608, Physicochem.df$station_km)
+Physicochem.df$station_km = gsub(613, 713, Physicochem.df$station_km)
+Physicochem.df$station_km = gsub(632.88, 633, Physicochem.df$station_km)
+Physicochem.df$station_km = gsub(632.884, 633, Physicochem.df$station_km)
+Physicochem.df$station_km = gsub(633.022, 633, Physicochem.df$station_km)
+Physicochem.df$station_km = gsub(6334, 633, Physicochem.df$station_km)
+Physicochem.df$station_km = gsub(651.32, 651, Physicochem.df$station_km)
+Physicochem.df$station_km = gsub(651.323, 651, Physicochem.df$station_km)
+Physicochem.df$station_km = gsub(651.955, 651, Physicochem.df$station_km)
+Physicochem.df$station_km = gsub(6513, 651, Physicochem.df$station_km)
+Physicochem.df$station_km = gsub(665.41, 665, Physicochem.df$station_km)
+Physicochem.df$station_km = gsub(665.414, 665, Physicochem.df$station_km)
+Physicochem.df$station_km = gsub(665.546, 665, Physicochem.df$station_km)
+Physicochem.df$station_km = gsub(6654, 665, Physicochem.df$station_km)
+Physicochem.df$station_km = gsub(691.997, 692, Physicochem.df$station_km)
+Physicochem.df$station_km = gsub(692.010, 692, Physicochem.df$station_km)
+Physicochem.df$station_km = gsub(692.01, 692, Physicochem.df$station_km)
+Physicochem.df$station_km = gsub(694, 692, Physicochem.df$station_km)
+Physicochem.df$station_km = gsub(711.515, 713, Physicochem.df$station_km)
+Physicochem.df$station_km = gsub(712, 713, Physicochem.df$station_km)
+Physicochem.df$station_km = gsub(714.975, 713, Physicochem.df$station_km)
+Physicochem.df$station_km = gsub(714.98, 713, Physicochem.df$station_km)
+sort(unique(Physicochem.df$station_km))
+
+Physicochem.df = subset(Physicochem.df, station_km > 630)
+
+#Rename rows for downstream applications
+rownames(Physicochem.df) = Physicochem.df$Associatednumber
+
+#Add density data - calculated from dry-weight and area
+Physicochem.df$Density_gpercm3 = (as.numeric(Physicochem.df$SPM_mgperL) / (as.numeric(Physicochem.df$ParticleArea_um2perL))) * 10^5
+
+#Add PA PP to Free-living rows 
+
+#Extract sample numbers for FL - MG
+FL_samples.df = Physicochem.df %>%
+  filter(Sample_type == "Free_living")
+PA_PP.ls = c("SPM_mgperL", "ParticleArea_um2perL", "Density_gpercm3", "POC_mgperL", "PTC_mgperL", "PTN_mgperL", "PTH_mgperL", "TEP_um2perL", "CSP_um2perL")
+count = 1
+i=6
+x="SPM_mgperL"
+for (i in 1:length(Physicochem.df$Associatednumber)) {
+  if (grepl(Physicochem.df$Sample_type[i], "Free_living") == T ) {
+    #Bug hunting
+    #print(paste0("Match ",count, " found"))
+    PA_sub.df = subset(Physicochem.df, Sample_type!="Free_living" & 
+                         station_km == Physicochem.df$station_km[i] & 
+                         Sample_date == Physicochem.df$Sample_date[i])
+    for (x in PA_PP.ls) {
+      #Bug hunting
+      #print(paste0("Matching ", x))
+      mean.tmp = mean(unlist(PA_sub.df[x]))
+      #Bug hunt
+      #print(paste0("Getting ", mean.tmp))
+      Physicochem.df[i,x] = mean(unlist(PA_sub.df[x]))
+    }
+    count = count + 1
+  }
+}
+
+Physicochem.df$Associatednumber = as.character(Physicochem.df$Associatednumber)
+
+#Remove redundant ones identified with correlated pearson tests
+PP_totest.ls = unique(colnames(Physicochem.df))
+PP_totest.ls = PP_totest.ls[PP_totest.ls != "Sample"]  # Removes elements that are "b"
+#PP_totest.ls = PP_totest.ls[PP_totest.ls != "Associatednumber"]  # Removes elements that are "b"
+PP_totest.ls = PP_totest.ls[PP_totest.ls != "DNA_concentration_ng.uL"]  # Removes elements that are "b"
+#PP_totest.ls = PP_totest.ls[PP_totest.ls != "Station"]  # Removes elements that are "b"
+PP_totest.ls = PP_totest.ls[PP_totest.ls != "StationNumber"]  # Removes elements that are "b"
+#PP_totest.ls = PP_totest.ls[PP_totest.ls != "Sample_type"]  # Removes elements that are "b"
+#PP_totest.ls = PP_totest.ls[PP_totest.ls != "Sample_date"]  # Removes elements that are "b"
+PP_totest.ls = PP_totest.ls[PP_totest.ls != "AccessionNumber_TBDSven"]  # Removes elements that are "b"
+#PP_totest.ls = PP_totest.ls[PP_totest.ls != "POC_mgperL"]  # Removes elements that are "b"
+PP_totest.ls = PP_totest.ls[PP_totest.ls != "PTH_mgperL"]  # Removes elements that are "b"
+#PP_totest.ls = PP_totest.ls[PP_totest.ls != "TN_mg.L"]  # Removes elements that are "b"
+PP_totest.ls = PP_totest.ls[PP_totest.ls != "Total_DIN_uM"]  # Removes elements that are "b"
+PP_totest.ls = PP_totest.ls[PP_totest.ls != "Phosphate_uM"]  # Removes elements that are "b"
+#PP_totest.ls = PP_totest.ls[PP_totest.ls != "Temperature_TBDHereon"]  # Removes elements that are "b"
+#PP_totest.ls = PP_totest.ls[PP_totest.ls != "Silicate_mg.L"]  # Removes elements that are "b"
+PP_totest.ls = PP_totest.ls[PP_totest.ls != "Ammonium_uM"]  # Removes elements that are "b"
+#PP_totest.ls = PP_totest.ls[PP_totest.ls != "Ammonium_mg.L"]  # Removes elements that are "b"
+PP_totest.ls = PP_totest.ls[PP_totest.ls != "Nitrate_uM"]  # Removes elements that are "b"
+PP_totest.ls = PP_totest.ls[PP_totest.ls != "Nitrite_uM"]  # Removes elements that are "b"
+PP_totest.ls = PP_totest.ls[PP_totest.ls != "Silicate_uM"]  # Removes elements that are "b"
+PP_totest.ls = PP_totest.ls[PP_totest.ls != "SRP_uM"]  # Removes elements that are "b"
+PP_totest.ls = PP_totest.ls[PP_totest.ls != "RespirationRate_O2ug.L.h"]  # Removes elements that are "b"
+PP_totest.ls = PP_totest.ls[PP_totest.ls != "DIC_uM.L"]  # Removes elements that are "b"
+PP_totest.ls = PP_totest.ls[PP_totest.ls != "DOC_uM.L"]  # Removes elements that are "b"
+#PP_totest.ls = PP_totest.ls[PP_totest.ls != "TotalDissolvedPhosphate_mg.L"]  # Removes elements that are "b"
+PP_totest.ls = PP_totest.ls[PP_totest.ls != "Sat_O2_Perc"]  # Removes elements that are "b"
+PP_totest.ls = PP_totest.ls[PP_totest.ls != "dCH4_uM"]  # Removes elements that are "b"
+PP_totest.ls = PP_totest.ls[PP_totest.ls != "dCO2_nM"]  # Removes elements that are "b"
+
+
+#Extract relevant columns
+PP_totest.df = Physicochem.df  %>% dplyr::select(all_of(PP_totest.ls))
+
+colnames(PP_totest.df)
+
+#Make sure rownames have been preserved
+rownames(PP_totest.df)
+dim(PP_totest.df)
+
+
+#Apply row numbers from sample IDs
+rownames(PP_totest.df) = PP_totest.df$Associatednumber
+PP_totest.df$Associatednumber = NULL
+
+
+
+
+#Add lifestyle information
+tmp = data.frame(model.matrix(~ PP_totest.df$Sample_type-1, data=PP_totest.df))
+colnames(tmp) = gsub("PP_totest.df.Sample_type", "", colnames(tmp))
+PP_totest.df = cbind(PP_totest.df, tmp)
+
+#Add date information
+tmp = data.frame(model.matrix(~ PP_totest.df$Sample_date-1, data=PP_totest.df))
+colnames(tmp) = gsub("PP_totest.df.Sample_date", "", colnames(tmp))
+PP_totest.df = cbind(PP_totest.df, tmp)
+
+#Add station information
+tmp = data.frame(model.matrix(~ PP_totest.df$Station-1, data=PP_totest.df))
+colnames(tmp) = gsub("PP_totest.df.Station", "", colnames(tmp))
+PP_totest.df = cbind(PP_totest.df, tmp)
+
+#Add density data - calculated from dry-weight and area
+PP_totest.df$Density_gpercm3 = (as.numeric(PP_totest.df$SPM_mgperL) / (as.numeric(PP_totest.df$ParticleArea_um2perL))) * 10^5
+
+
+
+
+#Flip so columns are samples for dissimilarity assessment
+PP_totest.df = t(PP_totest.df)
+
+#Get sample names for microbiome comparison
+PP_totest.ls = rownames(PP_totest.df)
+
+
+PP_loop.df = PP_totest.df[-c(1:3),]
+
+
+PP_loop.df = as.data.frame(PP_loop.df) %>%
+   mutate_all(as.numeric)
+
+
+####Generate metadata file for WGCNA ####
+metadata_WGCNA = Physicochem.df %>%
+  dplyr::select(Associatednumber, station_km, Sample_type, Sample_date, 
+         SPM_mgperL, DOC_mg.L, TN_mg.L, DIC_mg.L, POC_mgperL, PTC_mgperL, PTN_mgperL,
+         Sat_O2_Perc, Temperature_TBDHereon, Salinity_PSU, Turbidity_NTU, pH, O2_uM, Silicate_mg.L, Ammonium_mg.L,
+         Nitrite_mg.L, Nitrate_mg.L, SRP_mgperL, TotalDissolvedPhosphate_mg.L,
+         ParticleArea_um2perL, TEP_um2perL, CSP_um2perL, dCH4_nM, dCO2_uM) %>%
+  distinct()
+
+metadata_WGCNA$Sample_date = gsub(" ","_", metadata_WGCNA$Sample_date)
+
+rownames(metadata_WGCNA) = metadata_WGCNA$Associatednumber
+
+metadata_WGCNA = metadata_WGCNA %>%
+  as.data.frame() %>%
+  mutate(TEP_um2perL = TEP_um2perL/100000000) %>%
+  mutate(CSP_um2perL = CSP_um2perL/100000000)
+#Divide by 100000000, due to limitations in floating-point computations and precision, and these numbers are much much larger than any of the others.
+
+tmp = data.frame(model.matrix(~ metadata_WGCNA$Sample_type-1, data=metadata_WGCNA))
+colnames(tmp) = c("FreeLiving", "SinkingParticles", "SuspendedParticles")
+
+metadata_WGCNA = cbind(metadata_WGCNA, tmp)
+
+
+#Add lifestyle information
+tmp = data.frame(model.matrix(~ metadata_WGCNA$Sample_type-1, data=metadata_WGCNA))
+colnames(tmp) = gsub("metadata_WGCNA.Sample_type", "", colnames(tmp))
+metadata_WGCNA = cbind(metadata_WGCNA, tmp)
+
+#Add date information
+tmp = data.frame(model.matrix(~ metadata_WGCNA$Sample_date-1, data=metadata_WGCNA))
+colnames(tmp) = gsub("metadata_WGCNA.Sample_date", "", colnames(tmp))
+metadata_WGCNA = cbind(metadata_WGCNA, tmp)
+
+#Add density data - calculated from dry-weight and area
+metadata_WGCNA$Density_gpercm3 = (as.numeric(metadata_WGCNA$SPM_mgperL) / (as.numeric(metadata_WGCNA$ParticleArea_um2perL))) * 10^5
+
+#Add date information
+#tmp = data.frame(model.matrix(~ metadata_WGCNA$Station-1, data=metadata_WGCNA))
+#colnames(tmp) = gsub("metadata_WGCNA.Station", "", colnames(tmp))
+#metadata_WGCNA = cbind(metadata_WGCNA, tmp)
+
+```
+#Prep taxa table
+```{r}
+
+#Create taxa table equivalent
+All_WGCNA_taxtable = annot %>%
+  filter(KO!="") %>%
+  mutate(KO = as.character(KO)) %>%
+  tibble::remove_rownames() %>%
+  distinct() %>%
+  column_to_rownames(var = "KO") %>%
+  dplyr::select(DISEASE, DRUG, ENZYME, MODULE, PATHWAY, PUBMED, REACTION, DESCRIPTION) %>%
+  separate(col = DESCRIPTION, sep = ";", into = c("SName", "LName")) #separate description
+
+```
+
+#Carry out with metagenome data
+```{r Prep metagenome data}
+
+#Import gene list
+CarbonGenelist.df = read.csv("F:/Functional_R_analysis/CarbonGeneList.csv", header = T, sep = ";") %>%
+  filter(KEGG_Orthology %nin% c("K10945", "K10946"))
+
+#amoAMatches.ls = annot %>%
+#  rownames_to_column("gene_cluster") %>%
+#  left_join(gene_cluster_taxa, by=c("gene_cluster" = "gene_cluster")) %>% # add MAG information
+#  left_join(taxa, by = c("genome" = "GENOME"), relationship = "many-to-many") %>% # add taxonomic information
+#  filter(KO %in% CarbonGenelist.df$KEGG_Orthology) %>% # only extract the CO2CH4 gene
+#  filter(str_detect(genus,"Nitros") & str_detect(KO, "^K10944$"))
+#dim(amoAMatches.ls)
+#sort(unique(amoAMatches.ls$KO))
+
+Geneabund_KO = annot %>%
+  rownames_to_column("gene_cluster") %>%
+  left_join(gene_cluster_taxa, by=c("gene_cluster" = "gene_cluster")) %>% # add MAG information
+  mutate(DESCRIPTION = ifelse(gene %in% amoAMatches.ls$gene, "amoA; ammonia monooxygenase subunit A", DESCRIPTION)) %>% # Rename description based on above taxa filtering
+  mutate(DESCRIPTION = ifelse(KO == "K10944" & gene %nin% amoAMatches.ls$gene, "pmoA; methane monooxygenase subunit A", DESCRIPTION)) %>% # Rename description to purely pmoA
+  dplyr::select(gene_cluster, DESCRIPTION) %>% # select only the columns titled gene_cluster and KO
+  left_join(geneabund_2, by=c("gene_cluster" = "gene_cluster")) %>% # join these two columns to the gene abundance dataframe based on the gene_cluster column
+  dplyr::select(-length, -gene_cluster) %>% # remove the length and gene_cluster column
+  group_by(DESCRIPTION) %>% #aggregate the data by the KEGG ID
+  summarise(across(everything(), ~ sum(., na.rm = TRUE))) # summarise the data using the sum to get abundance data - this still needs to be divided by 1000 for actual per genome values
+dim(Geneabund_KO)
+
+
+
+
+
+#saveRDS(Geneabund_KO, "F:/Functional_R_analysis/Network/Geneabund_KO_MG.rds")
+Geneabund_KO = readRDS("F:/Functional_R_analysis/Network/Geneabund_KO_MG.rds")
+
+Geneabund_KO_MG.lng <- Geneabund_KO %>%
+  pivot_longer(!DESCRIPTION, names_to = "sampleid", values_to = "counts", values_drop_na = 0) # reformat from a wide to long format, remove gene-cluster information, column names will be in the sampleid column, and values that would be NA are replaced with a 0. 
+
+  
+  
+##Need to cut dataframe into 120 pieces and run code on it in loop, and then stick it back together
+  ##This needs to be redone
+  
+Final_Geneabund_KO_MG.lng = as.data.frame(matrix(ncol = 27, nrow = 1))
+colnames(Final_Geneabund_KO_MG.lng) = c("sampleid", "counts", "SName", "LName", "KO", "Sample",   "Associatednumber", "DNA_concentration_ng.uL", "Station", "StationNumber", "Sample_type", "Sample_date", "SPM_mgperL", "DOC_mg.L", "TN_mg.L",  "DIC_mg.L", "DOC_uM.L", "DIC_uM.L", "POC_mgperL", "PTC_mgperL", "PTN_mgperL",  "PTH_mgperL", "BioSample", "ERANumber", "ProjectID", "data_type", "station_km")
+  
+i=1
+i=120
+for (i in 1:ceiling(dim(Geneabund_KO_MG.lng)[1]/18158)) {
+  
+  number = i * 18158 
+  #number = i * 20
+  
+  tmp.lng = Geneabund_KO_MG.lng[c((number-18158):number),] 
+  #tmp.lng = Geneabund_KO_MG.lng[c((number-20):number),] # Bug hunting
+  
+  tmp.out = tmp.lng %>% # reformat from a wide to long format, remove gene-cluster information, column names will be in the sampleid column, and values that would be NA are replaced with a 0.
+  left_join(annot, by = c("DESCRIPTION" = "DESCRIPTION"), relationship = "many-to-many") %>% # add gene information
+  mutate(KO = ifelse(DESCRIPTION == "amoA; ammonia monooxygenase subunit A", "K10944", KO)) %>% # add gene information for amoA
+  mutate(KO = ifelse(DESCRIPTION == "pmoA; methane monooxygenase subunit A", "K10944", KO)) %>% # add gene information for pmoA
+  dplyr::select(sampleid, counts, DESCRIPTION, KO, ) %>% # only keep relevant columns
+  separate(col = DESCRIPTION, sep = ";", into = c("SName", "LName")) %>% #separate description
+  left_join(metadata) %>% # add metadata
+  filter(Sample_date != "Nov 21") %>% # remove samples from Nov 21
+  filter(Station != 'BunthausSpitze') %>% #remove sample from BunthausSpitze
+  filter(data_type == 'METAG') %>% # keep only metagenomes
+  ##Identify genes occurring at 0.1% abundance in at least 30% of samples
+  ungroup() %>%
+  distinct()
+  
+  Final_Geneabund_KO_MG.lng = rbind(Final_Geneabund_KO_MG.lng, tmp.out)
+  
+  
+  if ( i == ceiling(dim(Geneabund_KO_MG.lng)[1]/18158) ) {
+    
+    end = dim(Geneabund_KO_MG.lng)[1]
+    number = ((i-1) * 18158)
+    tmp.lng = Geneabund_KO_MG.lng[c(number:end),] 
+    
+    tmp.out = tmp.lng %>% # reformat from a wide to long format, remove gene-cluster information, column names will be in the sampleid column, and values that would be NA are replaced with a 0.
+  left_join(annot, by = c("DESCRIPTION" = "DESCRIPTION"), relationship = "many-to-many") %>% # add gene information
+  mutate(KO = ifelse(DESCRIPTION == "amoA; ammonia monooxygenase subunit A", "K10944", KO)) %>% # add gene information fpr amoA
+  mutate(KO = ifelse(DESCRIPTION == "pmoA; methane monooxygenase subunit A", "K10944", KO)) %>% # add gene information for pmoA
+  dplyr::select(sampleid, counts, DESCRIPTION, KO, ) %>% # only keep relevant columns
+  separate(col = DESCRIPTION, sep = ";", into = c("SName", "LName")) %>% #separate description
+  left_join(metadata) %>% # add metadata
+  filter(Sample_date != "Nov 21") %>% # remove samples from Nov 21
+  filter(Station != 'BunthausSpitze') %>% #remove sample from BunthausSpitze
+  filter(data_type == 'METAG') %>% # keep only metagenomes
+  ##Identify genes occurring at 0.1% abundance in at least 30% of samples
+  ungroup() %>%
+  distinct()
+  
+  Final_Geneabund_KO_MG.lng = rbind(Final_Geneabund_KO_MG.lng, tmp.out)
+  
+  print(paste0("Finished the last one!"))
+  }
+  
+  print(paste0("Completed ", i, " out of ", round(dim(Geneabund_KO_MG.lng)[1]/18158), " dataframes, which is ", round(i/round(dim(Geneabund_KO_MG.lng)[1]/18158) * 100), "%"))
+  
+  
+}
+
+#Remove unnecesary top row, as it was generated when making the initial df
+Final_Geneabund_KO_MG.lng = Final_Geneabund_KO_MG.lng[-1,]
+
+Geneabund_KO_MG.lng = Final_Geneabund_KO_MG.lng
+
+#save in case of crashes (which are inevitable with a df of this size)
+saveRDS(Final_Geneabund_KO_MG.lng, "F:/Functional_R_analysis/Network/Geneabund_KO_MG.lng.rds")
+#Geneabund_KO_MG.lng = readRDS("E:/Functional_R_analysis/Network/Geneabund_KO_MG.lng.rds") 
+
+
+#Correct count data
+Geneabund_KO_MG.lng$counts = Geneabund_KO_MG.lng$counts / 1000
+
+#View(Geneabund_KO_MG.lng)
+dim(Geneabund_KO_MG.lng)
+
+#Reorder factors
+Geneabund_KO_MG.lng$Statio = factor(Geneabund_KO_MG.lng$Station,
+                                   levels = c("Medemgrund",
+                                              "Brunsbuettel",
+                                              "Schwarztonnensand",
+                                              "Twielenfleth",
+                                              "Muehlenberger Loch"))
+
+Geneabund_KO_MG.lng$Sample_date = gsub("-", " ",Geneabund_KO_MG.lng$Sample_date)
+
+Geneabund_KO_MG.lng$Sample_date = factor(Geneabund_KO_MG.lng$Sample_date,
+                                   levels = c("May 21",
+                                              "Jul 21",
+                                              "Nov 21",
+                                              "Feb 22",
+                                              "May 22",
+                                              "Jun 22",
+                                              "Nov 22"))
+
+#Make data_type names informative
+Geneabund_KO_MG.lng$data_type = gsub("METAG", "Metagenomes", Geneabund_KO_MG.lng$data_type)
+
+dim(Geneabund_KO_MG.lng)
+
+#Remove outliers and make dataframe wide from a long format
+Geneabund_KO_MG.wde = Geneabund_KO_MG.lng %>%
+  dplyr::select(Associatednumber, counts, KO) %>%
+  pivot_wider(names_from = KO, values_from = counts, values_fn = mean) %>%
+  as.data.frame() %>%
+  filter(Associatednumber!="164") %>%
+  column_to_rownames("Associatednumber")
+
+#We need to have samples as columns, and genes as rows in a wide format.
+WGCNA_MG_raw.df = t(Geneabund_KO_MG.wde)
+
+```
+## Actual WGCNA for MG
+### Sample_type
+```{r}
+
+set.seed(2)
+
+data = WGCNA_MG_raw.df %>%
+  as.data.frame() %>%
+  rownames_to_column(var = "GeneId")
+
+
+
+data[1:5,1:10]        # Look at first 5 rows and 10 columns
+dim(data)
+
+names(data)[1] = "GeneId"
+names(data)           # Look at the column names
+
+
+col_sel = names(data)[-1]     # Get all but first column name
+mdata <- data %>%
+  tidyr::pivot_longer(
+    .,                        # The dot is the the input data, magrittr tutorial
+    col = all_of(col_sel),
+    values_transform = as.numeric
+    ) %>%
+  left_join(metadata_WGCNA, by = c("name" = "Associatednumber")) %>%
+  dplyr::select(GeneId, name, value, Sample_type) %>%
+  dplyr::rename(group = Sample_type)
+
+mdata$name = as.character(mdata$name)
+
+
+# ==== Plot groups (Sample Groups vs RNA Seq Counts) to identify outliers
+
+ p <- mdata %>%
+    ggplot(., aes(x = name, y = value)) +             # x = treatment, y = RNA Seq count
+    geom_violin() +                                   # violin plot, show distribution
+    geom_point(alpha = 0.2) +                         # scatter plot
+    theme_bw() +
+    theme(
+      axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)          # Rotate treatment text
+    ) +
+    labs(x = "Treatment Groups / Samples", y = "Gene Hit Counts") +
+    facet_grid(cols = vars(group), drop = TRUE, scales = "free_x")      # Facet by hour
+p
+
+pdf("F:/Functional_R_analysis/Network/WGCNA_OutlierHunting_MG_all.pdf", width = 48, height = 10)
+p
+dev.off()
+#No outliers were detected
+
+#Remove outliers
+#mdata = mdata %>%
+ # filter(value < 4000000)
+#Rerun above code to make sure outliers have been removed
+
+#Normalise data with DESeq2
+library(DESeq2)
+de_input = as.data.frame(data[,-1])
+row.names(de_input) = data$GeneId
+de_input[1:5,1:10]
+
+
+meta_df <- data.frame(Sample = names(data[-1])) %>%
+  left_join(metadata_WGCNA, by = c("Sample" = "Associatednumber")) %>%
+  dplyr::select(Sample, Sample_type) %>%
+  dplyr::rename(Type = Sample_type)
+
+dds <- DESeq2::DESeqDataSetFromMatrix(round(de_input),
+                              meta_df,
+                              design = ~Type)
+#> converting counts to integer mode
+#> Warning in DESeqDataSet(se, design = design, ignoreRank): some variables in
+#> design formula are characters, converting to factors
+
+dds <- DESeq(dds)
+#> estimating size factors
+#> estimating dispersions
+#> gene-wise dispersion estimates
+#> mean-dispersion relationship
+#> final dispersion estimates
+#> fitting model and testing
+vsd <- varianceStabilizingTransformation(dds)
+#>
+#> Attaching package: 'genefilter'
+#> The following objects are masked from 'package:matrixStats':
+#>
+#>     rowSds, rowVars
+#> The following object is masked from 'package:readr':
+#>
+#>     spec
+wpn_vsd <- getVarianceStabilizedData(dds)
+rv_wpn <- rowVars(wpn_vsd)
+summary(rv_wpn)
+#>     Min.  1st Qu.   Median     Mean  3rd Qu.     Max.
+#>  0.00000  0.00000  0.00000  0.08044  0.03322 11.14529
+
+q75_wpn <- quantile( rowVars(wpn_vsd), .75)  # <= original
+q95_wpn <- quantile( rowVars(wpn_vsd), .95)  # <= changed to 95 quantile to reduce dataset
+expr_normalized <- wpn_vsd[ rv_wpn > q95_wpn, ]
+
+expr_normalized[1:5,1:10]
+#>                       B-3      B-4      B-5      L-3      L-4      L-5      S-3
+#> AC149818.2_FG001 7.600901 7.077399 7.803434 7.220840 7.410408 8.028223 7.160846
+#> AC149829.2_FG003 8.782014 8.179876 7.900062 8.299778 7.529891 8.631731 8.055118
+#> AC182617.3_FG001 8.047244 7.120668 6.885533 7.501391 7.279413 7.809565 7.184253
+#> AC186512.3_FG001 6.901539 7.389644 6.975945 6.859593 7.370816 6.633722 7.798843
+#> AC186512.3_FG007 7.919688 7.754506 7.670946 7.417760 7.988427 7.904850 7.484542
+#>                       S-4      S-5   B_L1.1
+#> AC149818.2_FG001 7.401382 7.345322 6.524435
+#> AC149829.2_FG003 8.744502 8.142909 8.240407
+#> AC182617.3_FG001 8.140134 6.972400 7.777347
+#> AC186512.3_FG001 6.949501 6.952659 6.059033
+#> AC186512.3_FG007 8.375664 7.762799 6.335663
+dim(expr_normalized)
+# This would give us 415 genes - so we use all genes for downstream analysis
+expr_normalized_df <- data.frame(expr_normalized) %>%
+  mutate(
+    Gene_id = row.names(expr_normalized)
+  ) %>%
+  pivot_longer(-Gene_id)
+
+wpn_vsd.df <- data.frame(wpn_vsd) %>%
+  mutate(
+    Gene_id = row.names(wpn_vsd)
+  ) %>%
+  pivot_longer(-Gene_id)
+
+expr_normalized_df %>% ggplot(., aes(x = name, y = value)) +
+  geom_violin() +
+  geom_point() +
+  theme_bw() +
+  theme(
+    axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)
+  ) +
+  ylim(0, NA) +
+  labs(
+    title = "Normalized and 95 quantile Expression",
+    x = "treatment",
+    y = "normalized expression"
+  )
+
+wpn_vsd.df %>% ggplot(., aes(x = name, y = value)) +
+  geom_violin() +
+  geom_point() +
+  theme_bw() +
+  theme(
+    axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)
+  ) +
+  ylim(0, NA) +
+  labs(
+    title = "Normalized Expression",
+    x = "treatment",
+    y = "normalized expression"
+  )
+
+# === Carry out WGCNA
+
+# Use "expr_normalized" for a smaller dataset, but as we have relative few genes, we'll use the full carbon processing dataset 
+
+input_mat = t(wpn_vsd)
+dim(input_mat)
+input_mat[1:5,1:10]    
+#>     AC149818.2_FG001 AC149829.2_FG003 AC182617.3_FG001 AC186512.3_FG001
+#> B-3         7.600901         8.782014         8.047244         6.901539
+#> B-4         7.077399         8.179876         7.120668         7.389644
+#> B-5         7.803434         7.900062         6.885533         6.975945
+#> L-3         7.220840         8.299778         7.501391         6.859593
+#> L-4         7.410408         7.529891         7.279413         7.370816
+#>     AC186512.3_FG007 AC189795.3_FG001 AC190609.3_FG002 AC190623.3_FG001
+#> B-3         7.919688         8.149041         12.64301         6.575155
+#> B-4         7.754506         8.077571         11.99816         7.170788
+#> B-5         7.670946         7.524430         12.12500         7.438024
+#> L-3         7.417760         8.420552         12.36979         8.223261
+#> L-4         7.988427         7.105196         11.64515         8.008850
+#>     AC192451.3_FG001 AC195340.3_FG001
+#> B-3         6.700385         9.104258
+#> B-4         7.325447         9.135480
+#> B-5         7.819142         9.023856
+#> L-3         8.052019         8.908933
+#> L-4         8.528875         8.583982
+
+#Treatment/samples should be rows, and genes columns
+#library(WGCNA)
+allowWGCNAThreads()          # allow multi-threading (optional)
+#> Allowing multi-threading with up to 4 threads.
+
+# Choose a set of soft-thresholding powers
+powers = c(c(1:10), seq(from = 12, to = 25, by = 2))
+
+# Call the network topology analysis function
+sft = pickSoftThreshold(
+  input_mat,             # <= Input data
+  blockSize = 9000,
+  powerVector = powers,
+  verbose = 5
+  )
+#> pickSoftThreshold: will use block size 5486.
+#>  pickSoftThreshold: calculating connectivity for given powers...
+#>    ..working on genes 1 through 5486 of 5486
+#>    Power SFT.R.sq  slope truncated.R.sq mean.k. median.k. max.k.
+#> 1      1   0.5350  2.500          0.960  1940.0    1950.0   2840
+#> 2      2   0.0642  0.331          0.897   964.0     927.0   1860
+#> 3      3   0.1680 -0.444          0.859   560.0     505.0   1340
+#> 4      4   0.5050 -0.822          0.906   358.0     300.0   1030
+#> 5      5   0.6800 -1.070          0.935   243.0     189.0    819
+#> 6      6   0.7770 -1.230          0.954   173.0     125.0    673
+#> 7      7   0.8330 -1.310          0.972   127.0      85.3    564
+#> 8      8   0.8660 -1.390          0.980    96.4      60.2    484
+#> 9      9   0.8810 -1.450          0.981    74.8      43.2    422
+#> 10    10   0.8940 -1.490          0.984    59.1      31.7    371
+#> 11    12   0.9070 -1.540          0.988    38.7      17.6    295
+#> 12    14   0.9150 -1.580          0.988    26.7      10.3    240
+#> 13    16   0.9220 -1.570          0.985    19.1       6.3    200
+#> 14    18   0.9200 -1.570          0.979    14.1       4.0    169
+#> 15    20   0.9240 -1.570          0.982    10.7       2.6    145
+
+par(mfrow = c(1,2));
+cex1 = 0.9;
+
+plot(sft$fitIndices[, 1],
+     -sign(sft$fitIndices[, 3]) * sft$fitIndices[, 2],
+     xlab = "Soft Threshold (power)",
+     ylab = "Scale Free Topology Model Fit, signed R^2",
+     main = paste("Scale independence")
+)
+text(sft$fitIndices[, 1],
+     -sign(sft$fitIndices[, 3]) * sft$fitIndices[, 2],
+     labels = powers, cex = cex1, col = "red"
+)
+abline(h = 0.90, col = "red")
+plot(sft$fitIndices[, 1],
+     sft$fitIndices[, 5],
+     xlab = "Soft Threshold (power)",
+     ylab = "Mean Connectivity",
+     type = "n",
+     main = paste("Mean connectivity")
+)
+text(sft$fitIndices[, 1],
+     sft$fitIndices[, 5],
+     labels = powers,
+     cex = cex1, col = "red")
+
+
+
+dim(input_mat)
+#View(input_mat)
+picked_power = 10
+cor <- WGCNA::cor         # Force it to use WGCNA cor function (fix a namespace conflict issue)
+dim(input_mat)
+netwk <- blockwiseModules(input_mat,                # <= input here
+
+                          # == Adjacency Function ==
+                          power = picked_power,                # <= power here
+                          networkType = "unsigned",
+                          randomSeed = 2,
+                          corType = "pearson",
+
+                          # == Tree and Block Options ==
+                          deepSplit = 2,
+                          pamRespectsDendro = F,
+                          # detectCutHeight = 0.75,
+                          minModuleSize = 50,
+                          maxBlockSize = 40000,
+
+                          # == Module Adjustments ==
+                          reassignThreshold = 0,
+                          mergeCutHeight = 0.25,
+
+                          # == TOM == Archive the run results in TOM file (saves time)
+                          #saveTOMs = T,
+                          #saveTOMFileBase = "./Network/WGCNA_MG_all",
+                          #loadTOM = T,
+
+                          # == Output Options
+                          numericLabels = T,
+                          verbose = 3)
+#Calculating module eigengenes block-wise from all genes
+#   Flagging genes and samples with too many missing values...
+#    ..step 1
+#  ..Excluding 11 genes from the calculation due to too many missing samples or zero variance.
+#    ..step 2
+# ..Working on block 1 .
+#    TOM calculation: adjacency..
+#    ..will not use multithreading.
+#     Fraction of slow calculations: 0.000000
+#    ..connectivity..
+#    ..matrix multiplication (system BLAS)..
+#    ..normalization..
+#    ..done.
+#   ..saving TOM for block 1 into file ./Network/WGCNA_MG-block.1.RData
+# ....clustering..
+# ....detecting modules..
+# ....calculating module eigengenes..
+# ....checking kME in modules..
+#     ...removing 4 genes from module 1 because their KME is too low.
+#     ..removing 4 genes from module 2 because their KME is too low.
+#     ..removing 2 genes from module 3 because their KME is too low.
+#     ..removing 3 genes from module 4 because their KME is too low
+# ..merging modules that are too close..
+#     mergeCloseModules: Merging modules whose distance is less than 0.25
+#       Calculating new MEs...
+
+#cor <- stats::cor     # Return cor function to original namespace
+
+#Take a look at the modules
+# Convert labels to colors for plotting
+mergedColors = labels2colors(netwk$colors)
+unique(mergedColors)
+
+# Plot the dendrogram and the module colors underneath
+plotDendroAndColors(
+  netwk$dendrograms[[1]],
+  mergedColors[netwk$blockGenes[[1]]],
+  "Module colors",
+  dendroLabels = FALSE,
+  hang = 0.03,
+  addGuide = TRUE,
+  guideHang = 0.05 )
+
+
+pdf("F:/Functional_R_analysis/Network/WGCNA_tree_MG_all.pdf", width = 16, height = 8)
+plotDendroAndColors(
+  netwk$dendrograms[[1]],
+  mergedColors[netwk$blockGenes[[1]]],
+  "Module colors",
+  dendroLabels = FALSE,
+  hang = 0.03,
+  addGuide = TRUE,
+  guideHang = 0.05 )
+dev.off()
+
+#Extract module assignments 
+module_df <- data.frame(
+  gene_id = names(netwk$colors),
+  colors = labels2colors(netwk$colors)
+)
+
+module_df[1:5,]
+#>            gene_id    colors
+#> 1 K23094   grey
+#> 2  K03392   blue
+#> 3  K05359   grey
+#> 4  K00476   grey
+#> 5  K00471   grey
+
+write_delim(module_df,
+            file = "Network/WGCNA_gene_modules_MG_all.txt",
+            delim = "\t")
+
+#How many modules are there
+length(unique(module_df$colors))
+
+# Get Module Eigengenes per cluster
+MEs0 <- moduleEigengenes(input_mat, mergedColors)$eigengenes
+
+# Reorder modules so similar modules are next to each other
+MEs0 <- orderMEs(MEs0)
+module_order = names(MEs0) %>% gsub("ME","", .)
+
+# Add treatment names
+MEs0$treatment = row.names(MEs0)
+
+#Export MEs0 for later downstream analysis
+write.csv(MEs0, "F:/Functional_R_analysis/Network/MEs0_MG.csv")
+
+# tidy & plot data
+mME = MEs0 %>%
+  pivot_longer(-treatment) %>%
+  mutate(
+    name = gsub("ME", "", name),
+    name = factor(name, levels = module_order)
+  )
+
+WGCNA_sample_MG = mME %>% ggplot(., aes(x=treatment, y=name, fill=value)) +
+  geom_tile() +
+  theme_bw() +
+  scale_fill_gradient2(
+    low = "blue",
+    high = "red",
+    mid = "white",
+    midpoint = 0,
+    limit = c(-1,1)) +
+  theme(axis.text.x = element_text(angle=90, hjust = 1, vjust = 0.5)) +
+  labs(title = "Module-trait Relationships", y = "Modules", fill="corr")
+WGCNA_sample_MG
+
+pdf("F:/Functional_R_analysis/Network/WGCNA_sample_MG_all.pdf", width = 20, height = 8)
+WGCNA_sample_MG
+dev.off()
+
+
+# pick out a few modules of interest here
+modules_of_interest = c("green", "turquoise", "tan")
+
+# Pull out list of genes in that module
+submod = module_df 
+
+row.names(module_df) = module_df$gene_id
+
+# Get normalized expression for those genes
+wpn_vsd[1:5,1:10]
+
+#Subset gene list - expression profiles
+subexpr = wpn_vsd[submod$gene_id,]
+
+#Make into a dataframe
+submod_df = data.frame(subexpr) %>%
+  mutate(
+    gene_id = row.names(.)
+  ) %>%
+  pivot_longer(-gene_id) %>%
+  mutate(
+    module = module_df[gene_id,]$colors
+  )
+
+submod_df %>% ggplot(., aes(x=name, y=value, group=gene_id)) +
+  geom_line(aes(color = module),
+            alpha = 0.2) +
+  theme_bw() +
+  theme(
+    axis.text.x = element_text(angle = 90)
+  ) +
+  #scale_colour_manual(values = c("black", "blue", "brown", "green", "greenyellow", "grey", "magenta", "pink", "purple", "red", "salmon", "forestgreen", "turquoise", "yellow"))+
+  facet_grid(rows = vars(module)) +
+  labs(x = "sample",
+       y = "normalized expression")
+
+
+
+
+genes_of_interest = module_df
+
+expr_of_interest = wpn_vsd[module_df$gene_id,]
+expr_of_interest[1:5,1:5]
+#>                       B-3      B-4      B-5      L-3      L-4
+#> AC186512.3_FG001 6.901539 7.389644 6.975945 6.859593 7.370816
+#> AC186512.3_FG007 7.919688 7.754506 7.670946 7.417760 7.988427
+#> AC190623.3_FG001 6.575155 7.170788 7.438024 8.223261 8.008850
+#> AC196475.3_FG004 6.054319 6.439899 6.424540 5.815344 6.565299
+#> AC196475.3_FG005 6.194406 5.872273 6.207174 6.499828 6.314952
+
+genes_of_interest = module_df
+
+expr_of_interest = wpn_vsd[genes_of_interest$gene_id,]
+expr_of_interest[1:5,1:5]
+#>                       B-3      B-4      B-5      L-3      L-4
+#> AC186512.3_FG001 6.901539 7.389644 6.975945 6.859593 7.370816
+#> AC186512.3_FG007 7.919688 7.754506 7.670946 7.417760 7.988427
+#> AC190623.3_FG001 6.575155 7.170788 7.438024 8.223261 8.008850
+#> AC196475.3_FG004 6.054319 6.439899 6.424540 5.815344 6.565299
+#> AC196475.3_FG005 6.194406 5.872273 6.207174 6.499828 6.314952
+
+# Only recalculate TOM for modules of interest (faster, altho there's some online discussion if this will be slightly off)
+TOM = TOMsimilarityFromExpr(t(expr_of_interest),
+                            power = picked_power)
+#> TOM calculation: adjacency..
+#> ..will use 4 parallel threads.
+#>  Fraction of slow calculations: 0.000000
+#> ..connectivity..
+#> ..matrix multiplication (system BLAS)..
+#> ..normalization..
+#> ..done.
+
+# Add gene names to row and columns
+row.names(TOM) = row.names(expr_of_interest)
+colnames(TOM) = row.names(expr_of_interest)
+
+dim(data.frame(TOM))
+
+edge_list = data.frame(TOM) %>%
+  mutate(
+    gene1 = row.names(.)
+  ) %>%
+  pivot_longer(-gene1) %>%
+  dplyr::rename(gene2 = name, correlation = value) %>%
+  unique() %>%
+  subset(!(gene1==gene2)) %>%
+  mutate(
+    module1 = module_df[gene1,]$colors,
+    module2 = module_df[gene2,]$colors
+  )
+
+head(edge_list)
+#> # A tibble: 6 x 5
+#>   gene1            gene2            correlation module1   module2  
+#>   <chr>            <chr>                  <dbl> <chr>     <chr>    
+#> 1 AC186512.3_FG001 AC186512.3_FG007      0.0238 turquoise turquoise
+#> 2 AC186512.3_FG001 AC190623.3_FG001      0.0719 turquoise turquoise
+#> 3 AC186512.3_FG001 AC196475.3_FG004      0.143  turquoise turquoise
+#> 4 AC186512.3_FG001 AC196475.3_FG005      0.0117 turquoise turquoise
+#> 5 AC186512.3_FG001 AC196489.3_FG002      0.0181 turquoise turquoise
+#> 6 AC186512.3_FG001 AC198481.3_FG004      0.0240 turquoise turquoise
+
+
+adj = TOM[, colnames(TOM) != "samplesums"]
+adj = adj[rownames(TOM) != "samplesums", ]
+adj[adj > 0.1] = 1
+adj[adj != 1] = 0
+
+dim(adj)
+
+network <- igraph::graph_from_adjacency_matrix(adj)
+network <- igraph::simplify(network)  # removes self-loops
+#results <- netwk
+V(network)$color <- netwk$colors #Assign colours to genes for their respective modules
+
+#Plot for sanity checking
+par(mar=c(0,0,0,0))
+# remove unconnected nodes
+network <- delete_vertices(network, degree(network)==0)
+multtest::plot(network, layout=layout.fruchterman.reingold(network), edge.arrow.size = 0.2)
+
+#Add extra information to network plot
+#E(network$label) <- ifelse(E(network)$weight > 0, '+', '-')
+#E(network)$weight_abs <- abs(E(network)$weight)
+
+#Make module tab for Gephi object
+V(network)$module =  V(network)$color
+
+#Add extra information to network plot
+#V(network)$Function <- All_WGCNA_taxtable[V(network)$name, "Name"]
+#V(network)$Direction <- All_WGCNA_taxtable[V(network)$name, "Direction"]
+#V(network)$Compound <- All_WGCNA_taxtable[V(network)$name, "Compound"]
+#V(network)$Class <- All_WGCNA_taxtable[V(network)$name, "Class"]
+#V(network)$label = V(network)$name
+
+
+
+# Export Network file to be read into Gephi, Cytoscape, VisANT, etc
+write_graph(network, "./Network/WGCNA_all_MG_type.graphml", format = "graphml")
+
+#Export edge file for back up
+write_delim(edge_list,
+            file = "Network/edgelist_MG_all_type.tsv",
+            delim = "\t")
+
+
+#Make space for other analyses
+rm(Geneabund_KO_MG.lng, Final_Geneabund_KO_MG.lng, Geneabund_KO_MG.wde, WGCNA_MG_raw.df, MEs0, network, netwk, test, tmp.out, TOM, adj, edge_list, expr_of_interest, genecat_ps, input_mat, mdata, subexpr, vsd, dds, wpn_vsd.df, wpn_vsd)
+gc()
+```
+##Correlate to environmental data
+
+The Pearson correlation test answers something like the question
+
+When X goes up, does Y also go up? 
+When X goes down, does Y also go down?
+
+while the Mantel test answers something like the question
+
+When any two X observations are similar, are the corresponding Y observations also similar? 
+When any two X observations are dissimilar, are the corresponding Y observations also dissimilar?
+ 
+```{r}
+
+#Import data if needed
+MEs0 = read.csv("E:/Functional_R_analysis/Network/MEs0_MG.csv")
+
+#Run loop for motus vs individual physicochemical parameters
+Results_WGCNA_MG.df = data.frame("Data_type" = "Metagenomes",
+                                 "Module_name" = "DELETEME",
+                                 "PhysicochemicalParameter" = "DELETEME",
+                                 "Pearson_corr_value" = 9999,
+                                 "pvalue" = 9999)
+PP_loop.df = PP_totest.df[-c(1:3),]
+PP_loop.df = as.data.frame(PP_loop.df) %>%
+   mutate_all(as.numeric) 
+
+i=1
+x=1
+for (i in 1:(which(colnames(MEs0) == "treatment")-1)) {
+  
+  print(paste0("Working on module ", i, " out of ", (which(colnames(MEs0) == "treatment")-1)))
+  
+  for (x in 1:length(rownames(PP_loop.df))) {
+    
+    #Extracting names
+    PP.name = rownames(as.data.frame(PP_loop.df)[x,])
+    module.name = colnames(MEs0)[i]
+    
+    #Remove all samples that have NAs for that PP
+    PP.tmp <- PP_loop.df[x,] %>%
+      as.data.frame() %>%
+      dplyr::select_if(~ !any(is.na(.))) %>%
+      t()
+      #t(as.data.frame(PP_loop.df[x,][,is.na(PP_loop.df[x,])]))
+    
+    
+    #Normalise PP metrics and extract module eigenvalues
+    PP.tmp <- PP.tmp %>%
+      as.data.frame() %>%
+      mutate_at(c(PP.name), ~(scale(.) %>% as.vector))
+    module.tmp = MEs0 %>%
+      as.data.frame() %>%
+      dplyr::select(all_of(module.name))
+    
+    #Make sure to only include samples/treatments that are present in both PP and microbiome dissimialrity matrices
+    #Extract sample numbers
+    PP_samples = data.frame(PP_sample = sort(as.numeric(rownames(PP.tmp))))
+    module_samples = data.frame(module_sample = sort(as.numeric(rownames(module.tmp))))
+
+
+    #Compare and put into dataframe
+    PP_samples$module_match = match(PP_samples$PP_sample, module_samples$module_sample)
+    module_samples$PP_match = match(module_samples$module_sample, PP_samples$PP_sample)
+
+
+    #Extract only matching samples
+    PP_module_matches = subset(PP_samples, module_match!="NA")
+
+
+    #Subset distance matrices by matching samples
+    module_sub.tmp = module.tmp %>% # read in data
+      tibble::rownames_to_column("rowsampleid") %>% # convert rownames to a column
+      filter(rowsampleid %in% PP_module_matches$PP_sample) %>% # filter for only matching samples
+      tibble::column_to_rownames("rowsampleid") # remove new column and replace generic rowname with sampleid
+    PP_sub.tmp = PP.tmp %>%  # read in data
+      tibble::rownames_to_column("rowsampleid") %>% # convert rownames to a column
+      filter(rowsampleid %in% PP_module_matches$PP_sample) %>% # filter for only matching samples
+      tibble::column_to_rownames("rowsampleid") # remove new column and replace generic rowname with sampleid
+    
+    #For bug hunting
+    #dim(module.tmp)
+    #dim(module_sub.tmp)
+    #dim(PP.tmp)
+    #dim(PP_sub.tmp)
+    
+    #Run correlation test
+    test.tmp = cor.test(PP_sub.tmp[,1], module_sub.tmp[,1], method = "pearson", permutations = 999, na.rm = TRUE)
+    
+    #Make df for results
+    Results.tmp = data.frame("Data_type" = "Metagenomes",
+                             "Module_name" = module.name,
+                             "PhysicochemicalParameter" = PP.name,
+                             "Pearson_corr_value" = test.tmp$estimate,
+                             "pvalue" = test.tmp$p.value
+                             )
+    
+    #Combine results with previous dataframe
+    Results_WGCNA_MG.df = rbind(Results_WGCNA_MG.df, Results.tmp)
+    
+   # print(paste0("Completed ", x, " out of ", length(rownames(PP_loop.df)), " physicochemical parameters, which is ", round((x/length(rownames(PP_loop.df)))*100, digits = 2), "%"))
+  
+    } 
+  }
+
+
+#Check results and clean up dataframe
+Results_WGCNA_MG.df = Results_WGCNA_MG.df[-1,]
+Results_WGCNA_MG.df
+
+#Check if each PP was included
+unique(Results_WGCNA_MG.df$PhysicochemicalParameter)
+
+
+
+```
+
+#Carry out with metatranscriptome data
+
+```{r}
+
+#Import gene list
+CarbonGenelist.df = read.csv("F:/Functional_R_analysis/CarbonGeneList.csv", header = T, sep = ";") %>%
+  filter(KEGG_Orthology %nin% c("K10945", "K10946"))
+
+#amoAMatches.ls = annot %>%
+#  rownames_to_column("gene_cluster") %>%
+#  left_join(gene_cluster_taxa, by=c("gene_cluster" = "gene_cluster")) %>% # add MAG information
+#  left_join(taxa, by = c("genome" = "GENOME"), relationship = "many-to-many") %>% # add taxonomic information
+#  filter(KO %in% CarbonGenelist.df$KEGG_Orthology) %>% # only extract the CO2CH4 gene
+#  filter(str_detect(genus,"Nitros") & str_detect(KO, "^K10944$"))
+#dim(amoAMatches.ls)
+#sort(unique(amoAMatches.ls$KO))
+
+Geneabund_KO = annot %>%
+  rownames_to_column("gene_cluster") %>%
+  left_join(gene_cluster_taxa, by=c("gene_cluster" = "gene_cluster")) %>% # add MAG information
+  mutate(DESCRIPTION = ifelse(gene %in% amoAMatches.ls$gene, "amoA; ammonia monooxygenase subunit A", DESCRIPTION)) %>% # Rename description based on above taxa filtering
+  mutate(DESCRIPTION = ifelse(KO == "K10944" & gene %nin% amoAMatches.ls$gene, "pmoA; methane monooxygenase subunit A", DESCRIPTION)) %>% # Rename description to purely pmoA
+  dplyr::select(gene_cluster, DESCRIPTION) %>% # select only the columns titled gene_cluster and KO
+  left_join(geneabund_2, by=c("gene_cluster" = "gene_cluster")) %>% # join these two columns to the gene abundance dataframe based on the gene_cluster column
+  dplyr::select(-length, -gene_cluster) %>% # remove the length and gene_cluster column
+  group_by(DESCRIPTION) %>% #aggregate the data by the KEGG ID
+  summarise(across(everything(), ~ sum(., na.rm = TRUE))) # summarise the data using the sum to get abundance data - this still needs to be divided by 1000 for actual per genome values
+ dim(Geneabund_KO)
+
+
+#saveRDS(Geneabund_KO, "F:/Functional_R_analysis/Network/Geneabund_KO_MT.rds")
+Geneabund_KO = readRDS("F:/Functional_R_analysis/Network/Geneabund_KO_MT.rds")
+
+Geneabund_KO_MT.lng <- Geneabund_KO %>%
+  pivot_longer(!DESCRIPTION, names_to = "sampleid", values_to = "counts", values_drop_na = 0) # reformat from a wide to long format, remove gene-cluster information, column names will be in the sampleid column, and values that would be NA are replaced with a 0. 
+
+  
+  
+##Need to cut dataframe into 120 pieces and run code on it in loop, and then stick it back together
+  
+Final_Geneabund_KO_MT.lng = as.data.frame(matrix(ncol = 27, nrow = 1))
+colnames(Final_Geneabund_KO_MT.lng) = c("sampleid", "counts", "SName", "LName", "KO", "Sample",   "Associatednumber", "DNA_concentration_ng.uL", "Station", "StationNumber", "Sample_type", "Sample_date", "SPM_mgperL", "DOC_mg.L", "TN_mg.L",  "DIC_mg.L", "DOC_uM.L", "DIC_uM.L", "POC_mgperL", "PTC_mgperL", "PTN_mgperL",  "PTH_mgperL", "BioSample", "ERANumber", "ProjectID", "data_type", "station_km")
+  
+i=1
+i=120
+for (i in 1:ceiling(dim(Geneabund_KO_MT.lng)[1]/18158)) {
+  
+  number = i * 18158 
+  #number = i * 20
+  
+  tmp.lng = Geneabund_KO_MT.lng[c((number-18158):number),] 
+  #tmp.lng = Geneabund_KO_MT.lng[c((number-20):number),] # Bug hunting
+  
+  tmp.out = tmp.lng %>% # reformat from a wide to long format, remove gene-cluster information, column names will be in the sampleid column, and values that would be NA are replaced with a 0.
+  left_join(annot, by = c("DESCRIPTION" = "DESCRIPTION"), relationship = "many-to-many") %>% # add gene information
+  mutate(KO = ifelse(DESCRIPTION == "amoA; ammonia monooxygenase subunit A", "K10944", KO)) %>% # add gene information fpr amoA
+  mutate(KO = ifelse(DESCRIPTION == "pmoA; methane monooxygenase subunit A", "K10944", KO)) %>% # add gene information for pmoA
+  dplyr::select(sampleid, counts, DESCRIPTION, KO, ) %>% # only keep relevant columns
+  separate(col = DESCRIPTION, sep = ";", into = c("SName", "LName")) %>% #separate description
+  left_join(metadata) %>% # add metadata
+  filter(Sample_date != "Nov 21") %>% # remove samples from Nov 21
+  filter(Associatednumber > 115) %>% # remove samples that have no metagenome samples
+  filter(Station != 'BunthausSpitze') %>% #remove sample from BunthausSpitze
+  ungroup() %>%
+  distinct()
+  
+  Final_Geneabund_KO_MT.lng = rbind(Final_Geneabund_KO_MT.lng, tmp.out)
+  
+  
+  if ( i == ceiling(dim(Geneabund_KO_MT.lng)[1]/18158) ) {
+    
+    end = dim(Geneabund_KO_MT.lng)[1]
+    number = ((i-1) * 18158)
+    tmp.lng = Geneabund_KO_MT.lng[c(number:end),] 
+    
+    tmp.out = tmp.lng %>% # reformat from a wide to long format, remove gene-cluster information, column names will be in the sampleid column, and values that would be NA are replaced with a 0.
+  left_join(annot, by = c("DESCRIPTION" = "DESCRIPTION"), relationship = "many-to-many") %>% # add gene information
+  mutate(KO = ifelse(DESCRIPTION == "amoA; ammonia monooxygenase subunit A", "K10944", KO)) %>% # add gene information fpr amoA
+  mutate(KO = ifelse(DESCRIPTION == "pmoA; methane monooxygenase subunit A", "K10944", KO)) %>% # add gene information for pmoA
+  dplyr::select(sampleid, counts, DESCRIPTION, KO, ) %>% # only keep relevant columns
+  separate(col = DESCRIPTION, sep = ";", into = c("SName", "LName")) %>% #separate description
+  left_join(metadata) %>% # add metadata
+  filter(Sample_date != "Nov 21") %>% # remove samples from Nov 21
+  filter(Associatednumber > 115) %>% # remove samples that have no metagenome samples
+  filter(Station != 'BunthausSpitze') %>% #remove sample from BunthausSpitze
+  ungroup() %>%
+  distinct()
+  
+  Final_Geneabund_KO_MT.lng = rbind(Final_Geneabund_KO_MT.lng, tmp.out)
+  
+  print(paste0("Finished the last one!"))
+  }
+  
+  print(paste0("Completed ", i, " out of ", round(dim(Geneabund_KO_MT.lng)[1]/18158), " dataframes, which is ", round(i/round(dim(Geneabund_KO_MT.lng)[1]/18158) * 100), "%"))
+  
+  
+}
+
+#Remove unnecesary top row, as it was generated when making the initial df
+Final_Geneabund_KO_MT.lng = Final_Geneabund_KO_MT.lng[-1,]
+
+#save in case of crashes (which are inevitable with a df of this size)
+saveRDS(Final_Geneabund_KO_MT.lng, "F:/Functional_R_analysis/Network/Geneabund_KO_MT.lng.rds")
+#Geneabund_KO_MT.lng = readRDS("F:/Functional_R_analysis/Network/Geneabund_KO_MT.lng.rds") 
+
+Geneabund_KO_MT.lng = Final_Geneabund_KO_MT.lng
+
+
+#Correct abundance
+Geneabund_KO_MT.lng$counts = Geneabund_KO_MT.lng$counts / 1000
+
+
+#View(Geneabund_KO_MT.lng)
+dim(Geneabund_KO_MT.lng)
+
+write.csv(Geneabund_KO_MT.lng, "F:/Functional_R_analysis/OccurrenceFiltered_all_TG.csv")
+
+#Geneabund_KO_MT.lng = read.csv( "F:/Functional_R_analysis/OccurrenceFiltered_all_TG.csv", row.names = 1)
+
+#Reorder factors
+Geneabund_KO_MT.lng$Station = factor(Geneabund_KO_MT.lng$Station,
+                                   levels = c("Medemgrund",
+                                              "Brunsbuettel",
+                                              "Schwarztonnensand",
+                                              "Twielenfleth",
+                                              "Muehlenberger Loch"))
+
+Geneabund_KO_MT.lng$Sample_date = gsub("-", " ",Geneabund_KO_MT.lng$Sample_date)
+
+Geneabund_KO_MT.lng$Sample_date = factor(Geneabund_KO_MT.lng$Sample_date,
+                                   levels = c("May 21",
+                                              "Jul 21",
+                                              "Nov 21",
+                                              "Feb 22",
+                                              "May 22",
+                                              "Jun 22",
+                                              "Nov 22"))
+
+#Make data_type names informative
+Geneabund_KO_MT.lng$data_type = gsub("METAG", "Metagenomes", Geneabund_KO_MT.lng$data_type)
+Geneabund_KO_MT.lng$data_type = gsub("METAT", "Transcriptomes", Geneabund_KO_MT.lng$data_type)
+
+#Add more info - remove NA's and Infinite numbers
+#Geneabund_KO_MT.lng = Geneabund_KO_MT.lng %>%
+ # mutate_at(c("counts"), ~replace(., is.na(.), 0)) 
+
+#As we split it into a loop and 120 separate dataframes, we just need to run distinct one more time, but on the end dataframe
+Geneabund_KO_MT.lng = Geneabund_KO_MT.lng %>%
+  distinct()
+
+#Long to wide, in preparation for transcripts per gene copy calculation
+# The arguments to spread():
+# - data: Data object
+# - key: Name of column containing the new column names
+# - value: Name of column containing values
+CO2CH4_TG.df <- tidyr::spread(Geneabund_KO_MT.lng[ , ! names(Geneabund_KO_MT.lng) %in% c("X", "sampleid", "abundance", "occurrence", "X")], #Remove columns that will cause problems
+                       data_type, #Column that will contain new column names
+                       counts) %>% # Value that will fill new columns
+  mutate(across(c("Metagenomes", "Transcriptomes"), ~replace(., is.na(.), 0))) #Replace NAs with 0 in the new columns
+#Ensure that it worked
+dim(Geneabund_KO_MT.lng)
+dim(CO2CH4_TG.df)
+
+
+
+
+#Calculate Transcripts per gene copy
+CO2CH4_TG.df$TranscriptsPerGenome = CO2CH4_TG.df$Transcriptomes / CO2CH4_TG.df$Metagenomes
+
+#Add more info - remove NA's and Infinite numbers
+CO2CH4_TG.df = CO2CH4_TG.df %>%
+  mutate_at(c("TranscriptsPerGenome"), ~replace(., is.na(.), 0)) %>% # This was ususally the case when 0/0
+  mutate_at(c("TranscriptsPerGenome"), ~replace(., is.infinite(.), "IncompleteMetagenome")) #Replace Infin with #/0, as Metagenome likely incomplete
+
+
+#This is our dataset
+CO2CH4_TG.df
+
+Geneabund_KO_MT.wd = CO2CH4_TG.df  %>%
+  dplyr::select(Associatednumber, TranscriptsPerGenome, KO) %>%
+  filter(TranscriptsPerGenome!="IncompleteMetagenome") %>%
+  mutate(TranscriptsPerGenome = as.numeric(TranscriptsPerGenome) + 1) %>%
+  tidyr::pivot_wider(names_from = KO, values_from = TranscriptsPerGenome, values_fn = mean) %>%
+  as.data.frame() %>%
+  filter(Associatednumber!="164") %>%
+  tibble::column_to_rownames("Associatednumber")
+
+#Create a new column to calculate what samples have no transcripts per gene counts
+Geneabund_KO_MT.wd$samplesums = Geneabund_KO_MT.wd %>%
+  rowSums()
+#Exclude samples with no meta-transcriptome genes
+WGCNA_MT_raw.df = Geneabund_KO_MT.wd %>% 
+  tibble::rownames_to_column(var = "rownames") %>%
+  filter(samplesums != 0 | is.na(samplesums)) %>% 
+  mutate_all(~ replace(., is.na(.), 0)) %>%
+  tibble::column_to_rownames(var = "rownames") %>%
+  dplyr::select(-samplesums)
+
+WGCNA_MT_raw.df = t(WGCNA_MT_raw.df)
+
+test = WGCNA_MT_raw.df
+
+#Create a new column to calculate what genes have no transcripts per gene counts
+test = test %>%
+  as.data.frame() %>%
+  tibble::rownames_to_column(var = "rownames") %>%
+  mutate(across(-rownames, as.numeric)) 
+
+test$genesums = 
+  rowSums(test[,-1])
+
+test = test %>%
+  tibble::column_to_rownames(var = "rownames")
+
+#Exclude samples with no metatranscriptome samples
+WGCNA_MT_raw.df = test %>% 
+  tibble::rownames_to_column(var = "rownames") %>%
+  filter(genesums != 0 | is.na(genesums)) %>% 
+  mutate_all(~ replace(., is.na(.), 0)) %>%
+  tibble::column_to_rownames(var = "rownames") %>%
+  dplyr::select(-genesums)
+
+
+```
+### Actual WGCNA for MT
+```{r}
+
+set.seed(2)
+
+data = WGCNA_MT_raw.df %>%
+  as.data.frame() %>%
+  tibble::rownames_to_column(var = "GeneId")
+
+
+
+data[1:5,1:10]        # Look at first 5 rows and 10 columns
+dim(data)
+
+names(data)[1] = "GeneId"
+names(data)           # Look at the column names
+
+
+col_sel = names(data)[-1]     # Get all but first column name
+mdata <- data %>%
+  tidyr::pivot_longer(
+    .,                        # The dot is the the input data, magrittr tutorial
+    col = all_of(col_sel),
+    values_transform = as.numeric
+    ) %>%
+  left_join(metadata_WGCNA, by = c("name" = "Associatednumber")) %>%
+  dplyr::select(GeneId, name, value, Sample_type) %>%
+  dplyr::rename(group = Sample_type)
+
+mdata$name = as.character(mdata$name)
+
+
+# ==== Plot groups (Sample Groups vs RNA Seq Counts) to identify outliers
+
+ p <- mdata %>%
+    ggplot(., aes(x = name, y = value)) +             # x = treatment, y = RNA Seq count
+    geom_violin() +                                   # violin plot, show distribution
+    geom_point(alpha = 0.2) +                         # scatter plot
+    theme_bw() +
+    theme(
+      axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)          # Rotate treatment text
+    ) +
+    labs(x = "Treatment Groups / Samples", y = "Gene Hit Counts") +
+    facet_grid(cols = vars(group), drop = TRUE, scales = "free_x")      # Facet by hour
+p
+
+pdf("F:/Functional_R_analysis/Network/WGCNA_OutlierHunting_MT_all.pdf", width = 48, height = 10)
+p
+dev.off()
+#No outliers were detected
+
+#Remove outliers
+mdata = mdata %>%
+  filter(value < 4000000)
+#Rerun above code to make sure outliers have been removed
+
+#Normalise data with DESeq2
+library(DESeq2)
+de_input = as.data.frame(data[,-1])
+row.names(de_input) = data$GeneId
+de_input[1:5,1:10]
+
+
+meta_df <- data.frame(Sample = names(data[-1])) %>%
+  left_join(metadata_WGCNA, by = c("Sample" = "Associatednumber")) %>%
+  dplyr::select(Sample, Sample_type) %>%
+  dplyr::rename(Type = Sample_type)
+
+dds <- DESeq2::DESeqDataSetFromMatrix(round(de_input),
+                              meta_df,
+                              design = ~Type)
+#> converting counts to integer mode
+#> Warning in DESeqDataSet(se, design = design, ignoreRank): some variables in
+#> design formula are characters, converting to factors
+
+dds <- DESeq(dds)
+#> estimating size factors
+#> estimating dispersions
+#> gene-wise dispersion estimates
+#> mean-dispersion relationship
+#> final dispersion estimates
+#> fitting model and testing
+vsd <- varianceStabilizingTransformation(dds)
+#>
+#> Attaching package: 'genefilter'
+#> The following objects are masked from 'package:matrixStats':
+#>
+#>     rowSds, rowVars
+#> The following object is masked from 'package:readr':
+#>
+#>     spec
+wpn_vsd <- getVarianceStabilizedData(dds)
+rv_wpn <- rowVars(wpn_vsd)
+summary(rv_wpn)
+#>     Min.  1st Qu.   Median     Mean  3rd Qu.     Max.
+#>  0.00000  0.00000  0.00000  0.08044  0.03322 11.14529
+
+q75_wpn <- quantile( rowVars(wpn_vsd), .75)  # <= original
+q95_wpn <- quantile( rowVars(wpn_vsd), .95)  # <= changed to 95 quantile to reduce dataset
+expr_normalized <- wpn_vsd[ rv_wpn > q95_wpn, ]
+
+expr_normalized[1:5,1:10]
+#>                       B-3      B-4      B-5      L-3      L-4      L-5      S-3
+#> AC149818.2_FG001 7.600901 7.077399 7.803434 7.220840 7.410408 8.028223 7.160846
+#> AC149829.2_FG003 8.782014 8.179876 7.900062 8.299778 7.529891 8.631731 8.055118
+#> AC182617.3_FG001 8.047244 7.120668 6.885533 7.501391 7.279413 7.809565 7.184253
+#> AC186512.3_FG001 6.901539 7.389644 6.975945 6.859593 7.370816 6.633722 7.798843
+#> AC186512.3_FG007 7.919688 7.754506 7.670946 7.417760 7.988427 7.904850 7.484542
+#>                       S-4      S-5   B_L1.1
+#> AC149818.2_FG001 7.401382 7.345322 6.524435
+#> AC149829.2_FG003 8.744502 8.142909 8.240407
+#> AC182617.3_FG001 8.140134 6.972400 7.777347
+#> AC186512.3_FG001 6.949501 6.952659 6.059033
+#> AC186512.3_FG007 8.375664 7.762799 6.335663
+dim(expr_normalized)
+# This would give us 415 genes - so we use all genes for downstream analysis
+expr_normalized_df <- data.frame(expr_normalized) %>%
+  mutate(
+    Gene_id = row.names(expr_normalized)
+  ) %>%
+  pivot_longer(-Gene_id)
+
+wpn_vsd.df <- data.frame(wpn_vsd) %>%
+  mutate(
+    Gene_id = row.names(wpn_vsd)
+  ) %>%
+  pivot_longer(-Gene_id)
+
+expr_normalized_df %>% ggplot(., aes(x = name, y = value)) +
+  geom_violin() +
+  geom_point() +
+  theme_bw() +
+  theme(
+    axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)
+  ) +
+  ylim(0, NA) +
+  labs(
+    title = "Normalized and 95 quantile Expression",
+    x = "treatment",
+    y = "normalized expression"
+  )
+
+wpn_vsd.df %>% ggplot(., aes(x = name, y = value)) +
+  geom_violin() +
+  geom_point() +
+  theme_bw() +
+  theme(
+    axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)
+  ) +
+  ylim(0, NA) +
+  labs(
+    title = "Normalized Expression",
+    x = "treatment",
+    y = "normalized expression"
+  )
+
+# === Carry out WGCNA
+
+# Use "expr_normalized" for a smaller dataset, but as we have relative few genes, we'll use the full carbon processing dataset 
+
+input_mat = t(wpn_vsd)
+dim(input_mat)
+input_mat[1:5,1:10]    
+#>     AC149818.2_FG001 AC149829.2_FG003 AC182617.3_FG001 AC186512.3_FG001
+#> B-3         7.600901         8.782014         8.047244         6.901539
+#> B-4         7.077399         8.179876         7.120668         7.389644
+#> B-5         7.803434         7.900062         6.885533         6.975945
+#> L-3         7.220840         8.299778         7.501391         6.859593
+#> L-4         7.410408         7.529891         7.279413         7.370816
+#>     AC186512.3_FG007 AC189795.3_FG001 AC190609.3_FG002 AC190623.3_FG001
+#> B-3         7.919688         8.149041         12.64301         6.575155
+#> B-4         7.754506         8.077571         11.99816         7.170788
+#> B-5         7.670946         7.524430         12.12500         7.438024
+#> L-3         7.417760         8.420552         12.36979         8.223261
+#> L-4         7.988427         7.105196         11.64515         8.008850
+#>     AC192451.3_FG001 AC195340.3_FG001
+#> B-3         6.700385         9.104258
+#> B-4         7.325447         9.135480
+#> B-5         7.819142         9.023856
+#> L-3         8.052019         8.908933
+#> L-4         8.528875         8.583982
+
+#Treatment/samples should be rows, and genes columns
+#library(WGCNA)
+allowWGCNAThreads()          # allow multi-threading (optional)
+#> Allowing multi-threading with up to 4 threads.
+
+# Choose a set of soft-thresholding powers
+powers = c(c(1:10), seq(from = 12, to = 25, by = 2))
+
+# Call the network topology analysis function
+sft = pickSoftThreshold(
+  input_mat,             # <= Input data
+  blockSize = 9000,
+  powerVector = powers,
+  verbose = 5
+  )
+#> pickSoftThreshold: will use block size 5486.
+#>  pickSoftThreshold: calculating connectivity for given powers...
+#>    ..working on genes 1 through 5486 of 5486
+#>    Power SFT.R.sq  slope truncated.R.sq mean.k. median.k. max.k.
+#> 1      1   0.5350  2.500          0.960  1940.0    1950.0   2840
+#> 2      2   0.0642  0.331          0.897   964.0     927.0   1860
+#> 3      3   0.1680 -0.444          0.859   560.0     505.0   1340
+#> 4      4   0.5050 -0.822          0.906   358.0     300.0   1030
+#> 5      5   0.6800 -1.070          0.935   243.0     189.0    819
+#> 6      6   0.7770 -1.230          0.954   173.0     125.0    673
+#> 7      7   0.8330 -1.310          0.972   127.0      85.3    564
+#> 8      8   0.8660 -1.390          0.980    96.4      60.2    484
+#> 9      9   0.8810 -1.450          0.981    74.8      43.2    422
+#> 10    10   0.8940 -1.490          0.984    59.1      31.7    371
+#> 11    12   0.9070 -1.540          0.988    38.7      17.6    295
+#> 12    14   0.9150 -1.580          0.988    26.7      10.3    240
+#> 13    16   0.9220 -1.570          0.985    19.1       6.3    200
+#> 14    18   0.9200 -1.570          0.979    14.1       4.0    169
+#> 15    20   0.9240 -1.570          0.982    10.7       2.6    145
+
+par(mfrow = c(1,2));
+cex1 = 0.9;
+
+plot(sft$fitIndices[, 1],
+     -sign(sft$fitIndices[, 3]) * sft$fitIndices[, 2],
+     xlab = "Soft Threshold (power)",
+     ylab = "Scale Free Topology Model Fit, signed R^2",
+     main = paste("Scale independence")
+)
+text(sft$fitIndices[, 1],
+     -sign(sft$fitIndices[, 3]) * sft$fitIndices[, 2],
+     labels = powers, cex = cex1, col = "red"
+)
+abline(h = 0.90, col = "red")
+plot(sft$fitIndices[, 1],
+     sft$fitIndices[, 5],
+     xlab = "Soft Threshold (power)",
+     ylab = "Mean Connectivity",
+     type = "n",
+     main = paste("Mean connectivity")
+)
+text(sft$fitIndices[, 1],
+     sft$fitIndices[, 5],
+     labels = powers,
+     cex = cex1, col = "red")
+
+
+
+dim(input_mat)
+#View(input_mat)
+picked_power = 5 # Use 5 or 6 depending on result
+cor <- WGCNA::cor         # Force it to use WGCNA cor function (fix a namespace conflict issue)
+dim(input_mat)
+netwk <- blockwiseModules(input_mat,                # <= input here
+
+                          # == Adjacency Function ==
+                          power = picked_power,                # <= power here
+                          networkType = "unsigned",
+                          randomSeed = 2,
+                          corType = "pearson",
+
+                          # == Tree and Block Options ==
+                          deepSplit = 2,
+                          pamRespectsDendro = F,
+                          # detectCutHeight = 0.75,
+                          minModuleSize = 50,
+                          maxBlockSize = 40000,
+
+                          # == Module Adjustments ==
+                          reassignThreshold = 0,
+                          mergeCutHeight = 0.25,
+
+                          # == TOM == Archive the run results in TOM file (saves time)
+                          saveTOMs = T,
+                          #saveTOMFileBase = "./Network/WGCNA_MT_all",
+                          loadTOM = T,
+
+                          # == Output Options
+                          numericLabels = T,
+                          verbose = 3)
+#Calculating module eigengenes block-wise from all genes
+#   Flagging genes and samples with too many missing values...
+#    ..step 1
+#  ..Excluding 11 genes from the calculation due to too many missing samples or zero variance.
+#    ..step 2
+# ..Working on block 1 .
+#    TOM calculation: adjacency..
+#    ..will not use multithreading.
+#     Fraction of slow calculations: 0.000000
+#    ..connectivity..
+#    ..matrix multiplication (system BLAS)..
+#    ..normalization..
+#    ..done.
+#   ..saving TOM for block 1 into file ./Network/WGCNA_MT-block.1.RData
+# ....clustering..
+# ....detecting modules..
+# ....calculating module eigengenes..
+# ....checking kME in modules..
+#     ...removing 4 genes from module 1 because their KME is too low.
+#     ..removing 4 genes from module 2 because their KME is too low.
+#     ..removing 2 genes from module 3 because their KME is too low.
+#     ..removing 3 genes from module 4 because their KME is too low
+# ..merging modules that are too close..
+#     mergeCloseModules: Merging modules whose distance is less than 0.25
+#       Calculating new MEs...
+
+#cor <- stats::cor     # Return cor function to original namespace
+
+#Take a look at the modules
+# Convert labels to colors for plotting
+mergedColors = labels2colors(netwk$colors)
+unique(mergedColors)
+
+# Plot the dendrogram and the module colors underneath
+plotDendroAndColors(
+  netwk$dendrograms[[1]],
+  mergedColors[netwk$blockGenes[[1]]],
+  "Module colors",
+  dendroLabels = FALSE,
+  hang = 0.03,
+  addGuide = TRUE,
+  guideHang = 0.05 )
+
+
+pdf("F:/Functional_R_analysis/Network/WGCNA_tree_MT_all.pdf", width = 16, height = 8)
+plotDendroAndColors(
+  netwk$dendrograms[[1]],
+  mergedColors[netwk$blockGenes[[1]]],
+  "Module colors",
+  dendroLabels = FALSE,
+  hang = 0.03,
+  addGuide = TRUE,
+  guideHang = 0.05 )
+dev.off()
+
+#Extract module assignments 
+module_df <- data.frame(
+  gene_id = names(netwk$colors),
+  colors = labels2colors(netwk$colors)
+)
+
+module_df[1:5,]
+#>            gene_id    colors
+#> 1 K23094   grey
+#> 2  K03392   blue
+#> 3  K05359   grey
+#> 4  K00476   grey
+#> 5  K00471   grey
+
+write_delim(module_df,
+            file = "Network/WGCNA_gene_modules_MT_all.txt",
+            delim = "\t")
+
+#How many modules are there
+length(unique(module_df$colors))
+
+# Get Module Eigengenes per cluster
+MEs0 <- moduleEigengenes(input_mat, mergedColors)$eigengenes
+
+# Reorder modules so similar modules are next to each other
+MEs0 <- orderMEs(MEs0)
+module_order = names(MEs0) %>% gsub("ME","", .)
+
+# Add treatment names
+MEs0$treatment = row.names(MEs0)
+
+#export for downstream analysis backup
+write.csv(MEs0, "F:/Functional_R_analysis/Network/MEs0_MT.csv")
+
+# tidy & plot data
+mME = MEs0 %>%
+  pivot_longer(-treatment) %>%
+  mutate(
+    name = gsub("ME", "", name),
+    name = factor(name, levels = module_order)
+  )
+
+WGCNA_sample_MT = mME %>% ggplot(., aes(x=treatment, y=name, fill=value)) +
+  geom_tile() +
+  theme_bw() +
+  scale_fill_gradient2(
+    low = "blue",
+    high = "red",
+    mid = "white",
+    midpoint = 0,
+    limit = c(-1,1)) +
+  theme(axis.text.x = element_text(angle=90, hjust = 1, vjust = 0.5)) +
+  labs(title = "Module-trait Relationships", y = "Modules", fill="corr")
+WGCNA_sample_MT
+
+pdf("F:/Functional_R_analysis/Network/WGCNA_sample_MT_all.pdf", width = 20, height = 8)
+WGCNA_sample_MT
+dev.off()
+
+
+# pick out a few modules of interest here
+modules_of_interest = c("green", "turquoise", "tan")
+
+# Pull out list of genes in that module
+submod = module_df 
+
+row.names(module_df) = module_df$gene_id
+
+# Get normalized expression for those genes
+wpn_vsd[1:5,1:10]
+
+#Subset gene list - expression profiles
+subexpr = wpn_vsd[submod$gene_id,]
+
+#Make into a dataframe
+submod_df = data.frame(subexpr) %>%
+  mutate(
+    gene_id = row.names(.)
+  ) %>%
+  pivot_longer(-gene_id) %>%
+  mutate(
+    module = module_df[gene_id,]$colors
+  )
+
+submod_df %>% ggplot(., aes(x=name, y=value, group=gene_id)) +
+  geom_line(aes(color = module),
+            alpha = 0.2) +
+  theme_bw() +
+  theme(
+    axis.text.x = element_text(angle = 90)
+  ) +
+  #scale_colour_manual(values = c("black", "blue", "brown", "green", "greenyellow", "grey", "magenta", "pink", "purple", "red", "salmon", "forestgreen", "turquoise", "yellow"))+
+  facet_grid(rows = vars(module)) +
+  labs(x = "sample",
+       y = "normalized expression")
+
+
+
+
+genes_of_interest = module_df
+
+expr_of_interest = wpn_vsd[module_df$gene_id,]
+expr_of_interest[1:5,1:5]
+#>                       B-3      B-4      B-5      L-3      L-4
+#> AC186512.3_FG001 6.901539 7.389644 6.975945 6.859593 7.370816
+#> AC186512.3_FG007 7.919688 7.754506 7.670946 7.417760 7.988427
+#> AC190623.3_FG001 6.575155 7.170788 7.438024 8.223261 8.008850
+#> AC196475.3_FG004 6.054319 6.439899 6.424540 5.815344 6.565299
+#> AC196475.3_FG005 6.194406 5.872273 6.207174 6.499828 6.314952
+
+####SHow temporarily ####
+
+
+
+genes_of_interest = module_df
+
+expr_of_interest = wpn_vsd[genes_of_interest$gene_id,]
+expr_of_interest[1:5,1:5]
+#>                       B-3      B-4      B-5      L-3      L-4
+#> AC186512.3_FG001 6.901539 7.389644 6.975945 6.859593 7.370816
+#> AC186512.3_FG007 7.919688 7.754506 7.670946 7.417760 7.988427
+#> AC190623.3_FG001 6.575155 7.170788 7.438024 8.223261 8.008850
+#> AC196475.3_FG004 6.054319 6.439899 6.424540 5.815344 6.565299
+#> AC196475.3_FG005 6.194406 5.872273 6.207174 6.499828 6.314952
+
+# Only recalculate TOM for modules of interest (faster, altho there's some online discussion if this will be slightly off)
+TOM = TOMsimilarityFromExpr(t(expr_of_interest),
+                            power = picked_power)
+#> TOM calculation: adjacency..
+#> ..will use 4 parallel threads.
+#>  Fraction of slow calculations: 0.000000
+#> ..connectivity..
+#> ..matrix multiplication (system BLAS)..
+#> ..normalization..
+#> ..done.
+
+# Add gene names to row and columns
+row.names(TOM) = row.names(expr_of_interest)
+colnames(TOM) = row.names(expr_of_interest)
+
+dim(data.frame(TOM))
+
+edge_list = data.frame(TOM) %>%
+  mutate(
+    gene1 = row.names(.)
+  ) %>%
+  pivot_longer(-gene1) %>%
+  dplyr::rename(gene2 = name, correlation = value) %>%
+  unique() %>%
+  subset(!(gene1==gene2)) %>%
+  mutate(
+    module1 = module_df[gene1,]$colors,
+    module2 = module_df[gene2,]$colors
+  )
+
+head(edge_list)
+#> # A tibble: 6 x 5
+#>   gene1            gene2            correlation module1   module2  
+#>   <chr>            <chr>                  <dbl> <chr>     <chr>    
+#> 1 AC186512.3_FG001 AC186512.3_FG007      0.0238 turquoise turquoise
+#> 2 AC186512.3_FG001 AC190623.3_FG001      0.0719 turquoise turquoise
+#> 3 AC186512.3_FG001 AC196475.3_FG004      0.143  turquoise turquoise
+#> 4 AC186512.3_FG001 AC196475.3_FG005      0.0117 turquoise turquoise
+#> 5 AC186512.3_FG001 AC196489.3_FG002      0.0181 turquoise turquoise
+#> 6 AC186512.3_FG001 AC198481.3_FG004      0.0240 turquoise turquoise
+
+
+adj = TOM[, colnames(TOM) != "samplesums"]
+adj = adj[rownames(TOM) != "samplesums", ]
+adj[adj > 0.1] = 1
+adj[adj != 1] = 0
+
+dim(adj)
+
+network <- igraph::graph_from_adjacency_matrix(adj)
+network <- igraph::simplify(network)  # removes self-loops
+#results <- netwk
+V(network)$color <- netwk$colors #Assign colours to genes for their respective modules
+
+
+#Plot for sanity checking
+par(mar=c(0,0,0,0))
+# remove unconnected nodes
+network <- delete_vertices(network, degree(network)==0)
+multtest::plot(network, layout=layout.fruchterman.reingold(network), edge.arrow.size = 0.2)
+
+#Add extra information to network plot
+#E(network$label) <- ifelse(E(network)$weight > 0, '+', '-')
+#E(network)$weight_abs <- abs(E(network)$weight)
+
+#Make module tab for Gephi object
+V(network)$module =  V(network)$color
+
+#Add extra information to network plot
+#V(network)$Function <- All_WGCNA_taxtable[V(network)$name, "Name"]
+#V(network)$Direction <- All_WGCNA_taxtable[V(network)$name, "Direction"]
+#V(network)$Compound <- All_WGCNA_taxtable[V(network)$name, "Compound"]
+#V(network)$Class <- All_WGCNA_taxtable[V(network)$name, "Class"]
+#V(network)$label = V(network)$name
+
+
+
+# Export Network file to be read into Gephi, Cytoscape, VisANT, etc
+write_graph(network, "./Network/WGCNA_all_MT_type.graphml", format = "graphml")
+
+#Export edge file for back up
+write_delim(edge_list,
+            file = "Network/edgelist_MT_all_type.tsv",
+            delim = "\t")
+
+
+#Make space for other analyses
+rm(MEs0, network, netwk, WGCNA_MT_raw.df, test, Final_Geneabund_KO_MT.lng, tmp.out, Geneabund_KO_MT.lng, CO2CH4_TG.df, Geneabund_KO_MT.wd, WGCNA_MT_raw.df, TOM, adj, edge_list, expr_of_interest, genecat_ps, input_mat, mdata, subexpr, vsd, dds, wpn_vsd.df, wpn_vsd)
+gc()
+```
+
+##Correlate to environmental data
+
+The Pearson correlation test answers something like the question
+
+When X goes up, does Y also go up? 
+When X goes down, does Y also go down?
+
+while the Mantel test answers something like the question
+
+When any two X observations are similar, are the corresponding Y observations also similar? 
+When any two X observations are dissimilar, are the corresponding Y observations also dissimilar?
+ 
+```{r}
+#Import MEs0
+MEs0 = read.csv("E:/Functional_R_analysis/Network/MEs0_MT.csv")
+
+#Run loop for mOTUs vs individual physicochemical parameters
+Results_WGCNA_MT.df = data.frame("Data_type" = "TranscriptsPerGene",
+                                 "Module_name" = "DELETEME",
+                                 "PhysicochemicalParameter" = "DELETEME",
+                                 "Pearson_corr_value" = 9999,
+                                 "pvalue" = 9999)
+PP_loop.df = PP_totest.df[-c(1:3),]
+PP_loop.df = as.data.frame(PP_loop.df) %>%
+   mutate_all(as.numeric) 
+
+i=1
+x=1
+for (i in 1:(which(colnames(MEs0) == "treatment")-1)) {
+  
+  print(paste0("Working on module ", i, " out of ", (which(colnames(MEs0) == "treatment")-1)))
+  
+  for (x in 1:length(rownames(PP_loop.df))) {
+    
+    #Extracting names
+    PP.name = rownames(as.data.frame(PP_loop.df)[x,])
+    module.name = colnames(MEs0)[i]
+    
+    #Remove all samples that have NAs for that PP
+    PP.tmp <- PP_loop.df[x,] %>%
+      as.data.frame() %>%
+      dplyr::select_if(~ !any(is.na(.))) %>%
+      t()
+      #t(as.data.frame(PP_loop.df[x,][,is.na(PP_loop.df[x,])]))
+    
+    
+    #Normalise PP metrics and extract module eigenvalues
+    PP.tmp <- PP.tmp %>%
+      as.data.frame() %>%
+      mutate_at(c(PP.name), ~(scale(.) %>% as.vector))
+    module.tmp = MEs0 %>%
+      as.data.frame() %>%
+      dplyr::select(all_of(module.name))
+    
+    #Make sure to only include samples/treatments that are present in both PP and microbiome dissimialrity matrices
+    #Extract sample numbers
+    PP_samples = data.frame(PP_sample = sort(as.numeric(rownames(PP.tmp))))
+    module_samples = data.frame(module_sample = sort(as.numeric(rownames(module.tmp))))
+
+
+    #Compare and put into dataframe
+    PP_samples$module_match = match(PP_samples$PP_sample, module_samples$module_sample)
+    module_samples$PP_match = match(module_samples$module_sample, PP_samples$PP_sample)
+
+
+    #Extract only matching samples
+    PP_module_matches = subset(PP_samples, module_match!="NA")
+
+
+    #Subset distance matrices by matching samples
+    module_sub.tmp = module.tmp %>% # read in data
+      tibble::rownames_to_column("rowsampleid") %>% # convert rownames to a column
+      filter(rowsampleid %in% PP_module_matches$PP_sample) %>% # filter for only matching samples
+      tibble::column_to_rownames("rowsampleid") # remove new column and replace generic rowname with sampleid
+    PP_sub.tmp = PP.tmp %>%  # read in data
+      tibble::rownames_to_column("rowsampleid") %>% # convert rownames to a column
+      filter(rowsampleid %in% PP_module_matches$PP_sample) %>% # filter for only matching samples
+      tibble::column_to_rownames("rowsampleid") # remove new column and replace generic rowname with sampleid
+    
+    #For bug hunting
+    #dim(module.tmp)
+    #dim(module_sub.tmp)
+    #dim(PP.tmp)
+    #dim(PP_sub.tmp)
+    
+    #Run correlation test
+    test.tmp = cor.test(PP_sub.tmp[,1], module_sub.tmp[,1], method = "pearson", permutations = 999, na.rm = TRUE)
+    
+    #Make df for results
+    Results.tmp = data.frame("Data_type" = "TranscriptsPerGene",
+                             "Module_name" = module.name,
+                             "PhysicochemicalParameter" = PP.name,
+                             "Pearson_corr_value" = test.tmp$estimate,
+                             "pvalue" = test.tmp$p.value
+                             )
+    
+    #Combine results with previous dataframe
+    Results_WGCNA_MT.df = rbind(Results_WGCNA_MT.df, Results.tmp)
+    
+   # print(paste0("Completed ", x, " out of ", length(rownames(PP_loop.df)), " physicochemical parameters, which is ", round((x/length(rownames(PP_loop.df)))*100, digits = 2), "%"))
+  
+    } 
+  }
+
+
+#Check results and clean up dataframe
+Results_WGCNA_MT.df = Results_WGCNA_MT.df[-1,]
+Results_WGCNA_MT.df
+
+#Check if each PP was included
+unique(Results_WGCNA_MT.df$PhysicochemicalParameter)
+
+
+
+```
+#Carry out with mOTU data - need data from other computer
+##Metagenomes
+###Set up microbiome taxa dataframes
+```{r}
+
+motus_final_taxa_metadata <- readRDS(file="E:/Functional_R_analysis/motus_final_taxa_metadata_mod.RDS")
+metadata = Physicochem.df
+
+##Lets check out experimental scheme
+motus_final_taxa_metadata %>% 
+  dplyr::select(sampleid, data_type, date, station, sample_type) %>% 
+  group_by(data_type, sample_type, date) %>% 
+  dplyr::summarise(count=n_distinct(sampleid)) %>% 
+  print(n=30) 
+
+##So when we consider fraction and date we see that Nov 21 has few samples, we should consider removing it
+
+motus_final_taxa_metadata %>% 
+  dplyr::select(sampleid, data_type, date, station, sample_type) %>% 
+  group_by(data_type, sample_type, station) %>% 
+  dplyr::summarise(count=n_distinct(sampleid)) %>% 
+  print(n=30) 
+
+##By station we see that Kollmar, SeemanshÃ¶ft and BunthausSpitze also were sampled infrequently, lets also remove these. 
+
+motus_final_taxa_metadata <- motus_final_taxa_metadata %>% 
+  filter(!grepl("Bunthaus|Kollmar|Seemans", station), !grepl("Nov 21", date))
+
+
+#so to do a ternary plot we actually need to create a physeq object really quick 
+motus_table <- motus_final_taxa_metadata %>%
+  filter(data_type == "METAG") %>%
+  dplyr::select(mOTU, sampleid, counts) %>%
+  group_by(sampleid) %>% 
+  mutate(total=sum(counts)) %>% 
+  filter(total > 2400) %>%  ##Here we just remove those with low counts
+  dplyr::select(-total) %>% 
+  ungroup() %>% 
+  pivot_wider(names_from = sampleid, values_from = counts, values_fill = 0) %>% 
+  column_to_rownames("mOTU") %>% 
+  phyloseq::otu_table(taxa_are_rows = TRUE)
+motus_taxa <- motus_final_taxa_metadata %>% 
+  filter(data_type == "METAG") %>%
+  dplyr::select(mOTU, phylum, class, order, family, genus, species) %>% 
+  unique() %>% 
+  column_to_rownames("mOTU") %>% 
+  as.matrix() %>%
+  phyloseq::tax_table()
+motus_sampledata <- motus_final_taxa_metadata %>% 
+  filter(data_type == "METAG") %>%
+  dplyr::select(-phylum, -class, -order, -family, -genus, -species, -counts, -mOTU, -domain) %>% 
+  unique() %>%  
+  column_to_rownames("sampleid") %>% 
+  sample_data()
+bicest_motu_ps <- phyloseq(motus_table, motus_taxa, motus_sampledata)
+bicest_motu_ps
+#bicest_motu_ps_v0 = bicest_motu_ps
+#bicest_motu_ps = bicest_motu_ps_v0
+
+Stupidworkaround.df = read.csv("E:/Functional_R_analysis/SAMEAID_SampleID_simplified.csv", sep = ";")
+
+test = motus_sampledata
+i=1
+x=1
+for (i in 1:length(Stupidworkaround.df$BioSample)) {
+  for (x in 1:length(motus_sampledata$BioSample)) {
+  if(grepl(Stupidworkaround.df$BioSample[i], motus_sampledata$BioSample[x]) == T) {
+    
+    test$Associatednumber[x] = Stupidworkaround.df$Associatednumber[i]
+    
+    print(paste0("Matching ", motus_sampledata$BioSample[x], " with ", Stupidworkaround.df$BioSample[i]))
+    
+  }
+  }
+}
+
+
+
+#Fix german computer issues that replace periods and commas weirdly
+i=1
+x=59
+test$TEP_um2perL = 0
+test$CSP_um2perL = 0
+test$ParticleArea_um2perL = 0
+test$Density_gpercm3 = 0
+test$doc_mg_l = 0
+test$dic_mg_l = 0
+for (i in 1:length(Physicochem.df$Associatednumber)) {
+  for (x in 1:length(test$Associatednumber)) {
+  if(grepl(Physicochem.df$Associatednumber[i], test$Associatednumber[x]) == T) {
+    
+    print(paste0("Matching ", test$Associatednumber[x], " with ", Physicochem.df$Associatednumber[i]))
+    
+    #Update relevant physicochemical parameters as German computers cause weird issues
+    test$doc_mg_l[x] = Physicochem.df$DOC_mg.L[i]
+    test$dic_mg_l[x] = Physicochem.df$DIC_mg.L[i]
+    
+    test$ptc_mg_l[x] = Physicochem.df$PTC_mgperL[i]
+    test$spm_mg_l[x] = Physicochem.df$SPM_mgperL[i]
+    test$poc_mg_l[x] = Physicochem.df$POC_mgperL[i]
+    test$Density_gpercm3[x] = Physicochem.df$Density_gpercm3[i]
+    
+    test$ParticleArea_um2perL[x] = Physicochem.df$ParticleArea_um2perL[i]
+    test$TEP_um2perL[x] = Physicochem.df$TEP_um2perL[i]
+    test$CSP_um2perL[x] = Physicochem.df$CSP_um2perL[i]
+    
+  }
+  }
+}
+
+test$doc_um = NULL
+test$dic_um = NULL
+    
+
+bicest_motu_ps <- phyloseq(motus_table, motus_taxa, test)
+bicest_motu_ps@sam_data
+
+
+taxa.df <- tax_glom(bicest_motu_ps, taxrank = 'species') %>%#Merge the species at the Phylum level
+  transform_sample_counts(function(x) {x/sum(x)} ) %>% #Extract abundance data from phyloseq object
+  psmelt() %>%#Melt it into a dataframe
+  subset(date!="Nov 21")
+  
+taxa.df <- taxa.df[order(taxa.df$species),] #Order them at the Species level
+
+taxa.df$species <- as.character(taxa.df$species)
+  # group dataframe by Phylum, calculate relative abundance
+
+#Remove na values
+taxa.df$Abundance[grep(NaN, taxa.df$Abundance)] = 0
+
+#Remove annoying extras from taxonomic names
+taxa.df$phylum = gsub("p__", "", taxa.df$phylum)
+taxa.df$class = gsub("c__", "", taxa.df$class)
+taxa.df$order = gsub("o__", "", taxa.df$order)
+taxa.df$family = gsub("f__", "", taxa.df$family)
+taxa.df$genus = gsub("g__", "", taxa.df$genus)
+taxa.df$species = gsub("s__", "", taxa.df$species)
+taxa.df$species = gsub("s_", "", taxa.df$species)
+
+taxa.df$taxapath = paste0(taxa.df$phylum, "__", taxa.df$class, "__", taxa.df$order, "__", taxa.df$family, "__", taxa.df$genus, "__", taxa.df$species)
+
+Microbiome_wide_mOTU = taxa.df %>%
+  dplyr::select(Abundance, Associatednumber, taxapath, OTU) %>%
+  mutate(newname = paste0(taxapath, "__", OTU)) %>%
+  dplyr::select(Abundance, Associatednumber, newname)
+
+
+#Long to wide, in preparation for transcripts per gene copy calculation
+# The arguments to spread():
+# - data: Data object
+# - key: Name of column containing the new column names
+# - value: Name of column containing values
+Microbiome_wide_mOTU <- data.frame(spread(Microbiome_wide_mOTU,
+                       key = Associatednumber, #Column that will contain new column names
+                       value = Abundance)) # Value that will fill new columns
+
+rownames(Microbiome_wide_mOTU) = Microbiome_wide_mOTU$newname
+Microbiome_wide_mOTU$newname = NULL
+
+colnames(Microbiome_wide_mOTU) = gsub("X","", colnames(Microbiome_wide_mOTU))
+
+
+#We need to have samples as columns, and taxa as rows in a wide format.
+
+#Sanity check to make sure all columns add up to 1
+colSums(Microbiome_wide_mOTU)
+
+```
+
+## Actual WGCNA for mOTUs
+### Sample_type
+```{r}
+
+set.seed(2)
+
+#Generate function
+scale2 <- function(x, na.rm = FALSE) (x * 100 )
+
+data = Microbiome_wide_mOTU %>%
+  as.data.frame() %>%
+  dplyr::mutate(across(where(is.numeric), scale2)) %>%
+  rownames_to_column(var = "mOTUId")
+
+
+
+data[1:5,1:10]        # Look at first 5 rows and 10 columns
+dim(data)
+
+names(data)[1] = "mOTUId"
+names(data)           # Look at the column names
+
+
+col_sel = names(data)[-1]     # Get all but first column name
+mdata <- data %>%
+  tidyr::pivot_longer(
+    .,                        # The dot is the the input data, magrittr tutorial
+    col = all_of(col_sel),
+    values_transform = as.numeric
+    ) %>%
+  left_join(metadata_WGCNA, by = c("name" = "Associatednumber")) %>%
+  dplyr::select(mOTUId, name, value, Sample_type) %>%
+  dplyr::rename(group = Sample_type)
+
+mdata$name = as.character(mdata$name)
+
+# ==== Plot groups (Sample Groups vs RNA Seq Counts) to identify outliers
+
+ p <- mdata %>%
+    ggplot(., aes(x = name, y = value)) +             # x = treatment, y = RNA Seq count
+    geom_violin() +                                   # violin plot, show distribution
+    geom_point(alpha = 0.2) +                         # scatter plot
+    theme_bw() +
+    theme(
+      axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)          # Rotate treatment text
+    ) +
+    labs(x = "Treatment Groups / Samples", y = "mOTU Abundance (%)") +
+    facet_grid(cols = vars(group), drop = TRUE, scales = "free_x")      # Facet by hour
+p
+
+pdf("E:/Functional_R_analysis/Network/WGCNA_OutlierHunting_mOTU_all.pdf", width = 48, height = 10)
+p
+dev.off()
+#No outliers were detected
+
+#Remove outliers
+#mdata = mdata %>%
+ # filter(value < 4000000)
+#Rerun above code to make sure outliers have been removed
+
+#Normalise data with DESeq2
+library(DESeq2)
+de_input = as.data.frame(data[,-1])
+row.names(de_input) = data$mOTUId
+de_input[1:5,1:10]
+
+
+meta_df <- data.frame(Sample = names(data[-1])) %>%
+  left_join(metadata_WGCNA, by = c("Sample" = "Associatednumber")) %>%
+  dplyr::select(Sample, Sample_type) %>%
+  dplyr::rename(Type = Sample_type)
+
+dds <- DESeq2::DESeqDataSetFromMatrix(round(de_input),
+                              meta_df,
+                              design = ~Type)
+#> converting counts to integer mode
+#> Warning in DESeqDataSet(se, design = design, ignoreRank): some variables in
+#> design formula are characters, converting to factors
+
+dds <- DESeq(dds)
+#> estimating size factors
+#> estimating dispersions
+#> gene-wise dispersion estimates
+#> mean-dispersion relationship
+#> final dispersion estimates
+#> fitting model and testing
+vsd <- varianceStabilizingTransformation(dds)
+#>
+#> Attaching package: 'genefilter'
+#> The following objects are masked from 'package:matrixStats':
+#>
+#>     rowSds, rowVars
+#> The following object is masked from 'package:readr':
+#>
+#>     spec
+wpn_vsd <- getVarianceStabilizedData(dds)
+rv_wpn <- rowVars(wpn_vsd)
+summary(rv_wpn)
+#>     Min.  1st Qu.   Median     Mean  3rd Qu.     Max.
+#>  0.00000  0.00000  0.00000  0.08044  0.03322 11.14529
+
+q75_wpn <- quantile( rowVars(wpn_vsd), .75)  # <= original
+q95_wpn <- quantile( rowVars(wpn_vsd), .95)  # <= changed to 95 quantile to reduce dataset
+expr_normalized <- wpn_vsd[ rv_wpn > q95_wpn, ]
+
+expr_normalized[1:5,1:10]
+#>                       B-3      B-4      B-5      L-3      L-4      L-5      S-3
+#> AC149818.2_FG001 7.600901 7.077399 7.803434 7.220840 7.410408 8.028223 7.160846
+#> AC149829.2_FG003 8.782014 8.179876 7.900062 8.299778 7.529891 8.631731 8.055118
+#> AC182617.3_FG001 8.047244 7.120668 6.885533 7.501391 7.279413 7.809565 7.184253
+#> AC186512.3_FG001 6.901539 7.389644 6.975945 6.859593 7.370816 6.633722 7.798843
+#> AC186512.3_FG007 7.919688 7.754506 7.670946 7.417760 7.988427 7.904850 7.484542
+#>                       S-4      S-5   B_L1.1
+#> AC149818.2_FG001 7.401382 7.345322 6.524435
+#> AC149829.2_FG003 8.744502 8.142909 8.240407
+#> AC182617.3_FG001 8.140134 6.972400 7.777347
+#> AC186512.3_FG001 6.949501 6.952659 6.059033
+#> AC186512.3_FG007 8.375664 7.762799 6.335663
+dim(expr_normalized)
+# This would give us 415 genes - so we use all genes for downstream analysis
+expr_normalized_df <- data.frame(expr_normalized) %>%
+  mutate(
+    Gene_id = row.names(expr_normalized)
+  ) %>%
+  pivot_longer(-Gene_id)
+
+wpn_vsd.df <- data.frame(wpn_vsd) %>%
+  mutate(
+    Gene_id = row.names(wpn_vsd)
+  ) %>%
+  pivot_longer(-Gene_id)
+
+expr_normalized_df %>% ggplot(., aes(x = name, y = value)) +
+  geom_violin() +
+  geom_point() +
+  theme_bw() +
+  theme(
+    axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)
+  ) +
+  ylim(0, NA) +
+  labs(
+    title = "Normalized and 95 quantile Expression",
+    x = "treatment",
+    y = "normalized expression"
+  )
+
+wpn_vsd.df %>% ggplot(., aes(x = name, y = value)) +
+  geom_violin() +
+  geom_point() +
+  theme_bw() +
+  theme(
+    axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)
+  ) +
+  ylim(0, NA) +
+  labs(
+    title = "Normalized Expression",
+    x = "treatment",
+    y = "normalized expression"
+  )
+
+# === Carry out WGCNA
+
+# Use "expr_normalized" for a smaller dataset, but as we have relative few genes, we'll use the full carbon processing dataset 
+
+input_mat = t(wpn_vsd)
+dim(input_mat)
+input_mat[1:5,1:10]    
+#>     AC149818.2_FG001 AC149829.2_FG003 AC182617.3_FG001 AC186512.3_FG001
+#> B-3         7.600901         8.782014         8.047244         6.901539
+#> B-4         7.077399         8.179876         7.120668         7.389644
+#> B-5         7.803434         7.900062         6.885533         6.975945
+#> L-3         7.220840         8.299778         7.501391         6.859593
+#> L-4         7.410408         7.529891         7.279413         7.370816
+#>     AC186512.3_FG007 AC189795.3_FG001 AC190609.3_FG002 AC190623.3_FG001
+#> B-3         7.919688         8.149041         12.64301         6.575155
+#> B-4         7.754506         8.077571         11.99816         7.170788
+#> B-5         7.670946         7.524430         12.12500         7.438024
+#> L-3         7.417760         8.420552         12.36979         8.223261
+#> L-4         7.988427         7.105196         11.64515         8.008850
+#>     AC192451.3_FG001 AC195340.3_FG001
+#> B-3         6.700385         9.104258
+#> B-4         7.325447         9.135480
+#> B-5         7.819142         9.023856
+#> L-3         8.052019         8.908933
+#> L-4         8.528875         8.583982
+
+#Treatment/samples should be rows, and genes columns
+#library(WGCNA)
+allowWGCNAThreads()          # allow multi-threading (optional)
+#> Allowing multi-threading with up to 4 threads.
+
+# Choose a set of soft-thresholding powers
+powers = c(c(1:10), seq(from = 12, to = 25, by = 2))
+
+# Call the network topology analysis function
+sft = pickSoftThreshold(
+  input_mat,             # <= Input data
+  blockSize = 9000,
+  powerVector = powers,
+  verbose = 5
+  )
+#> pickSoftThreshold: will use block size 5486.
+#>  pickSoftThreshold: calculating connectivity for given powers...
+#>    ..working on genes 1 through 5486 of 5486
+#>    Power SFT.R.sq  slope truncated.R.sq mean.k. median.k. max.k.
+#> 1      1   0.5350  2.500          0.960  1940.0    1950.0   2840
+#> 2      2   0.0642  0.331          0.897   964.0     927.0   1860
+#> 3      3   0.1680 -0.444          0.859   560.0     505.0   1340
+#> 4      4   0.5050 -0.822          0.906   358.0     300.0   1030
+#> 5      5   0.6800 -1.070          0.935   243.0     189.0    819
+#> 6      6   0.7770 -1.230          0.954   173.0     125.0    673
+#> 7      7   0.8330 -1.310          0.972   127.0      85.3    564
+#> 8      8   0.8660 -1.390          0.980    96.4      60.2    484
+#> 9      9   0.8810 -1.450          0.981    74.8      43.2    422
+#> 10    10   0.8940 -1.490          0.984    59.1      31.7    371
+#> 11    12   0.9070 -1.540          0.988    38.7      17.6    295
+#> 12    14   0.9150 -1.580          0.988    26.7      10.3    240
+#> 13    16   0.9220 -1.570          0.985    19.1       6.3    200
+#> 14    18   0.9200 -1.570          0.979    14.1       4.0    169
+#> 15    20   0.9240 -1.570          0.982    10.7       2.6    145
+
+par(mfrow = c(1,2));
+cex1 = 0.9;
+
+plot(sft$fitIndices[, 1],
+     -sign(sft$fitIndices[, 3]) * sft$fitIndices[, 2],
+     xlab = "Soft Threshold (power)",
+     ylab = "Scale Free Topology Model Fit, signed R^2",
+     main = paste("Scale independence")
+)
+text(sft$fitIndices[, 1],
+     -sign(sft$fitIndices[, 3]) * sft$fitIndices[, 2],
+     labels = powers, cex = cex1, col = "red"
+)
+abline(h = 0.90, col = "red")
+plot(sft$fitIndices[, 1],
+     sft$fitIndices[, 5],
+     xlab = "Soft Threshold (power)",
+     ylab = "Mean Connectivity",
+     type = "n",
+     main = paste("Mean connectivity")
+)
+text(sft$fitIndices[, 1],
+     sft$fitIndices[, 5],
+     labels = powers,
+     cex = cex1, col = "red")
+
+
+
+dim(input_mat)
+#View(input_mat)
+picked_power = 7
+cor <- WGCNA::cor         # Force it to use WGCNA cor function (fix a namespace conflict issue)
+dim(input_mat)
+netwk <- blockwiseModules(input_mat,                # <= input here
+
+                          # == Adjacency Function ==
+                          power = picked_power,                # <= power here
+                          networkType = "unsigned",
+                          randomSeed = 2,
+                          corType = "pearson",
+
+                          # == Tree and Block Options ==
+                          deepSplit = 2,
+                          pamRespectsDendro = F,
+                          # detectCutHeight = 0.75,
+                          minModuleSize = 15, # This should be 5%
+                          maxBlockSize = 40000,
+
+                          # == Module Adjustments ==
+                          reassignThreshold = 0,
+                          mergeCutHeight = 0.25,
+
+                          # == TOM == Archive the run results in TOM file (saves time)
+                          #saveTOMs = T,
+                          #saveTOMFileBase = "./Network/WGCNA_MG_all",
+                          #loadTOM = T,
+
+                          # == Output Options
+                          numericLabels = T,
+                          verbose = 3)
+#Calculating module eigengenes block-wise from all genes
+#   Flagging genes and samples with too many missing values...
+#    ..step 1
+#  ..Excluding 11 genes from the calculation due to too many missing samples or zero variance.
+#    ..step 2
+# ..Working on block 1 .
+#    TOM calculation: adjacency..
+#    ..will not use multithreading.
+#     Fraction of slow calculations: 0.000000
+#    ..connectivity..
+#    ..matrix multiplication (system BLAS)..
+#    ..normalization..
+#    ..done.
+#   ..saving TOM for block 1 into file ./Network/WGCNA_MG-block.1.RData
+# ....clustering..
+# ....detecting modules..
+# ....calculating module eigengenes..
+# ....checking kME in modules..
+#     ...removing 4 genes from module 1 because their KME is too low.
+#     ..removing 4 genes from module 2 because their KME is too low.
+#     ..removing 2 genes from module 3 because their KME is too low.
+#     ..removing 3 genes from module 4 because their KME is too low
+# ..merging modules that are too close..
+#     mergeCloseModules: Merging modules whose distance is less than 0.25
+#       Calculating new MEs...
+
+#cor <- stats::cor     # Return cor function to original namespace
+
+#Take a look at the modules
+# Convert labels to colors for plotting
+mergedColors = labels2colors(netwk$colors)
+unique(mergedColors)
+
+# Plot the dendrogram and the module colors underneath
+plotDendroAndColors(
+  netwk$dendrograms[[1]],
+  mergedColors[netwk$blockGenes[[1]]],
+  "Module colors",
+  dendroLabels = FALSE,
+  hang = 0.03,
+  addGuide = TRUE,
+  guideHang = 0.05 )
+
+
+pdf("E:/Functional_R_analysis/Network/WGCNA_tree_mOTUs_all.pdf", width = 16, height = 8)
+plotDendroAndColors(
+  netwk$dendrograms[[1]],
+  mergedColors[netwk$blockGenes[[1]]],
+  "Module colors",
+  dendroLabels = FALSE,
+  hang = 0.03,
+  addGuide = TRUE,
+  guideHang = 0.05 )
+dev.off()
+
+#Extract module assignments 
+module_df <- data.frame(
+  gene_id = names(netwk$colors),
+  colors = labels2colors(netwk$colors)
+)
+
+module_df[1:5,]
+#>            gene_id    colors
+#> 1 K23094   grey
+#> 2  K03392   blue
+#> 3  K05359   grey
+#> 4  K00476   grey
+#> 5  K00471   grey
+
+write_delim(module_df,
+            file = "E:/Functional_R_analysis/Network/WGCNA_gene_modules_mOTUs_all.txt",
+            delim = "\t")
+
+#How many modules are there
+length(unique(module_df$colors))
+
+# Get Module Eigengenes per cluster
+MEs0 <- moduleEigengenes(input_mat, mergedColors)$eigengenes
+
+# Reorder modules so similar modules are next to each other
+MEs0 <- orderMEs(MEs0)
+module_order = names(MEs0) %>% gsub("ME","", .)
+
+# Add treatment names
+MEs0$treatment = row.names(MEs0)
+
+#Export MEs0 for later downstream analysis
+write.csv(MEs0, "E:/Functional_R_analysis/Network/MEsO_mOTUs.csv")
+
+# tidy & plot data
+mME = MEs0 %>%
+  pivot_longer(-treatment) %>%
+  mutate(
+    name = gsub("ME", "", name),
+    name = factor(name, levels = module_order)
+  )
+
+WGCNA_sample_mOTUs = mME %>% ggplot(., aes(x=treatment, y=name, fill=value)) +
+  geom_tile() +
+  theme_bw() +
+  scale_fill_gradient2(
+    low = "blue",
+    high = "red",
+    mid = "white",
+    midpoint = 0,
+    limit = c(-1,1)) +
+  theme(axis.text.x = element_text(angle=90, hjust = 1, vjust = 0.5)) +
+  labs(title = "Module-trait Relationships", y = "Modules", fill="corr")
+WGCNA_sample_mOTUs
+
+pdf("E:/Functional_R_analysis/Network/WGCNA_sample_mOTUs_all.pdf", width = 20, height = 8)
+WGCNA_sample_mOTUs
+dev.off()
+
+
+# pick out a few modules of interest here
+#modules_of_interest = c("green", "turquoise", "tan")
+
+# Pull out list of genes in that module
+submod = module_df 
+
+row.names(module_df) = module_df$gene_id
+
+# Get normalized expression for those genes
+wpn_vsd[1:5,1:10]
+
+#Subset gene list - expression profiles
+subexpr = wpn_vsd[submod$gene_id,]
+
+#Make into a dataframe
+submod_df = data.frame(subexpr) %>%
+  mutate(
+    gene_id = row.names(.)
+  ) %>%
+  pivot_longer(-gene_id) %>%
+  mutate(
+    module = module_df[gene_id,]$colors
+  )
+
+submod_df %>% ggplot(., aes(x=name, y=value, group=gene_id)) +
+  geom_line(aes(color = module),
+            alpha = 0.2) +
+  theme_bw() +
+  theme(
+    axis.text.x = element_text(angle = 90)
+  ) +
+  #scale_colour_manual(values = c("black", "blue", "brown", "green", "greenyellow", "grey", "magenta", "pink", "purple", "red", "salmon", "forestgreen", "turquoise", "yellow"))+
+  facet_grid(rows = vars(module)) +
+  labs(x = "sample",
+       y = "normalized expression")
+
+
+
+
+genes_of_interest = module_df
+
+expr_of_interest = wpn_vsd[module_df$gene_id,]
+expr_of_interest[1:5,1:5]
+#>                       B-3      B-4      B-5      L-3      L-4
+#> AC186512.3_FG001 6.901539 7.389644 6.975945 6.859593 7.370816
+#> AC186512.3_FG007 7.919688 7.754506 7.670946 7.417760 7.988427
+#> AC190623.3_FG001 6.575155 7.170788 7.438024 8.223261 8.008850
+#> AC196475.3_FG004 6.054319 6.439899 6.424540 5.815344 6.565299
+#> AC196475.3_FG005 6.194406 5.872273 6.207174 6.499828 6.314952
+
+genes_of_interest = module_df
+
+expr_of_interest = wpn_vsd[genes_of_interest$gene_id,]
+expr_of_interest[1:5,1:5]
+#>                       B-3      B-4      B-5      L-3      L-4
+#> AC186512.3_FG001 6.901539 7.389644 6.975945 6.859593 7.370816
+#> AC186512.3_FG007 7.919688 7.754506 7.670946 7.417760 7.988427
+#> AC190623.3_FG001 6.575155 7.170788 7.438024 8.223261 8.008850
+#> AC196475.3_FG004 6.054319 6.439899 6.424540 5.815344 6.565299
+#> AC196475.3_FG005 6.194406 5.872273 6.207174 6.499828 6.314952
+
+# Only recalculate TOM for modules of interest (faster, altho there's some online discussion if this will be slightly off)
+TOM = TOMsimilarityFromExpr(t(expr_of_interest),
+                            power = picked_power)
+#> TOM calculation: adjacency..
+#> ..will use 4 parallel threads.
+#>  Fraction of slow calculations: 0.000000
+#> ..connectivity..
+#> ..matrix multiplication (system BLAS)..
+#> ..normalization..
+#> ..done.
+
+# Add gene names to row and columns
+row.names(TOM) = row.names(expr_of_interest)
+colnames(TOM) = row.names(expr_of_interest)
+
+dim(data.frame(TOM))
+
+edge_list = data.frame(TOM) %>%
+  mutate(
+    gene1 = row.names(.)
+  ) %>%
+  pivot_longer(-gene1) %>%
+  dplyr::rename(gene2 = name, correlation = value) %>%
+  unique() %>%
+  subset(!(gene1==gene2)) %>%
+  mutate(
+    module1 = module_df[gene1,]$colors,
+    module2 = module_df[gene2,]$colors
+  )
+
+head(edge_list)
+#> # A tibble: 6 x 5
+#>   gene1            gene2            correlation module1   module2  
+#>   <chr>            <chr>                  <dbl> <chr>     <chr>    
+#> 1 AC186512.3_FG001 AC186512.3_FG007      0.0238 turquoise turquoise
+#> 2 AC186512.3_FG001 AC190623.3_FG001      0.0719 turquoise turquoise
+#> 3 AC186512.3_FG001 AC196475.3_FG004      0.143  turquoise turquoise
+#> 4 AC186512.3_FG001 AC196475.3_FG005      0.0117 turquoise turquoise
+#> 5 AC186512.3_FG001 AC196489.3_FG002      0.0181 turquoise turquoise
+#> 6 AC186512.3_FG001 AC198481.3_FG004      0.0240 turquoise turquoise
+
+
+adj = TOM[, colnames(TOM) != "samplesums"]
+adj = adj[rownames(TOM) != "samplesums", ]
+adj[adj > 0.1] = 1
+adj[adj != 1] = 0
+
+dim(adj)
+
+network <- igraph::graph_from_adjacency_matrix(adj)
+network <- igraph::simplify(network)  # removes self-loops
+#results <- netwk
+V(network)$color <- netwk$colors #Assign colours to genes for their respective modules
+
+#Plot for sanity checking
+par(mar=c(0,0,0,0))
+# remove unconnected nodes
+network <- delete_vertices(network, degree(network)==0)
+multtest::plot(network, layout=layout.fruchterman.reingold(network), edge.arrow.size = 0.2)
+
+#Add extra information to network plot
+#E(network$label) <- ifelse(E(network)$weight > 0, '+', '-')
+#E(network)$weight_abs <- abs(E(network)$weight)
+
+#Make module tab for Gephi object
+V(network)$module =  V(network)$color
+
+#Add extra information to network plot
+#V(network)$Function <- All_WGCNA_taxtable[V(network)$name, "Name"]
+#V(network)$Direction <- All_WGCNA_taxtable[V(network)$name, "Direction"]
+#V(network)$Compound <- All_WGCNA_taxtable[V(network)$name, "Compound"]
+#V(network)$Class <- All_WGCNA_taxtable[V(network)$name, "Class"]
+V(network)$label = V(network)$name
+
+
+#Make df with taxa info
+networktaxa.df = data.frame(taxa = V(network)$name) %>%
+  separate(col = taxa, sep = "__", into = c("Phylum", "Class", "Order", "Family", "Genus", "Species", "mOTU_ID"))
+
+#Add taxonomic info
+V(network)$Phylum = networktaxa.df$Phylum
+V(network)$Class = networktaxa.df$Class
+V(network)$Order = networktaxa.df$Order
+V(network)$Family = networktaxa.df$Family
+V(network)$Genus = networktaxa.df$Genus
+V(network)$Species = networktaxa.df$Species
+V(network)$mOTU_ID = networktaxa.df$mOTU_ID
+
+  
+
+# Export Network file to be read into Gephi, Cytoscape, VisANT, etc
+write_graph(network, "E:/Functional_R_analysis/Network/WGCNA_all_mOTUs_type.graphml", format = "graphml")
+
+#Export edge file for back up
+write_delim(edge_list,
+            file = "E:/Functional_R_analysis/Network/edgelist_mOTUs_all_type.tsv",
+            delim = "\t")
+
+
+#Make space for other analyses
+rm(Geneabund_KO_mOTUs.lng, Final_Geneabund_KO_mOTUs.lng, Geneabund_KO_mOTUs.wde, WGCNA_mOTUs_raw.df, MEs0, network, netwk, test, tmp.out, TOM, adj, edge_list, expr_of_interest, genecat_ps, input_mat, mdata, subexpr, vsd, dds, wpn_vsd.df, wpn_vsd)
+gc()
+```
+##Correlate to environmental data
+
+The Pearson correlation test answers something like the question
+
+When X goes up, does Y also go up? 
+When X goes down, does Y also go down?
+
+while the Mantel test answers something like the question
+
+When any two X observations are similar, are the corresponding Y observations also similar? 
+When any two X observations are dissimilar, are the corresponding Y observations also dissimilar?
+ 
+```{r}
+
+MEs0
+
+#Run loop for motus vs individual physicochemical parameters
+Results_WGCNA_mOTUs.df = data.frame("Data_type" = "mOTUs",
+                                 "Module_name" = "DELETEME",
+                                 "PhysicochemicalParameter" = "DELETEME",
+                                 "Pearson_corr_value" = 9999,
+                                 "pvalue" = 9999)
+PP_loop.df = PP_totest.df[-c(1:3),]
+PP_loop.df = as.data.frame(PP_loop.df) %>%
+   mutate_all(as.numeric) 
+
+i=1
+x=1
+for (i in 1:(which(colnames(MEs0) == "treatment")-1)) {
+  
+  print(paste0("Working on module ", i, " out of ", (which(colnames(MEs0) == "treatment")-1)))
+  
+  for (x in 1:length(rownames(PP_loop.df))) {
+    
+    #Extracting names
+    PP.name = rownames(as.data.frame(PP_loop.df)[x,])
+    module.name = colnames(MEs0)[i]
+    
+    #Remove all samples that have NAs for that PP
+    PP.tmp <- PP_loop.df[x,] %>%
+      as.data.frame() %>%
+      dplyr::select_if(~ !any(is.na(.))) %>%
+      t()
+      #t(as.data.frame(PP_loop.df[x,][,is.na(PP_loop.df[x,])]))
+    
+    
+    #Normalise PP metrics and extract module eigenvalues
+    PP.tmp <- PP.tmp %>%
+      as.data.frame() %>%
+      mutate_at(c(PP.name), ~(scale(.) %>% as.vector))
+    module.tmp = MEs0 %>%
+      as.data.frame() %>%
+      dplyr::select(all_of(module.name))
+    
+    #Make sure to only include samples/treatments that are present in both PP and microbiome dissimialrity matrices
+    #Extract sample numbers
+    PP_samples = data.frame(PP_sample = sort(as.numeric(rownames(PP.tmp))))
+    module_samples = data.frame(module_sample = sort(as.numeric(rownames(module.tmp))))
+
+
+    #Compare and put into dataframe
+    PP_samples$module_match = match(PP_samples$PP_sample, module_samples$module_sample)
+    module_samples$PP_match = match(module_samples$module_sample, PP_samples$PP_sample)
+
+
+    #Extract only matching samples
+    PP_module_matches = subset(PP_samples, module_match!="NA")
+
+
+    #Subset distance matrices by matching samples
+    module_sub.tmp = module.tmp %>% # read in data
+      tibble::rownames_to_column("rowsampleid") %>% # convert rownames to a column
+      filter(rowsampleid %in% PP_module_matches$PP_sample) %>% # filter for only matching samples
+      tibble::column_to_rownames("rowsampleid") # remove new column and replace generic rowname with sampleid
+    PP_sub.tmp = PP.tmp %>%  # read in data
+      tibble::rownames_to_column("rowsampleid") %>% # convert rownames to a column
+      filter(rowsampleid %in% PP_module_matches$PP_sample) %>% # filter for only matching samples
+      tibble::column_to_rownames("rowsampleid") # remove new column and replace generic rowname with sampleid
+    
+    #For bug hunting
+    #dim(module.tmp)
+    #dim(module_sub.tmp)
+    #dim(PP.tmp)
+    #dim(PP_sub.tmp)
+    
+    #Run correlation test
+    test.tmp = cor.test(PP_sub.tmp[,1], module_sub.tmp[,1], method = "pearson", permutations = 999, na.rm = TRUE)
+    
+    #Make df for results
+    Results.tmp = data.frame("Data_type" = "mOTUs",
+                             "Module_name" = module.name,
+                             "PhysicochemicalParameter" = PP.name,
+                             "Pearson_corr_value" = test.tmp$estimate,
+                             "pvalue" = test.tmp$p.value
+                             )
+    
+    #Combine results with previous dataframe
+    Results_WGCNA_mOTUs.df = rbind(Results_WGCNA_mOTUs.df, Results.tmp)
+    
+   # print(paste0("Completed ", x, " out of ", length(rownames(PP_loop.df)), " physicochemical parameters, which is ", round((x/length(rownames(PP_loop.df)))*100, digits = 2), "%"))
+  
+    } 
+  }
+
+
+#Check results and clean up dataframe
+Results_WGCNA_mOTUs.df = Results_WGCNA_mOTUs.df[-1,]
+Results_WGCNA_mOTUs.df
+
+#Check if each PP was included
+unique(Results_WGCNA_mOTUs.df$PhysicochemicalParameter)
+
+
+
+```
+
+##Metatranscriptomes
+###Set up microbiome taxa dataframes
+```{r}
+
+motus_final_taxa_metadata <- readRDS(file="E:/Functional_R_analysis/motus_final_taxa_metadata_mod.RDS")
+metadata = Physicochem.df
+
+##Lets check out experimental scheme
+motus_final_taxa_metadata %>% 
+  dplyr::select(sampleid, data_type, date, station, sample_type) %>% 
+  group_by(data_type, sample_type, date) %>% 
+  dplyr::summarise(count=n_distinct(sampleid)) %>% 
+  print(n=30) 
+
+##So when we consider fraction and date we see that Nov 21 has few samples, we should consider removing it
+
+motus_final_taxa_metadata %>% 
+  dplyr::select(sampleid, data_type, date, station, sample_type) %>% 
+  group_by(data_type, sample_type, station) %>% 
+  dplyr::summarise(count=n_distinct(sampleid)) %>% 
+  print(n=30) 
+
+##By station we see that Kollmar, SeemanshÃ¶ft and BunthausSpitze also were sampled infrequently, lets also remove these. 
+
+motus_final_taxa_metadata <- motus_final_taxa_metadata %>% 
+  filter(!grepl("Bunthaus|Kollmar|Seemans", station), !grepl("Nov 21", date))
+
+
+#so to do a ternary plot we actually need to create a physeq object really quick 
+motus_table <- motus_final_taxa_metadata %>%
+  filter(data_type == "METAT") %>%
+  dplyr::select(mOTU, sampleid, counts) %>%
+  group_by(sampleid) %>% 
+  mutate(total=sum(counts)) %>% 
+  filter(total > 2400) %>%  ##Here we just remove those with low counts
+  dplyr::select(-total) %>% 
+  ungroup() %>% 
+  pivot_wider(names_from = sampleid, values_from = counts, values_fill = 0) %>% 
+  column_to_rownames("mOTU") %>% 
+  phyloseq::otu_table(taxa_are_rows = TRUE)
+motus_taxa <- motus_final_taxa_metadata %>% 
+  filter(data_type == "METAT") %>%
+  dplyr::select(mOTU, phylum, class, order, family, genus, species) %>% 
+  unique() %>% 
+  column_to_rownames("mOTU") %>% 
+  as.matrix() %>%
+  phyloseq::tax_table()
+motus_sampledata <- motus_final_taxa_metadata %>% 
+  filter(data_type == "METAT") %>%
+  dplyr::select(-phylum, -class, -order, -family, -genus, -species, -counts, -mOTU, -domain) %>% 
+  unique() %>%  
+  column_to_rownames("sampleid") %>% 
+  sample_data()
+bicest_motu_ps <- phyloseq(motus_table, motus_taxa, motus_sampledata)
+bicest_motu_ps
+#bicest_motu_ps_v0 = bicest_motu_ps
+#bicest_motu_ps = bicest_motu_ps_v0
+
+Stupidworkaround.df = read.csv("E:/Functional_R_analysis/SAMEAID_SampleID_simplified.csv", sep = ";")
+
+test = motus_sampledata
+i=1
+x=1
+for (i in 1:length(Stupidworkaround.df$BioSample)) {
+  for (x in 1:length(motus_sampledata$BioSample)) {
+  if(grepl(Stupidworkaround.df$BioSample[i], motus_sampledata$BioSample[x]) == T) {
+    
+    test$Associatednumber[x] = Stupidworkaround.df$Associatednumber[i]
+    
+    print(paste0("Matching ", motus_sampledata$BioSample[x], " with ", Stupidworkaround.df$BioSample[i]))
+    
+  }
+  }
+}
+
+
+
+#Fix german computer issues that replace periods and commas weirdly
+i=1
+x=59
+test$TEP_um2perL = 0
+test$CSP_um2perL = 0
+test$ParticleArea_um2perL = 0
+test$Density_gpercm3 = 0
+test$doc_mg_l = 0
+test$dic_mg_l = 0
+for (i in 1:length(Physicochem.df$Associatednumber)) {
+  for (x in 1:length(test$Associatednumber)) {
+  if(grepl(Physicochem.df$Associatednumber[i], test$Associatednumber[x]) == T) {
+    
+    print(paste0("Matching ", test$Associatednumber[x], " with ", Physicochem.df$Associatednumber[i]))
+    
+    #Update relevant physicochemical parameters as German computers cause weird issues
+    test$doc_mg_l[x] = Physicochem.df$DOC_mg.L[i]
+    test$dic_mg_l[x] = Physicochem.df$DIC_mg.L[i]
+    
+    test$ptc_mg_l[x] = Physicochem.df$PTC_mgperL[i]
+    test$spm_mg_l[x] = Physicochem.df$SPM_mgperL[i]
+    test$poc_mg_l[x] = Physicochem.df$POC_mgperL[i]
+    test$Density_gpercm3[x] = Physicochem.df$Density_gpercm3[i]
+    
+    test$ParticleArea_um2perL[x] = Physicochem.df$ParticleArea_um2perL[i]
+    test$TEP_um2perL[x] = Physicochem.df$TEP_um2perL[i]
+    test$CSP_um2perL[x] = Physicochem.df$CSP_um2perL[i]
+    
+  }
+  }
+}
+
+test$doc_um = NULL
+test$dic_um = NULL
+    
+
+bicest_motu_ps <- phyloseq(motus_table, motus_taxa, test)
+bicest_motu_ps@sam_data
+
+
+taxa.df <- tax_glom(bicest_motu_ps, taxrank = 'species') %>%#Merge the species at the Phylum level
+  transform_sample_counts(function(x) {x/sum(x)} ) %>% #Extract abundance data from phyloseq object
+  psmelt() %>%#Melt it into a dataframe
+  subset(date!="Nov 21")
+  
+taxa.df <- taxa.df[order(taxa.df$species),] #Order them at the Species level
+
+taxa.df$species <- as.character(taxa.df$species)
+  # group dataframe by Phylum, calculate relative abundance
+
+#Remove na values
+taxa.df$Abundance[grep(NaN, taxa.df$Abundance)] = 0
+
+#Remove annoying extras from taxonomic names
+taxa.df$phylum = gsub("p__", "", taxa.df$phylum)
+taxa.df$class = gsub("c__", "", taxa.df$class)
+taxa.df$order = gsub("o__", "", taxa.df$order)
+taxa.df$family = gsub("f__", "", taxa.df$family)
+taxa.df$genus = gsub("g__", "", taxa.df$genus)
+taxa.df$species = gsub("s__", "", taxa.df$species)
+taxa.df$species = gsub("s_", "", taxa.df$species)
+
+taxa.df$taxapath = paste0(taxa.df$phylum, "__", taxa.df$class, "__", taxa.df$order, "__", taxa.df$family, "__", taxa.df$genus, "__", taxa.df$species)
+
+Microbiome_wide_mOTU = taxa.df %>%
+  dplyr::select(Abundance, Associatednumber, taxapath, OTU) %>%
+  mutate(newname = paste0(taxapath, "__", OTU)) %>%
+  dplyr::select(Abundance, Associatednumber, newname)
+
+
+#Long to wide, in preparation for transcripts per gene copy calculation
+# The arguments to spread():
+# - data: Data object
+# - key: Name of column containing the new column names
+# - value: Name of column containing values
+Microbiome_wide_mOTU <- data.frame(spread(Microbiome_wide_mOTU,
+                       key = Associatednumber, #Column that will contain new column names
+                       value = Abundance)) # Value that will fill new columns
+
+rownames(Microbiome_wide_mOTU) = Microbiome_wide_mOTU$newname
+Microbiome_wide_mOTU$newname = NULL
+
+colnames(Microbiome_wide_mOTU) = gsub("X","", colnames(Microbiome_wide_mOTU))
+
+
+#We need to have samples as columns, and taxa as rows in a wide format.
+
+#Sanity check to make sure all columns add up to 1
+colSums(Microbiome_wide_mOTU)
+
+```
+
+### Actual WGCNA for mOTUs
+#### Sample_type
+```{r}
+
+set.seed(2)
+
+#Generate function
+scale2 <- function(x, na.rm = FALSE) (x * 100 )
+
+data = Microbiome_wide_mOTU %>%
+  as.data.frame() %>%
+  dplyr::mutate(across(where(is.numeric), scale2)) %>%
+  rownames_to_column(var = "mOTUId")
+
+
+
+data[1:5,1:5]        # Look at first 5 rows and 10 columns
+dim(data)
+
+names(data)[1] = "mOTUId"
+names(data)           # Look at the column names
+
+
+col_sel = names(data)[-1]     # Get all but first column name
+mdata <- data %>%
+  tidyr::pivot_longer(
+    .,                        # The dot is the the input data, magrittr tutorial
+    col = all_of(col_sel),
+    values_transform = as.numeric
+    ) %>%
+  left_join(metadata_WGCNA, by = c("name" = "Associatednumber")) %>%
+  dplyr::select(mOTUId, name, value, Sample_type) %>%
+  dplyr::rename(group = Sample_type)
+
+mdata$name = as.character(mdata$name)
+
+# ==== Plot groups (Sample Groups vs RNA Seq Counts) to identify outliers
+
+ p <- mdata %>%
+    ggplot(., aes(x = name, y = value)) +             # x = treatment, y = RNA Seq count
+    geom_violin() +                                   # violin plot, show distribution
+    geom_point(alpha = 0.2) +                         # scatter plot
+    theme_bw() +
+    theme(
+      axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)          # Rotate treatment text
+    ) +
+    labs(x = "Treatment Groups / Samples", y = "mOTU Abundance (%)") +
+    facet_grid(cols = vars(group), drop = TRUE, scales = "free_x")      # Facet by hour
+p
+
+pdf("E:/Functional_R_analysis/Network/WGCNA_OutlierHunting_mOTU_all.pdf", width = 48, height = 10)
+p
+dev.off()
+#No outliers were detected
+
+#Remove outliers
+#mdata = mdata %>%
+ # filter(value < 4000000)
+#Rerun above code to make sure outliers have been removed
+
+#Normalise data with DESeq2
+library(DESeq2)
+de_input = as.data.frame(data[,-1])
+row.names(de_input) = data$mOTUId
+de_input[1:5,1:6]
+
+
+meta_df <- data.frame(Sample = names(data[-1])) %>%
+  left_join(metadata_WGCNA, by = c("Sample" = "Associatednumber")) %>%
+  dplyr::select(Sample, Sample_type) %>%
+  dplyr::rename(Type = Sample_type)
+
+dds <- DESeq2::DESeqDataSetFromMatrix(round(de_input),
+                              meta_df,
+                              design = ~ 1)
+#> converting counts to integer mode
+#> Warning in DESeqDataSet(se, design = design, ignoreRank): some variables in
+#> design formula are characters, converting to factors
+
+dds <- DESeq(dds)
+#> estimating size factors
+#> estimating dispersions
+#> gene-wise dispersion estimates
+#> mean-dispersion relationship
+#> final dispersion estimates
+#> fitting model and testing
+vsd <- varianceStabilizingTransformation(dds)
+#>
+#> Attaching package: 'genefilter'
+#> The following objects are masked from 'package:matrixStats':
+#>
+#>     rowSds, rowVars
+#> The following object is masked from 'package:readr':
+#>
+#>     spec
+wpn_vsd <- getVarianceStabilizedData(dds)
+rv_wpn <- rowVars(wpn_vsd)
+summary(rv_wpn)
+#>     Min.  1st Qu.   Median     Mean  3rd Qu.     Max.
+#>  0.00000  0.00000  0.00000  0.08044  0.03322 11.14529
+
+q75_wpn <- quantile( rowVars(wpn_vsd), .75)  # <= original
+q95_wpn <- quantile( rowVars(wpn_vsd), .95)  # <= changed to 95 quantile to reduce dataset
+expr_normalized <- wpn_vsd[ rv_wpn > q95_wpn, ]
+
+expr_normalized[1:5,1:7]
+#>                       B-3      B-4      B-5      L-3      L-4      L-5      S-3
+#> AC149818.2_FG001 7.600901 7.077399 7.803434 7.220840 7.410408 8.028223 7.160846
+#> AC149829.2_FG003 8.782014 8.179876 7.900062 8.299778 7.529891 8.631731 8.055118
+#> AC182617.3_FG001 8.047244 7.120668 6.885533 7.501391 7.279413 7.809565 7.184253
+#> AC186512.3_FG001 6.901539 7.389644 6.975945 6.859593 7.370816 6.633722 7.798843
+#> AC186512.3_FG007 7.919688 7.754506 7.670946 7.417760 7.988427 7.904850 7.484542
+#>                       S-4      S-5   B_L1.1
+#> AC149818.2_FG001 7.401382 7.345322 6.524435
+#> AC149829.2_FG003 8.744502 8.142909 8.240407
+#> AC182617.3_FG001 8.140134 6.972400 7.777347
+#> AC186512.3_FG001 6.949501 6.952659 6.059033
+#> AC186512.3_FG007 8.375664 7.762799 6.335663
+dim(expr_normalized)
+# This would give us 415 genes - so we use all genes for downstream analysis
+expr_normalized_df <- data.frame(expr_normalized) %>%
+  mutate(
+    Gene_id = row.names(expr_normalized)
+  ) %>%
+  pivot_longer(-Gene_id)
+
+wpn_vsd.df <- data.frame(wpn_vsd) %>%
+  mutate(
+    Gene_id = row.names(wpn_vsd)
+  ) %>%
+  pivot_longer(-Gene_id)
+
+expr_normalized_df %>% ggplot(., aes(x = name, y = value)) +
+  geom_violin() +
+  geom_point() +
+  theme_bw() +
+  theme(
+    axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)
+  ) +
+  ylim(0, NA) +
+  labs(
+    title = "Normalized and 95 quantile Expression",
+    x = "treatment",
+    y = "normalized expression"
+  )
+
+wpn_vsd.df %>% ggplot(., aes(x = name, y = value)) +
+  geom_violin() +
+  geom_point() +
+  theme_bw() +
+  theme(
+    axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)
+  ) +
+  ylim(0, NA) +
+  labs(
+    title = "Normalized Expression",
+    x = "treatment",
+    y = "normalized expression"
+  )
+
+# === Carry out WGCNA
+
+# Use "expr_normalized" for a smaller dataset, but as we have relative few genes, we'll use the full carbon processing dataset 
+
+input_mat = t(wpn_vsd)
+dim(input_mat)
+input_mat[1:5,1:10]    
+#>     AC149818.2_FG001 AC149829.2_FG003 AC182617.3_FG001 AC186512.3_FG001
+#> B-3         7.600901         8.782014         8.047244         6.901539
+#> B-4         7.077399         8.179876         7.120668         7.389644
+#> B-5         7.803434         7.900062         6.885533         6.975945
+#> L-3         7.220840         8.299778         7.501391         6.859593
+#> L-4         7.410408         7.529891         7.279413         7.370816
+#>     AC186512.3_FG007 AC189795.3_FG001 AC190609.3_FG002 AC190623.3_FG001
+#> B-3         7.919688         8.149041         12.64301         6.575155
+#> B-4         7.754506         8.077571         11.99816         7.170788
+#> B-5         7.670946         7.524430         12.12500         7.438024
+#> L-3         7.417760         8.420552         12.36979         8.223261
+#> L-4         7.988427         7.105196         11.64515         8.008850
+#>     AC192451.3_FG001 AC195340.3_FG001
+#> B-3         6.700385         9.104258
+#> B-4         7.325447         9.135480
+#> B-5         7.819142         9.023856
+#> L-3         8.052019         8.908933
+#> L-4         8.528875         8.583982
+
+#Treatment/samples should be rows, and genes columns
+#library(WGCNA)
+allowWGCNAThreads()          # allow multi-threading (optional)
+#> Allowing multi-threading with up to 4 threads.
+
+# Choose a set of soft-thresholding powers
+powers = c(c(1:10), seq(from = 12, to = 25, by = 2))
+
+# Call the network topology analysis function
+sft = pickSoftThreshold(
+  input_mat,             # <= Input data
+  blockSize = 9000,
+  powerVector = powers,
+  verbose = 5
+  )
+#> pickSoftThreshold: will use block size 5486.
+#>  pickSoftThreshold: calculating connectivity for given powers...
+#>    ..working on genes 1 through 5486 of 5486
+#>    Power SFT.R.sq  slope truncated.R.sq mean.k. median.k. max.k.
+#> 1      1   0.5350  2.500          0.960  1940.0    1950.0   2840
+#> 2      2   0.0642  0.331          0.897   964.0     927.0   1860
+#> 3      3   0.1680 -0.444          0.859   560.0     505.0   1340
+#> 4      4   0.5050 -0.822          0.906   358.0     300.0   1030
+#> 5      5   0.6800 -1.070          0.935   243.0     189.0    819
+#> 6      6   0.7770 -1.230          0.954   173.0     125.0    673
+#> 7      7   0.8330 -1.310          0.972   127.0      85.3    564
+#> 8      8   0.8660 -1.390          0.980    96.4      60.2    484
+#> 9      9   0.8810 -1.450          0.981    74.8      43.2    422
+#> 10    10   0.8940 -1.490          0.984    59.1      31.7    371
+#> 11    12   0.9070 -1.540          0.988    38.7      17.6    295
+#> 12    14   0.9150 -1.580          0.988    26.7      10.3    240
+#> 13    16   0.9220 -1.570          0.985    19.1       6.3    200
+#> 14    18   0.9200 -1.570          0.979    14.1       4.0    169
+#> 15    20   0.9240 -1.570          0.982    10.7       2.6    145
+
+par(mfrow = c(1,2));
+cex1 = 0.9;
+
+plot(sft$fitIndices[, 1],
+     -sign(sft$fitIndices[, 3]) * sft$fitIndices[, 2],
+     xlab = "Soft Threshold (power)",
+     ylab = "Scale Free Topology Model Fit, signed R^2",
+     main = paste("Scale independence")
+)
+text(sft$fitIndices[, 1],
+     -sign(sft$fitIndices[, 3]) * sft$fitIndices[, 2],
+     labels = powers, cex = cex1, col = "red"
+)
+abline(h = 0.90, col = "red")
+plot(sft$fitIndices[, 1],
+     sft$fitIndices[, 5],
+     xlab = "Soft Threshold (power)",
+     ylab = "Mean Connectivity",
+     type = "n",
+     main = paste("Mean connectivity")
+)
+text(sft$fitIndices[, 1],
+     sft$fitIndices[, 5],
+     labels = powers,
+     cex = cex1, col = "red")
+
+
+
+dim(input_mat)
+#View(input_mat)
+picked_power = 6
+cor <- WGCNA::cor         # Force it to use WGCNA cor function (fix a namespace conflict issue)
+dim(input_mat)
+netwk <- blockwiseModules(input_mat,                # <= input here
+
+                          # == Adjacency Function ==
+                          power = picked_power,                # <= power here
+                          networkType = "unsigned",
+                          randomSeed = 2,
+                          corType = "pearson",
+
+                          # == Tree and Block Options ==
+                          deepSplit = 2,
+                          pamRespectsDendro = F,
+                          # detectCutHeight = 0.75,
+                          minModuleSize = 15, # This should be 5%
+                          maxBlockSize = 40000,
+
+                          # == Module Adjustments ==
+                          reassignThreshold = 0,
+                          mergeCutHeight = 0.25,
+
+                          # == TOM == Archive the run results in TOM file (saves time)
+                          #saveTOMs = T,
+                          #saveTOMFileBase = "./Network/WGCNA_MG_all",
+                          #loadTOM = T,
+
+                          # == Output Options
+                          numericLabels = T,
+                          verbose = 3)
+#Calculating module eigengenes block-wise from all genes
+#   Flagging genes and samples with too many missing values...
+#    ..step 1
+#  ..Excluding 11 genes from the calculation due to too many missing samples or zero variance.
+#    ..step 2
+# ..Working on block 1 .
+#    TOM calculation: adjacency..
+#    ..will not use multithreading.
+#     Fraction of slow calculations: 0.000000
+#    ..connectivity..
+#    ..matrix multiplication (system BLAS)..
+#    ..normalization..
+#    ..done.
+#   ..saving TOM for block 1 into file ./Network/WGCNA_MG-block.1.RData
+# ....clustering..
+# ....detecting modules..
+# ....calculating module eigengenes..
+# ....checking kME in modules..
+#     ...removing 4 genes from module 1 because their KME is too low.
+#     ..removing 4 genes from module 2 because their KME is too low.
+#     ..removing 2 genes from module 3 because their KME is too low.
+#     ..removing 3 genes from module 4 because their KME is too low
+# ..merging modules that are too close..
+#     mergeCloseModules: Merging modules whose distance is less than 0.25
+#       Calculating new MEs...
+
+#cor <- stats::cor     # Return cor function to original namespace
+
+#Take a look at the modules
+# Convert labels to colors for plotting
+mergedColors = labels2colors(netwk$colors)
+unique(mergedColors)
+
+# Plot the dendrogram and the module colors underneath
+plotDendroAndColors(
+  netwk$dendrograms[[1]],
+  mergedColors[netwk$blockGenes[[1]]],
+  "Module colors",
+  dendroLabels = FALSE,
+  hang = 0.03,
+  addGuide = TRUE,
+  guideHang = 0.05 )
+
+
+pdf("E:/Functional_R_analysis/Network/WGCNA_tree_mOTUs_all_MT.pdf", width = 16, height = 8)
+plotDendroAndColors(
+  netwk$dendrograms[[1]],
+  mergedColors[netwk$blockGenes[[1]]],
+  "Module colors",
+  dendroLabels = FALSE,
+  hang = 0.03,
+  addGuide = TRUE,
+  guideHang = 0.05 )
+dev.off()
+
+#Extract module assignments 
+module_df <- data.frame(
+  gene_id = names(netwk$colors),
+  colors = labels2colors(netwk$colors)
+)
+
+module_df[1:5,]
+#>            gene_id    colors
+#> 1 K23094   grey
+#> 2  K03392   blue
+#> 3  K05359   grey
+#> 4  K00476   grey
+#> 5  K00471   grey
+
+write_delim(module_df,
+            file = "E:/Functional_R_analysis/Network/WGCNA_gene_modules_mOTUs_all_MT.txt",
+            delim = "\t")
+
+#How many modules are there
+length(unique(module_df$colors))
+
+# Get Module Eigengenes per cluster
+MEs0 <- moduleEigengenes(input_mat, mergedColors)$eigengenes
+
+# Reorder modules so similar modules are next to each other
+MEs0 <- orderMEs(MEs0)
+module_order = names(MEs0) %>% gsub("ME","", .)
+
+# Add treatment names
+MEs0$treatment = row.names(MEs0)
+
+#Export MEs0 for later downstream analysis
+write.csv(MEs0, "E:/Functional_R_analysis/Network/MEsO_mOTUs_MT.csv")
+
+# tidy & plot data
+mME = MEs0 %>%
+  pivot_longer(-treatment) %>%
+  mutate(
+    name = gsub("ME", "", name),
+    name = factor(name, levels = module_order)
+  )
+
+WGCNA_sample_mOTUs = mME %>% ggplot(., aes(x=treatment, y=name, fill=value)) +
+  geom_tile() +
+  theme_bw() +
+  scale_fill_gradient2(
+    low = "blue",
+    high = "red",
+    mid = "white",
+    midpoint = 0,
+    limit = c(-1,1)) +
+  theme(axis.text.x = element_text(angle=90, hjust = 1, vjust = 0.5)) +
+  labs(title = "Module-trait Relationships", y = "Modules", fill="corr")
+WGCNA_sample_mOTUs
+
+pdf("E:/Functional_R_analysis/Network/WGCNA_sample_mOTUs_all_MT.pdf", width = 20, height = 8)
+WGCNA_sample_mOTUs
+dev.off()
+
+
+# pick out a few modules of interest here
+#modules_of_interest = c("green", "turquoise", "tan")
+
+# Pull out list of genes in that module
+submod = module_df 
+
+row.names(module_df) = module_df$gene_id
+
+# Get normalized expression for those genes
+wpn_vsd[1:5,1:7]
+
+#Subset gene list - expression profiles
+subexpr = wpn_vsd[submod$gene_id,]
+
+#Make into a dataframe
+submod_df = data.frame(subexpr) %>%
+  mutate(
+    gene_id = row.names(.)
+  ) %>%
+  pivot_longer(-gene_id) %>%
+  mutate(
+    module = module_df[gene_id,]$colors
+  )
+
+submod_df %>% ggplot(., aes(x=name, y=value, group=gene_id)) +
+  geom_line(aes(color = module),
+            alpha = 0.2) +
+  theme_bw() +
+  theme(
+    axis.text.x = element_text(angle = 90)
+  ) +
+  #scale_colour_manual(values = c("black", "blue", "brown", "green", "greenyellow", "grey", "magenta", "pink", "purple", "red", "salmon", "forestgreen", "turquoise", "yellow"))+
+  facet_grid(rows = vars(module)) +
+  labs(x = "sample",
+       y = "normalized expression")
+
+
+
+
+genes_of_interest = module_df
+
+expr_of_interest = wpn_vsd[module_df$gene_id,]
+expr_of_interest[1:5,1:5]
+#>                       B-3      B-4      B-5      L-3      L-4
+#> AC186512.3_FG001 6.901539 7.389644 6.975945 6.859593 7.370816
+#> AC186512.3_FG007 7.919688 7.754506 7.670946 7.417760 7.988427
+#> AC190623.3_FG001 6.575155 7.170788 7.438024 8.223261 8.008850
+#> AC196475.3_FG004 6.054319 6.439899 6.424540 5.815344 6.565299
+#> AC196475.3_FG005 6.194406 5.872273 6.207174 6.499828 6.314952
+
+genes_of_interest = module_df
+
+expr_of_interest = wpn_vsd[genes_of_interest$gene_id,]
+expr_of_interest[1:5,1:5]
+#>                       B-3      B-4      B-5      L-3      L-4
+#> AC186512.3_FG001 6.901539 7.389644 6.975945 6.859593 7.370816
+#> AC186512.3_FG007 7.919688 7.754506 7.670946 7.417760 7.988427
+#> AC190623.3_FG001 6.575155 7.170788 7.438024 8.223261 8.008850
+#> AC196475.3_FG004 6.054319 6.439899 6.424540 5.815344 6.565299
+#> AC196475.3_FG005 6.194406 5.872273 6.207174 6.499828 6.314952
+
+# Only recalculate TOM for modules of interest (faster, altho there's some online discussion if this will be slightly off)
+TOM = TOMsimilarityFromExpr(t(expr_of_interest),
+                            power = picked_power)
+#> TOM calculation: adjacency..
+#> ..will use 4 parallel threads.
+#>  Fraction of slow calculations: 0.000000
+#> ..connectivity..
+#> ..matrix multiplication (system BLAS)..
+#> ..normalization..
+#> ..done.
+
+# Add gene names to row and columns
+row.names(TOM) = row.names(expr_of_interest)
+colnames(TOM) = row.names(expr_of_interest)
+
+dim(data.frame(TOM))
+
+edge_list = data.frame(TOM) %>%
+  mutate(
+    gene1 = row.names(.)
+  ) %>%
+  pivot_longer(-gene1) %>%
+  dplyr::rename(gene2 = name, correlation = value) %>%
+  unique() %>%
+  subset(!(gene1==gene2)) %>%
+  mutate(
+    module1 = module_df[gene1,]$colors,
+    module2 = module_df[gene2,]$colors
+  )
+
+head(edge_list)
+#> # A tibble: 6 x 5
+#>   gene1            gene2            correlation module1   module2  
+#>   <chr>            <chr>                  <dbl> <chr>     <chr>    
+#> 1 AC186512.3_FG001 AC186512.3_FG007      0.0238 turquoise turquoise
+#> 2 AC186512.3_FG001 AC190623.3_FG001      0.0719 turquoise turquoise
+#> 3 AC186512.3_FG001 AC196475.3_FG004      0.143  turquoise turquoise
+#> 4 AC186512.3_FG001 AC196475.3_FG005      0.0117 turquoise turquoise
+#> 5 AC186512.3_FG001 AC196489.3_FG002      0.0181 turquoise turquoise
+#> 6 AC186512.3_FG001 AC198481.3_FG004      0.0240 turquoise turquoise
+
+
+adj = TOM[, colnames(TOM) != "samplesums"]
+adj = adj[rownames(TOM) != "samplesums", ]
+adj[adj > 0.1] = 1
+adj[adj != 1] = 0
+
+dim(adj)
+
+network <- igraph::graph_from_adjacency_matrix(adj)
+network <- igraph::simplify(network)  # removes self-loops
+#results <- netwk
+V(network)$color <- netwk$colors #Assign colours to genes for their respective modules
+
+#Plot for sanity checking
+par(mar=c(0,0,0,0))
+# remove unconnected nodes
+network <- delete_vertices(network, degree(network)==0)
+multtest::plot(network, layout=layout.fruchterman.reingold(network), edge.arrow.size = 0.2)
+
+#Add extra information to network plot
+#E(network$label) <- ifelse(E(network)$weight > 0, '+', '-')
+#E(network)$weight_abs <- abs(E(network)$weight)
+
+#Make module tab for Gephi object
+V(network)$module =  V(network)$color
+
+#Add extra information to network plot
+#V(network)$Function <- All_WGCNA_taxtable[V(network)$name, "Name"]
+#V(network)$Direction <- All_WGCNA_taxtable[V(network)$name, "Direction"]
+#V(network)$Compound <- All_WGCNA_taxtable[V(network)$name, "Compound"]
+#V(network)$Class <- All_WGCNA_taxtable[V(network)$name, "Class"]
+V(network)$label = V(network)$name
+
+
+#Make df with taxa info
+networktaxa.df = data.frame(taxa = V(network)$name) %>%
+  separate(col = taxa, sep = "__", into = c("Phylum", "Class", "Order", "Family", "Genus", "Species"))
+
+#Add taxonomic info
+V(network)$Phylum = networktaxa.df$Phylum
+V(network)$Class = networktaxa.df$Class
+V(network)$Order = networktaxa.df$Order
+V(network)$Family = networktaxa.df$Family
+V(network)$Genus = networktaxa.df$Genus
+V(network)$Species = networktaxa.df$Species
+
+  
+
+# Export Network file to be read into Gephi, Cytoscape, VisANT, etc
+write_graph(network, "E:/Functional_R_analysis/Network/WGCNA_all_mOTUs_type_MT.graphml", format = "graphml")
+
+#Export edge file for back up
+write_delim(edge_list,
+            file = "E:/Functional_R_analysis/Network/edgelist_mOTUs_all_type_MT.tsv",
+            delim = "\t")
+
+
+
+```
+###Correlate to environmental data
+
+The Pearson correlation test answers something like the question
+
+When X goes up, does Y also go up? 
+When X goes down, does Y also go down?
+
+while the Mantel test answers something like the question
+
+When any two X observations are similar, are the corresponding Y observations also similar? 
+When any two X observations are dissimilar, are the corresponding Y observations also dissimilar?
+ 
+```{r}
+
+MEs0
+
+#Run loop for motus vs individual physicochemical parameters
+Results_WGCNA_mOTUs_MT.df = data.frame("Data_type" = "mOTUs_MT",
+                                 "Module_name" = "DELETEME",
+                                 "PhysicochemicalParameter" = "DELETEME",
+                                 "Pearson_corr_value" = 9999,
+                                 "pvalue" = 9999)
+PP_loop.df = PP_totest.df[-c(1:3),]
+PP_loop.df = as.data.frame(PP_loop.df) %>%
+   mutate_all(as.numeric) 
+
+i=1
+x=1
+for (i in 1:(which(colnames(MEs0) == "treatment")-1)) {
+  
+  print(paste0("Working on module ", i, " out of ", (which(colnames(MEs0) == "treatment")-1)))
+  
+  for (x in 1:length(rownames(PP_loop.df))) {
+    
+    #Extracting names
+    PP.name = rownames(as.data.frame(PP_loop.df)[x,])
+    module.name = colnames(MEs0)[i]
+    
+    #Remove all samples that have NAs for that PP
+    PP.tmp <- PP_loop.df[x,] %>%
+      as.data.frame() %>%
+      dplyr::select_if(~ !any(is.na(.))) %>%
+      t()
+      #t(as.data.frame(PP_loop.df[x,][,is.na(PP_loop.df[x,])]))
+    
+    
+    #Normalise PP metrics and extract module eigenvalues
+    PP.tmp <- PP.tmp %>%
+      as.data.frame() %>%
+      mutate_at(c(PP.name), ~(scale(.) %>% as.vector))
+    module.tmp = MEs0 %>%
+      as.data.frame() %>%
+      dplyr::select(all_of(module.name))
+    
+    #Make sure to only include samples/treatments that are present in both PP and microbiome dissimialrity matrices
+    #Extract sample numbers
+    PP_samples = data.frame(PP_sample = sort(as.numeric(rownames(PP.tmp))))
+    module_samples = data.frame(module_sample = sort(as.numeric(rownames(module.tmp))))
+
+
+    #Compare and put into dataframe
+    PP_samples$module_match = match(PP_samples$PP_sample, module_samples$module_sample)
+    module_samples$PP_match = match(module_samples$module_sample, PP_samples$PP_sample)
+
+
+    #Extract only matching samples
+    PP_module_matches = subset(PP_samples, module_match!="NA")
+
+
+    #Subset distance matrices by matching samples
+    module_sub.tmp = module.tmp %>% # read in data
+      tibble::rownames_to_column("rowsampleid") %>% # convert rownames to a column
+      filter(rowsampleid %in% PP_module_matches$PP_sample) %>% # filter for only matching samples
+      tibble::column_to_rownames("rowsampleid") # remove new column and replace generic rowname with sampleid
+    PP_sub.tmp = PP.tmp %>%  # read in data
+      tibble::rownames_to_column("rowsampleid") %>% # convert rownames to a column
+      filter(rowsampleid %in% PP_module_matches$PP_sample) %>% # filter for only matching samples
+      tibble::column_to_rownames("rowsampleid") # remove new column and replace generic rowname with sampleid
+    
+    #For bug hunting
+    #dim(module.tmp)
+    #dim(module_sub.tmp)
+    #dim(PP.tmp)
+    #dim(PP_sub.tmp)
+    
+    #Run correlation test
+    test.tmp = cor.test(PP_sub.tmp[,1], module_sub.tmp[,1], method = "pearson", permutations = 999, na.rm = TRUE)
+    
+    #Make df for results
+    Results.tmp = data.frame("Data_type" = "mOTUs_MT",
+                             "Module_name" = module.name,
+                             "PhysicochemicalParameter" = PP.name,
+                             "Pearson_corr_value" = test.tmp$estimate,
+                             "pvalue" = test.tmp$p.value
+                             )
+    
+    #Combine results with previous dataframe
+    Results_WGCNA_mOTUs_MT.df = rbind(Results_WGCNA_mOTUs_MT.df, Results.tmp)
+    
+   # print(paste0("Completed ", x, " out of ", length(rownames(PP_loop.df)), " physicochemical parameters, which is ", round((x/length(rownames(PP_loop.df)))*100, digits = 2), "%"))
+  
+    } 
+  }
+
+
+#Check results and clean up dataframe
+Results_WGCNA_mOTUs_MT.df = Results_WGCNA_mOTUs_MT.df[-1,]
+Results_WGCNA_mOTUs_MT.df
+
+#Check if each PP was included
+unique(Results_WGCNA_mOTUs_MT.df$PhysicochemicalParameter)
+
+
+
+```
+
+# Plots
+```{r}
+
+#Combine dataframes for a single plot
+WGCNA_PP.df = rbind(Results_WGCNA_MG.df, Results_WGCNA_MT.df, Results_WGCNA_mOTUs.df)
+
+#Change variable names for nice plots
+WGCNA_PP.df$PhysicochemicalParameter = gsub("station_km", "Elbe km", WGCNA_PP.df$PhysicochemicalParameter)
+WGCNA_PP.df$PhysicochemicalParameter = gsub("Salinity_PSU", "Salinity (PSU)", WGCNA_PP.df$PhysicochemicalParameter)
+WGCNA_PP.df$PhysicochemicalParameter = gsub("Temperature_TBDHereon", "Temperature (°C)", WGCNA_PP.df$PhysicochemicalParameter)
+WGCNA_PP.df$PhysicochemicalParameter = gsub("dCO2_uM", "dCO2 (µM)", WGCNA_PP.df$PhysicochemicalParameter)
+WGCNA_PP.df$PhysicochemicalParameter = gsub("dCH4_nM", "dCH4 (nM)", WGCNA_PP.df$PhysicochemicalParameter)
+
+WGCNA_PP.df$PhysicochemicalParameter = gsub("O2_uM", "dO2 (µM)", WGCNA_PP.df$PhysicochemicalParameter)
+WGCNA_PP.df$PhysicochemicalParameter = gsub("Turbidity_NTU", "Turbidity (NTU)", WGCNA_PP.df$PhysicochemicalParameter)
+WGCNA_PP.df$PhysicochemicalParameter = gsub("PTC_mgperL", "PTC (mg L-1)", WGCNA_PP.df$PhysicochemicalParameter)
+WGCNA_PP.df$PhysicochemicalParameter = gsub("SPM_mgperL", "Dry-weight (mg L-1)", WGCNA_PP.df$PhysicochemicalParameter)
+WGCNA_PP.df$PhysicochemicalParameter = gsub("POC_mgperL", "POC (mg L-1)", WGCNA_PP.df$PhysicochemicalParameter)
+WGCNA_PP.df$PhysicochemicalParameter = gsub("DOC_mg.L", "DOC (mg L-1)", WGCNA_PP.df$PhysicochemicalParameter)
+WGCNA_PP.df$PhysicochemicalParameter = gsub("DIC_mg.L", "DIC (mg L-1)", WGCNA_PP.df$PhysicochemicalParameter)
+
+WGCNA_PP.df$PhysicochemicalParameter = gsub("PTN_mgperL", "PTN (mg L-1)", WGCNA_PP.df$PhysicochemicalParameter)
+WGCNA_PP.df$PhysicochemicalParameter = gsub("TN_mg.L", "DTN (mg L-1)", WGCNA_PP.df$PhysicochemicalParameter)
+WGCNA_PP.df$PhysicochemicalParameter = gsub("Ammonium_mg.L", "NH4+ (mg L-1)", WGCNA_PP.df$PhysicochemicalParameter)
+WGCNA_PP.df$PhysicochemicalParameter = gsub("Nitrite_mg.L", "NO2- (mg L-1)", WGCNA_PP.df$PhysicochemicalParameter)
+WGCNA_PP.df$PhysicochemicalParameter = gsub("Nitrate_mg.L", "NO3- (mg L-1)", WGCNA_PP.df$PhysicochemicalParameter)
+WGCNA_PP.df$PhysicochemicalParameter = gsub("Silicate_mg.L", "Si (mg L-1)", WGCNA_PP.df$PhysicochemicalParameter)
+WGCNA_PP.df$PhysicochemicalParameter = gsub("TotalDissolvedPhosphate_mg.L", "DP (mg L-1)", WGCNA_PP.df$PhysicochemicalParameter)
+WGCNA_PP.df$PhysicochemicalParameter = gsub("SRP_mgperL", "SRP (mg L-1)", WGCNA_PP.df$PhysicochemicalParameter)
+WGCNA_PP.df$PhysicochemicalParameter = gsub("TEP_um2perL", "TEP (µm2 L-1)", WGCNA_PP.df$PhysicochemicalParameter)
+WGCNA_PP.df$PhysicochemicalParameter = gsub("CSP_um2perL", "CSP (µm2 L-1)", WGCNA_PP.df$PhysicochemicalParameter)
+WGCNA_PP.df$PhysicochemicalParameter = gsub("Density_gpercm3", "Density (g cm-3)", WGCNA_PP.df$PhysicochemicalParameter)
+WGCNA_PP.df$PhysicochemicalParameter = gsub("ParticleArea_um2perL", "Particle area (um2 L-1)", WGCNA_PP.df$PhysicochemicalParameter)
+
+
+#Reorder for easy interpretation
+WGCNA_PP.df$PhysicochemicalParameter = factor(WGCNA_PP.df$PhysicochemicalParameter, 
+                                              levels = c( "Elbe km",
+                                                          "Salinity (PSU)",
+                                                          "Temperature (°C)",
+                                                          "Turbidity (NTU)",
+                                                          "Dry-weight (mg L-1)",
+                                                          "Particle area (um2 L-1)",
+                                                          "Density (g cm-3)",
+                                                          "PTC (mg L-1)",
+                                                          "POC (mg L-1)",
+                                                          "DOC (mg L-1)",
+                                                          "DIC (mg L-1)",
+                                                          "dCO2 (µM)",
+                                                          "dCH4 (nM)",
+                                                          "dO2 (µM)",
+                                                          "PTN (mg L-1)",
+                                                          "DTN (mg L-1)",
+                                                          "NH4+ (mg L-1)",
+                                                          "NO2- (mg L-1)",
+                                                          "NO3- (mg L-1)",
+                                                          "pH",
+                                                          "DP (mg L-1)",
+                                                          "Si (mg L-1)",
+                                                          "SRP (mg L-1)",
+                                                          "TEP (µm2 L-1)",
+                                                          "CSP (µm2 L-1)",
+                                                          "Free_living",
+                                                          "Light_fraction",
+                                                          "Heavy_fraction",
+                                                          "May.21",
+                                                          "Jul.21", 
+                                                          "Feb.22", 
+                                                          "May.22",
+                                                          "Jun.22",
+                                                          "Nov.22",
+                                                          "Muhlenberger.Loch",
+                                                          "Twielenfleth",
+                                                          "Schwarztonnensand",
+                                                          "Brunsbuttel",
+                                                          "Meedem.Grund"))
+ 
+
+
+WGCNA.plt = ggplot(WGCNA_PP.df, aes(x = PhysicochemicalParameter, y = Module_name, fill = Pearson_corr_value))+
+  geom_tile()+
+  geom_text(aes(label = ifelse(pvalue > 0.05, "", 
+                               ifelse(pvalue > 0.01, "*", 
+                                      ifelse(pvalue > 0.001, "**", 
+                                             ifelse(pvalue < 0.001, "***", ""))))),
+            size = 20 / .pt)+
+  scale_fill_gradient2("Pearson Correlation", low = "navy", mid = "white", high = "red", midpoint = 0)+ 
+  #scale_x_discrete(
+  #  expand = expansion(mult = c(0,0)), guide = guide_axis(angle = 90),
+  #  position = "top",
+  #  limits = rev
+  #)+
+  #scale_y_discrete(
+  #  expand = expansion(mult = c(0,0)),
+  #  position = "right"
+  #)+
+  xlab("Physicochemical parameters") + 
+  ylab("WGCNA calculated module")+
+  facet_grid(. ~ Data_type)+
+  My_Theme +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
+WGCNA.plt
+
+
+pdf("E:/Functional_R_analysis/Figures/WGCNA_pearson_all.pdf", width = 30, height = 8)
+WGCNA.plt
+dev.off()
+
+
+```
+#Get module information for processes
+##Metagenomes
+```{r}
+MG_modules.df = read.csv("E:/Functional_R_analysis/Network/WGCNA_all_MG_nodes.csv") %>%
+  dplyr::select(v_name, v_module, X, Y) %>%
+  mutate(KO = v_name) 
+
+#Import gene list
+CarbonGenelist.df = read.csv("E:/Functional_R_analysis/CarbonGeneList.csv", header = T, sep = ";") %>%
+  filter(KEGG_Orthology %nin% c("K10945", "K10946"))
+
+amoAMatches.ls = annot %>%
+  rownames_to_column("gene_cluster") %>%
+  left_join(gene_cluster_taxa, by=c("gene_cluster" = "gene_cluster")) %>% # add MAG information
+  left_join(taxa, by = c("genome" = "GENOME"), relationship = "many-to-many") %>% # add taxonomic information
+  filter(KO %in% CarbonGenelist.df$KEGG_Orthology) %>% # only extract the CO2CH4 gene
+  filter(str_detect(genus,"Nitros") & str_detect(KO, "^K10944$"))
+dim(amoAMatches.ls)
+sort(unique(amoAMatches.ls$KO))
+
+
+MG_modules_info.df = annot %>%
+  rownames_to_column("gene_cluster") %>%
+  #left_join(annot, by = c("KO" = "KO"), relationship = "many-to-many") %>% # add gene information
+  left_join(gene_cluster_taxa, by=c("gene_cluster" = "gene_cluster")) %>% # add MAG information
+  mutate(DESCRIPTION = ifelse(gene %in% amoAMatches.ls$gene, "amoA; ammonia monooxygenase subunit A", DESCRIPTION)) %>% # Rename description based on above taxa filtering
+  mutate(DESCRIPTION = ifelse(KO == "K10944" & gene %nin% amoAMatches.ls$gene, "pmoA; methane monooxygenase subunit A", DESCRIPTION)) %>% # Rename description to purely pmoA
+  left_join(MG_modules.df, by = c("KO" = "KO"), relationship = "many-to-many") %>%
+  dplyr::select(DESCRIPTION, KO, v_module, ) %>% # only keep relevant columns
+  separate(col = DESCRIPTION, sep = "; ", into = c("SName", "LName")) %>% #separate description
+  #left_join(metadata) %>% # add metadata
+  #filter(Sample_date != "Nov 21") %>% # remove samples from Nov 21
+  #filter(Station != 'BunthausSpitze') %>% #remove sample from BunthausSpitze
+  #filter(data_type == 'METAG') %>% # keep only metagenomes
+  ##Identify genes occurring at 0.1% abundance in at least 30% of samples
+  #ungroup() %>%
+  distinct()
+
+colnames(MG_modules_info.df)
+
+WGCNA_modules_Cinfo.df = MG_modules_info.df %>%
+  filter(!is.na(v_module)) %>%
+  left_join(CarbonGenelist.df, by = c("KO" = "KEGG_Orthology")) %>%
+  select(SName, LName, KO, v_module, Compound)
+
+module_total = WGCNA_modules_Cinfo.df %>%
+  dplyr::count(v_module) %>%
+  arrange(desc(n))
+module_total
+
+
+# Calculate the count and percentage of compounds within each v_module
+df_percentages <- WGCNA_modules_Cinfo.df %>%
+  group_by(v_module) %>%  # Group by v_module
+  count(Compound) %>%      # Count the number of occurrences of each Compound within each v_module
+  mutate(percentage = n / sum(n) * 100) %>%  # Calculate the percentage within each v_module
+  ungroup()  # Ungroup to prevent affecting subsequent operations
+df_percentages
+
+```
+##Metatranscriptomes
+```{r}
+MT_modules.df = read.csv("F:/Functional_R_analysis/Network/WGCNA_all_MT_nodes.csv") %>%
+  dplyr::select(v_name, v_module) %>%
+  mutate(KO = v_name) 
+
+unique(MT_modules.df$v_module)
+
+#Import gene list
+CarbonGenelist.df = read.csv("F:/Functional_R_analysis/CarbonGeneList.csv", header = T, sep = ";") %>%
+  filter(KEGG_Orthology %nin% c("K10945", "K10946"))
+
+amoAMatches.ls = annot %>%
+  rownames_to_column("gene_cluster") %>%
+  left_join(gene_cluster_taxa, by=c("gene_cluster" = "gene_cluster")) %>% # add MAG information
+  left_join(taxa, by = c("genome" = "GENOME"), relationship = "many-to-many") %>% # add taxonomic information
+  filter(KO %in% CarbonGenelist.df$KEGG_Orthology) %>% # only extract the CO2CH4 gene
+  filter(str_detect(genus,"Nitros") & str_detect(KO, "^K10944$"))
+dim(amoAMatches.ls)
+sort(unique(amoAMatches.ls$KO))
+
+
+MT_modules_info.df = annot %>%
+  rownames_to_column("gene_cluster") %>%
+  #left_join(annot, by = c("KO" = "KO"), relationship = "many-to-many") %>% # add gene information
+  left_join(gene_cluster_taxa, by=c("gene_cluster" = "gene_cluster")) %>% # add MAG information
+  mutate(DESCRIPTION = ifelse(gene %in% amoAMatches.ls$gene, "amoA; ammonia monooxygenase subunit A", DESCRIPTION)) %>% # Rename description based on above taxa filtering
+  mutate(DESCRIPTION = ifelse(KO == "K10944" & gene %nin% amoAMatches.ls$gene, "pmoA; methane monooxygenase subunit A", DESCRIPTION)) %>% # Rename description to purely pmoA
+  left_join(MT_modules.df, by = c("KO" = "KO"), relationship = "many-to-many") %>%
+  dplyr::select(DESCRIPTION, KO, v_module, ) %>% # only keep relevant columns
+  separate(col = DESCRIPTION, sep = "; ", into = c("SName", "LName")) %>% #separate description
+  #left_join(metadata) %>% # add metadata
+  #filter(Sample_date != "Nov 21") %>% # remove samples from Nov 21
+  #filter(Station != 'BunthausSpitze') %>% #remove sample from BunthausSpitze
+  #filter(data_type == 'METAG') %>% # keep only metagenomes
+  ##Identify genes occurring at 0.1% abundance in at least 30% of samples
+  #ungroup() %>%
+  distinct()
+
+colnames(WGCNA_modules_Cinfo.df)
+
+WGCNA_modules_Cinfo.df = MT_modules_info.df %>%
+  filter(!is.na(v_module)) %>%
+  left_join(CarbonGenelist.df, by = c("KO" = "KEGG_Orthology")) %>%
+  dplyr::select(SName, LName, KO, v_module, Compound)
+
+module_total = WGCNA_modules_Cinfo.df %>%
+  dplyr::count(v_module) %>%
+  arrange(desc(n))
+module_total
+
+
+# Calculate the count and percentage of compounds within each v_module
+df_percentages <- WGCNA_modules_Cinfo.df %>%
+  group_by(v_module) %>%  # Group by v_module
+  count(Compound) %>%      # Count the number of occurrences of each Compound within each v_module
+  mutate(percentage = n / sum(n) * 100) %>%  # Calculate the percentage within each v_module
+  ungroup()  # Ungroup to prevent affecting subsequent operations
+df_percentages
+
+```
+
+
+#Abundance of modules across PP - heatmap - already done, just need to match colours to numbers
+
+```{r}
+
+#Import C and N gene list
+CarbonGenelist.df = read.csv("E:/Functional_R_analysis/CarbonGeneList.csv", header = T, sep = ";") %>%
+  filter(KEGG_Orthology %nin% c("K10945", "K10946"))
+
+
+
+```
+
+##Metagenomes
+```{r}
+
+MG_mod.df = read.csv("E:/Functional_R_analysis/Network/WGCNA_network_MG_all.csv", sep = ";") %>%
+  dplyr::select(v_name, v_module, X, Y)
+
+#MEs0 = read.csv("E:/Functional_R_analysis/Network/MEsO_MG.csv")
+
+network_modules_MG.df = read.csv("E:/Functional_R_analysis/Network/edgelist_MG_all_type.tsv", sep = "\t") %>%
+  dplyr::select(gene1, module1) %>%
+  distinct()
+
+
+MG_module_KO.df = network_modules_MG.df %>%
+  left_join(MG_mod.df, by = c("gene1" = "v_name")) %>%
+  drop_na(v_module) %>%
+  left_join(annot, by = c("gene1" = "KO")) %>%
+  distinct() %>%
+  rename(KO = gene1) %>%
+  dplyr::select(KO, DESCRIPTION, v_module, module1) %>%
+  left_join(CarbonGenelist.df, by = c("KO" = "KEGG_Orthology")) %>%
+  dplyr::select(KO, DESCRIPTION, v_module, module1, Compound)
+MG_module_KO.df
+
+```
+##Metatranscriptomes
+```{r}
+
+MT_mod.df = read.csv("E:/Functional_R_analysis/Network/WGCNA_network_MT_all.csv", sep = ";") %>%
+  dplyr::select(v_name, v_module, X, Y)
+
+#MEs0 = read.csv("E:/Functional_R_analysis/Network/MEsO_MT.csv")
+
+network_modules_MT.df = read.csv("E:/Functional_R_analysis/Network/edgelist_MT_all_type.tsv", sep = "\t") %>%
+  dplyr::select(gene1, module1) %>%
+  distinct()
+
+
+MT_module_KO.df = network_modules_MT.df %>%
+  left_join(MT_mod.df, by = c("gene1" = "v_name")) %>%
+  drop_na(v_module) %>%
+  left_join(annot, by = c("gene1" = "KO")) %>%
+  distinct() %>%
+  rename(KO = gene1) %>%
+  dplyr::select(KO, DESCRIPTION, v_module, module1) %>%
+  left_join(CarbonGenelist.df, by = c("KO" = "KEGG_Orthology")) %>%
+  dplyr::select(KO, DESCRIPTION, v_module, module1, Compound)
+MT_module_KO.df
+
+```
+##mOTUs
+
+```{r}
+
+
+mOTUs_mod.df = read.csv("E:/Functional_R_analysis/Network/WGCNA_network_mOTUs_all.csv", sep = ";") %>%
+  dplyr::select(v_name, v_module, X, Y)
+
+#MEs0 = read.csv("E:/Functional_R_analysis/Network/MEsO_mOTUs.csv")
+
+network_modules_mOTUs.df = read.csv("E:/Functional_R_analysis/Network/edgelist_mOTUs_all_type.tsv", sep = "\t") %>%
+  dplyr::select(gene1, module1) %>%
+  distinct()
+
+
+mOTUs_module_KO.df = network_modules_mOTUs.df %>%
+  left_join(mOTUs_mod.df, by = c("gene1" = "v_name")) %>%
+  drop_na(v_module) %>%
+  #left_join(annot, by = c("gene1" = "KO")) %>%
+  distinct() %>%
+  dplyr::rename(taxa = gene1) %>%
+  dplyr::select(taxa, v_module, module1) 
+mOTUs_module_KO.df
+
+
+```
+#Match mOTUs to MAGs and get functional info
+
+```{r}
+
+#Import mOTU ID lists that lets us link them to MAGs, and combine them
+mag_nmOTUs.df = read.csv("E:/Functional_R_analysis/mag_2_new_motus", header = F, sep = "\t") %>%
+  separate_rows(V2, sep = ";") %>%
+  dplyr::rename(mOTU_ID = V1) %>%
+  dplyr::rename(MAG_ID = V2)
+
+mag_emOTUs.df = read.csv("E:/Functional_R_analysis/mag_2_existing_motus", header = F, sep = "\t") %>%
+  separate_rows(V2, sep = ";") %>%
+  dplyr::select(V1, V2) %>%
+  dplyr::rename(mOTU_ID = V2) %>%
+  dplyr::rename(MAG_ID = V1)
+
+mOTUs2MAGs = rbind(mag_nmOTUs.df, mag_emOTUs.df) %>%
+  filter(mOTU_ID!="NotEnoughMGs")
+
+
+#Import module information and combine (number and colour)
+mOTUs_mod.df = read.csv("E:/Functional_R_analysis/Network/WGCNA_network_mOTUs_all.csv", sep = ";") %>%
+  dplyr::select(v_name, v_module, X, Y, v_motu_id) %>%
+  dplyr::rename(mOTU_ID = v_motu_id) %>%
+  dplyr::rename(taxa = v_name)
+
+#Import list of mOTUs and their respective module colour
+network_modules_mOTUs.df = read.csv("E:/Functional_R_analysis/Network/edgelist_mOTUs_all_type.tsv", sep = "\t") %>%
+  dplyr::select(gene1, module1) %>%
+  distinct()
+
+
+#Modify the annotation df, to make linking it clearer downstream
+annot_mod = annot %>%
+  rownames_to_column("gene_cluster")
+
+
+#Combine both module lists
+mOTUs_module_KO.df = network_modules_mOTUs.df %>%
+  left_join(mOTUs_mod.df, by = c("gene1" = "taxa")) %>%
+  drop_na(v_module) %>% # remove taxa that haven't been assigned a module
+  distinct() %>% # Remove duplicates
+  dplyr::rename(taxa = gene1) %>% #Rename taxa for consistency
+  dplyr::select(taxa, v_module, module1) %>% # choose only the columns that we need
+  separate(col = taxa, sep = "__", into = c("Phylum", "Class", "Order", "Family", "Genus", "Species", "mOTU_ID")) %>% # separate the taxa information and establish the mOTU ID column needed downstream
+  left_join(mOTUs2MAGs, by = c("mOTU_ID" = "mOTU_ID")) %>%
+  left_join(gene_cluster_taxa, by = c("MAG_ID" = "genome")) %>%
+  dplyr::select(-gene) %>%
+  distinct() %>%
+  left_join(annot_mod, by = c("gene_cluster" = "gene_cluster")) %>%
+  filter(KO != is.na(KO)) # filter to remova all NA
+  
+mOTUs_module_KO.df
+
+
+#How many mOTUs matched MAGs? - all, as they are MAG derived
+test = network_modules_mOTUs.df %>%
+  left_join(mOTUs_mod.df, by = c("gene1" = "taxa")) %>%
+  drop_na(v_module) %>% # remove taxa that haven't been assigned a module
+  distinct() %>% # Remove duplicates
+  dplyr::rename(taxa = gene1) %>% #Rename taxa for consistency
+  dplyr::select(taxa, v_module, module1) %>% # choose only the columns that we need
+  separate(col = taxa, sep = "__", into = c("Phylum", "Class", "Order", "Family", "Genus", "Species", "mOTU_ID")) %>% # separate the taxa information and establish the mOTU ID column needed downstream
+  left_join(mOTUs2MAGs, by = c("mOTU_ID" = "mOTU_ID")) %>%
+  left_join(gene_cluster_taxa, by = c("MAG_ID" = "genome")) %>%
+  dplyr::select(-gene) %>%
+  distinct() %>%
+  dplyr::select(mOTU_ID, MAG_ID) %>%
+  distinct()
+test
+
+dim(test)
+
+
+#Identify methanogenesis
+#mcrA - generates methane
+#pmoA + mmoX - utilises methane
+
+methanemetabolism_genes.df = mOTUs_module_KO.df %>%
+  filter(str_detect(DESCRIPTION, "mmoX") | 
+           str_detect(DESCRIPTION, "mcrA") | 
+           str_detect(DESCRIPTION, "pmoA")) %>%
+  dplyr::select(DESCRIPTION, KO, v_module, module1, Phylum, Class, Order, Family, Genus, Species) %>%
+  distinct()
+
+dim(methanemetabolism_genes.df)
+
+
+#Identify osmosis genes
+
+Osmotic_genes.df = mOTUs_module_KO.df %>%
+  filter(str_detect(DESCRIPTION, "osmo")) %>%
+  dplyr::select(DESCRIPTION, KO, v_module, module1, Phylum, Class, Order, Family, Genus, Species) %>%
+  distinct()
+
+dim(Osmotic_genes.df)
+
+write.csv(Osmotic_genes.df, "E:/Functional_R_analysis/Osmoregulationgenes.csv")
+
+
+
+```
+#Extract all methanotrophs
+How to identify methanogenesis:
+  mcrA + EC 4.99.1.2 + phnJ - generates methane
+  pmoA + mmoX - utilises methane
+  
+  
+2.8.4.1	coenzyme-B sulfoethylthiotransferase	Transferases	Both	K00399	ec00680.ec01100.ec01120	CH4
+2.8.4.1	coenzyme-B sulfoethylthiotransferase	Transferases	Both	K00401	ec00680.ec01100.ec01120	CH4
+2.8.4.1	coenzyme-B sulfoethylthiotransferase	Transferases	Both	K00402	ec00680.ec01100.ec01120	CH4
+4.99.1.2	alkylmercury lyase	Lyases	Producing	K00221		CH4
+4.7.1.1	alpha-D-ribose 1-methylphosphonate 5-phosphate C-P-lyase	Lyases		K06163	ec00440.ec01100	CH4
+1.14.18.3	methane monooxygenase	Oxidoreductases		K10944	ec00680.ec01100	CH4
+1.14.13.25 	methane monooxygenase	Oxidoreductases		K16157	ec00680.ec01100.ec01120	CH4
+1.14.13.25 	methane monooxygenase	Oxidoreductases		K16158	ec00680.ec01100.ec01120	CH4
+1.14.13.25 	methane monooxygenase	Oxidoreductases		K16159	ec00680.ec01100.ec01120	CH4
+1.14.13.25 	methane monooxygenase	Oxidoreductases		K16161	ec00680.ec01100.ec01120	CH4
+
+##Using genes - no mcrA gene identifed
+```{r}
+
+
+#Import gene lists
+CH4Genelist.df = read.csv("E:/Functional_R_analysis/CarbonGeneList.csv", header = T, sep = ";") %>%
+  filter(KEGG_Orthology %nin% c("K10945", "K10946")) %>%
+  filter(Compound == "CH4")
+CarbonGenelist.df = read.csv("E:/Functional_R_analysis/CarbonGeneList.csv", header = T, sep = ";") %>%
+  filter(KEGG_Orthology %nin% c("K10945", "K10946"))
+
+#amoAMatches.ls = annot %>%
+#  rownames_to_column("gene_cluster") %>%
+#  left_join(gene_cluster_taxa, by=c("gene_cluster" = "gene_cluster")) %>% # add MAG information
+#  left_join(taxa, by = c("genome" = "GENOME"), relationship = "many-to-many") %>% # add taxonomic information
+#  filter(KO %in% CarbonGenelist.df$KEGG_Orthology) %>% # only extract the CO2CH4 gene
+#  filter(str_detect(genus,"Nitros") & str_detect(KO, "^K10944$"))
+#dim(amoAMatches.ls)
+sort(unique(amoAMatches.ls$KO))
+
+
+Methano_geneabund_KO_Temp = annot %>%
+  filter(KO %in% CH4Genelist.df$KEGG_Orthology # | 
+           #str_detect(DESCRIPTION, "mmoX") | 
+          # str_detect(DESCRIPTION, "mcrA") | 
+         #  str_detect(DESCRIPTION, "pmoA")
+         ) %>%
+  rownames_to_column("gene_cluster") %>%
+  left_join(gene_cluster_taxa, by=c("gene_cluster" = "gene_cluster")) %>% # add MAG information
+  left_join(taxa, by = c("genome" = "GENOME"), relationship = "many-to-many") %>% # add taxonomic information
+  unite(fulltaxa, c("domain", "phylum", "class", "order", "family", "genus", "species")) %>% # make new column that contains taxa information
+  anti_join(data.frame(gene = amoAMatches.ls$gene), by = "gene") %>% # Remove rows based on above taxa filtering)
+  mutate(DESCRIPTION = ifelse(KO == "K10944" , "pmoA; methane monooxygenase subunit A", DESCRIPTION)) # Rename description to purely pmoA
+  
+  dplyr::select(DESCRIPTION, KO, v_module, module1, Phylum, Class, Order, Family, Genus, Species) %>%
+  distinct()
+
+unique(Methano_geneabund_KO_Temp$KO)
+unique(Methano_geneabund_KO_Temp$DESCRIPTION)
+  
+
+  
+  
+  
+  
+  
+  #Remove phylogenetic level info
+Methano_geneabund_KO_Temp$fulltaxa = gsub("d__", "", Methano_geneabund_KO_Temp$fulltaxa)
+Methano_geneabund_KO_Temp$fulltaxa = gsub("p__", "", Methano_geneabund_KO_Temp$fulltaxa)
+Methano_geneabund_KO_Temp$fulltaxa = gsub("c__", "", Methano_geneabund_KO_Temp$fulltaxa)
+Methano_geneabund_KO_Temp$fulltaxa = gsub("o__", "", Methano_geneabund_KO_Temp$fulltaxa)
+Methano_geneabund_KO_Temp$fulltaxa = gsub("f__", "", Methano_geneabund_KO_Temp$fulltaxa)
+Methano_geneabund_KO_Temp$fulltaxa = gsub("g__", "", Methano_geneabund_KO_Temp$fulltaxa)
+Methano_geneabund_KO_Temp$fulltaxa = gsub("s__", "", Methano_geneabund_KO_Temp$fulltaxa)
+Methano_geneabund_KO_Temp$fulltaxa = gsub("_", "__", Methano_geneabund_KO_Temp$fulltaxa)
+
+
+
+
+amoAClean_geneabund_KO = annot %>%
+  rownames_to_column("gene_cluster") %>%
+  left_join(gene_cluster_taxa, by=c("gene_cluster" = "gene_cluster")) %>% # add MAG information
+  left_join(taxa, by = c("genome" = "GENOME"), relationship = "many-to-many") %>% # add taxonomic information
+  filter(KO %in% CarbonGenelist.df$KEGG_Orthology) %>% # only extract the CO2CH4 gene
+  mutate(DESCRIPTION = ifelse(gene %in% amoAMatches.ls$gene, "amoA; ammonia monooxygenase subunit A", DESCRIPTION)) %>% # Rename description based on above taxa filtering
+mutate(DESCRIPTION = ifelse(KO == "K10944" & gene %nin% amoAMatches.ls$gene, "pmoA; methane monooxygenase subunit A", DESCRIPTION)) %>% # Rename description to purely pmoA
+  dplyr::select(gene_cluster, DESCRIPTION) %>% # select only the columns titled gene_cluster and KO
+  left_join(geneabund_2, by=c("gene_cluster" = "gene_cluster")) %>% # join these two columns to the gene abundance dataframe based on the gene_cluster column
+  dplyr::select(-length, -gene_cluster) %>% # remove the length and gene_cluster column
+  group_by(DESCRIPTION) %>% #aggregate the data by the KEGG ID
+  summarise(across(everything(), ~ sum(., na.rm = TRUE))) # summarise the data using the sum to get abundance data - this still needs to be divided by 1000 for actual per genome values
+dim(amoAClean_geneabund_KO)
+
+
+Methano_geneabund_KO_Temp = Methano_geneabund_KO_Temp %>%
+  filter(KO %in% CarbonGenelist.df$KEGG_Orthology) %>% # only extract the CO2/CH4 gene
+  filter(fulltaxa %in% Temp_MG_MT_mOTU_taxa.ls) %>% # subset to only those 6 taxa we're interested in
+anti_join(data.frame(gene = amoAMatches.ls$gene), by = "gene") %>% # Remove rows based on above taxa filtering
+  select(gene_cluster, KO, genome, fulltaxa) %>% # select only the columns titled gene_cluster and KO
+  left_join(geneabund_2, by=c("gene_cluster" = "gene_cluster")) %>% # join these two columns to the gene abundance dataframe based on the gene_cluster column
+  select(-length, -gene_cluster) %>% # remove the length and gene_cluster column
+  group_by(fulltaxa, genome, KO) %>% #aggregate the data by the KEGG ID
+  summarise(across(everything(), ~ sum(., na.rm = TRUE))) # summarise the data using the sum to get abundance data - this still needs to be divided by 1000 for actual per genome values
+dim(Methano_geneabund_KO_Temp)
+#View(Methano_geneabund_KO_Temp)
+
+Methano_geneabund_KO_Temp.lng <- Methano_geneabund_KO_Temp %>%
+  pivot_longer(cols = -c(KO, genome, fulltaxa), names_to = "sampleid", values_to = "counts", values_drop_na = 0) %>% # reformat from a wide to long format, remove gene-cluster information, column names will be in the sampleid column, and values that would be NA are replaced with a 0.
+  #left_join(annot, by = c("KO" = "KO"), relationship = "many-to-many") %>% # add gene information
+  select(sampleid, counts, #DESCRIPTION,
+         KO, genome, fulltaxa, ) %>% # only keep relevant columns
+  #separate(col = DESCRIPTION, sep = ";", into = c("SName", "LName")) %>% #separate description
+  #left_join(CarbonGenelist.df, by = c("KO"="KEGG_Orthology")) %>%
+  #select(!c(EC_Number, Pathway)) %>%
+  left_join(metadata) %>% # add metadata
+  filter(Sample_date != "Nov 21") %>% # remove samples from Nov 21
+  filter(Station != 'BunthausSpitze') %>% #remove sample from BunthausSpitze
+  filter(data_type == "METAG" & Sample_type == "Free_living") %>% # select only metatranscriptome samples
+  ##Identify genes occurring at 0.1% abundance in at least 30% of samples
+  ungroup() %>%
+  distinct()
+
+#Correct abundance
+Methano_geneabund_KO_Temp.lng$counts = Methano_geneabund_KO_Temp.lng$counts / 1000
+
+#Check how many unique genera
+unique(Methano_geneabund_KO_Temp.lng$fulltaxa)
+unique(Methano_geneabund_KO_Temp.lng$genome)
+
+Methano_taxa_MG.df = Methano_geneabund_KO_Temp.lng %>%
+  select(counts, KO, fulltaxa, station_km, Sample_date)
+
+#Clean up for plot
+Methano_taxa_MG.df$station_km = as.numeric(as.character(Methano_taxa_MG.df$station_km))
+
+
+Methano_taxa_MG.df$Sample_date = factor(Methano_taxa_MG.df$Sample_date,
+                                   levels = c("May 21",
+                                              "Jul 21",
+                                              "Feb 22",
+                                              "May 22",
+                                              "Jun 22",
+                                              "Nov 22"))
+
+Methano_taxa_MG.sum = Rmisc::summarySE(Methano_taxa_MG.df, measurevar = "counts", groupvars = c("fulltaxa", "station_km", "Sample_date", "KO"))
+
+#Keep for records
+write.csv(Methano_taxa_MG.sum, "F:/Functional_R_analysis/MGMTmOTUCorr_MG_Methano.csv")
+
+#Methano_taxa_MG.sum = read.csv("F:/Functional_R_analysis/MGMTmOTUCorr_MG_Methano.csv")
+
+unique(Methano_taxa_MG.sum$fulltaxa)
+
+
+
+
+####Metatranscriptomes ####
+
+Methano_geneabund_KO_Temp = annot %>%
+  rownames_to_column("gene_cluster") %>%
+  left_join(gene_cluster_taxa, by=c("gene_cluster" = "gene_cluster")) %>% # add MAG information
+  left_join(taxa, by = c("genome" = "GENOME"), relationship = "many-to-many") %>% # add taxonomic information
+  unite(fulltaxa, c("domain", "phylum", "class", "order", "family", "genus", "species")) # make new column that contains taxa information
+
+  #Remove phylogenetic level info
+Methano_geneabund_KO_Temp$fulltaxa = gsub("d__", "", Methano_geneabund_KO_Temp$fulltaxa)
+Methano_geneabund_KO_Temp$fulltaxa = gsub("p__", "", Methano_geneabund_KO_Temp$fulltaxa)
+Methano_geneabund_KO_Temp$fulltaxa = gsub("c__", "", Methano_geneabund_KO_Temp$fulltaxa)
+Methano_geneabund_KO_Temp$fulltaxa = gsub("o__", "", Methano_geneabund_KO_Temp$fulltaxa)
+Methano_geneabund_KO_Temp$fulltaxa = gsub("f__", "", Methano_geneabund_KO_Temp$fulltaxa)
+Methano_geneabund_KO_Temp$fulltaxa = gsub("g__", "", Methano_geneabund_KO_Temp$fulltaxa)
+Methano_geneabund_KO_Temp$fulltaxa = gsub("s__", "", Methano_geneabund_KO_Temp$fulltaxa)
+Methano_geneabund_KO_Temp$fulltaxa = gsub("_", "__", Methano_geneabund_KO_Temp$fulltaxa)
+
+Methano_geneabund_KO_Temp = Methano_geneabund_KO_Temp %>%
+  filter(KO %in% CarbonGenelist.df$KEGG_Orthology) %>% # only extract the CO2/CH4 gene
+  filter(fulltaxa %in% Temp_MG_MT_mOTU_taxa.ls) %>% # subset to only those 6 taxa we're interested in
+anti_join(data.frame(gene = amoAMatches.ls$gene), by = "gene") %>% # Remove rows based on above taxa filtering
+  select(gene_cluster, KO, genome, fulltaxa) %>% # select only the columns titled gene_cluster and KO
+  left_join(geneabund_2, by=c("gene_cluster" = "gene_cluster")) %>% # join these two columns to the gene abundance dataframe based on the gene_cluster column
+  select(-length, -gene_cluster) %>% # remove the length and gene_cluster column
+  group_by(fulltaxa, genome, KO) %>% #aggregate the data by the KEGG ID
+  summarise(across(everything(), ~ sum(., na.rm = TRUE))) # summarise the data using the sum to get abundance data - this still needs to be divided by 1000 for actual per genome values
+dim(Methano_geneabund_KO_Temp)
+#View(Methano_geneabund_KO_Temp)
+
+Methano_CO2CH4_tbl_Temp.lng <- Methano_geneabund_KO_Temp %>%
+  pivot_longer(cols = -c(KO, genome, fulltaxa), names_to = "sampleid", values_to = "counts", values_drop_na = 0) %>% # reformat from a wide to long format, remove gene-cluster information, column names will be in the sampleid column, and values that would be NA are replaced with a 0.
+  #left_join(annot, by = c("KO" = "KO"), relationship = "many-to-many") %>% # add gene information
+  select(sampleid, counts, #DESCRIPTION,
+         KO, genome, fulltaxa, ) %>% # only keep relevant columns
+  #separate(col = DESCRIPTION, sep = ";", into = c("SName", "LName")) %>% #separate description
+  #left_join(CarbonGenelist.df, by = c("KO"="KEGG_Orthology")) %>%
+  #select(!c(EC_Number, Pathway)) %>%
+  left_join(metadata) %>% # add metadata
+  filter(Sample_date != "Nov 21") %>% # remove samples from Nov 21
+  filter(Station != 'BunthausSpitze') %>% #remove sample from BunthausSpitze
+  filter(Sample_type == "Free_living") %>% # select only metatranscriptome samples
+  ##Identify genes occurring at 0.1% abundance in at least 30% of samples
+  ungroup() %>%
+  distinct()
+
+#Correct abundance
+Methano_CO2CH4_tbl_Temp.lng$counts = Methano_CO2CH4_tbl_Temp.lng$counts / 1000
+
+#Make data_type names informative
+Methano_CO2CH4_tbl_Temp.lng$data_type = gsub("METAG", "Metagenomes", Methano_CO2CH4_tbl_Temp.lng$data_type)
+Methano_CO2CH4_tbl_Temp.lng$data_type = gsub("METAT", "Transcriptomes", Methano_CO2CH4_tbl_Temp.lng$data_type)
+
+
+ #Long to wide, in preparation for transcripts per gene copy calculation
+# The arguments to spread():
+# - data: Data object
+# - key: Name of column containing the new column names
+# - value: Name of column containing values
+Methano_TG_Temp.df <- spread(Methano_CO2CH4_tbl_Temp.lng[ , ! names(amoAClean_CO2CH4_tbl_long_Temp) %in% c("sampleid", "abundance", "occurrence", "X")], #Remove columns that will cause problems
+                       data_type, #Column that will contain new column names
+                       counts) %>% # Value that will fill new columns
+  mutate_at(c("Metagenomes", "Transcriptomes"), ~replace(., is.na(.), 0)) #Replace NAs with 0 in the new columns
+#Ensure that it worked
+dim(Methano_CO2CH4_tbl_Temp.lng)
+dim(Methano_TG_Temp.df)
+
+
+
+
+#Calculate Transcripts per gene copy
+Methano_TG_Temp.df$TranscriptsPerGenome = Methano_TG_Temp.df$Transcriptomes / Methano_TG_Temp.df$Metagenomes
+
+#Add more info - remove NA's and Infinite numbers
+Methano_TG_Temp.df = Methano_TG_Temp.df %>%
+  mutate_at(c("TranscriptsPerGenome"), ~replace(., is.na(.), 0)) %>% # This was usuTemply the case when 0/0
+  mutate_at(c("TranscriptsPerGenome"), ~replace(., is.infinite(.), "9999999999")) #Replace Infin with #/0, as Metagenome likely incomplete
+
+#Convert from wide to long format
+Methano_TG_Temp.df = gather(Methano_TG_Temp.df, key = data_type, value = counts, Metagenomes:TranscriptsPerGenome)
+dim(Methano_TG_Temp.df)
+
+#Remove data_types and columns that are no longer relevant 
+Methano_TG_Temp.df = subset(Methano_TG_Temp.df, data_type == "TranscriptsPerGenome") %>%
+  select(counts, KO, Associatednumber, station_km, Sample_date, genome, fulltaxa)
+dim(Methano_TG_Temp.df)
+
+
+#Remove samples for which we have no metatranscriptomes
+Methano_TG_Temp.df = subset(Methano_TG_Temp.df, Associatednumber > 116)
+
+#Remove samples for which sequencing failed
+Methano_TG_Temp.df = subset(Methano_TG_Temp.df, !(Associatednumber %in% c(127, 128, 140, 145, 146, 157, 169, 170,
+                                                               119, 125, 126, 136, 137, 153, 154)))
+#Make sure data is set up properly
+Methano_TG_Temp.df$counts = as.numeric(as.character(Methano_TG_Temp.df$counts))
+Methano_TG_Temp.df$Associatednumber = as.character(Methano_TG_Temp.df$Associatednumber)
+
+
+#Check how many unique genera
+unique(Methano_TG_Temp.df$fulltaxa)
+unique(Methano_TG_Temp.df$genome)
+
+Methano_taxa_MT.df = Methano_TG_Temp.df %>%
+  select(counts, KO, fulltaxa, station_km, Sample_date)
+
+#Clean up for plot
+Methano_taxa_MT.df$station_km = as.numeric(as.character(Methano_taxa_MT.df$station_km))
+
+
+Methano_taxa_MT.df$Sample_date = factor(Methano_taxa_MT.df$Sample_date,
+                                   levels = c("May 21",
+                                              "Jul 21",
+                                              "Feb 22",
+                                              "May 22",
+                                              "Jun 22",
+                                              "Nov 22"))
+
+Methano_taxa_MT.df = Rmisc::summarySE(Methano_taxa_MT.df, measurevar = "counts", groupvars = c("fulltaxa", "station_km", "Sample_date", "KO"))
+
+#Keep for records
+write.csv(Methano_taxa_MT.df, "F:/Functional_R_analysis/MGMTmOTUCorr_MT_Methano.csv")
+
+#Methano_taxa_MT.df = read.csv("E:/Functional_R_analysis/MGMTmOTUCorr_MT_Methano.csv")
+
+unique(Methano_taxa_MT.df$fulltaxa)
+
+
+
+
+#### Calculations - no need for MT as we calculate transcripts per gene ####
+
+#Read in dataframes
+Methano_taxa_MG.df = read.csv("F:/Functional_R_analysis/Methano_taxa_MG.sum")
+#Methano_taxa_MT.df = read.csv("E:/Functional_R_analysis/MGMTmOTUCorr_MT_Methano.csv")
+unique(Temp_taxa_MG.df$fulltaxa)
+
+#Summary for ease
+Methano_MG.sum = Rmisc::summarySE(Methano_taxa_MG.df, measurevar = "counts", groupvars = c("KO", "fulltaxa"))
+Methano_MG.sum = Rmisc::summarySE(Methano_MG.sum, measurevar = "counts", groupvars = c("fulltaxa"))
+#Temp_MT.sum = Rmisc::summarySE(Temp_taxa_MT.df, measurevar = "counts", groupvars = c("KO", "fulltaxa"))
+#Temp_MT.sum = Rmisc::summarySE(Temp_MT.sum, measurevar = "counts", groupvars = c("fulltaxa"))
+
+#How many of our selected carbon KOs are associated with each taxa?
+View(Methano_MG.sum)
+#Methano_MG.sum
+
+#How many KOs shared between all taxa?
+Temp_MG.sum = Rmisc::summarySE(Temp_taxa_MG.df, measurevar = "counts", groupvars = c("KO", "fulltaxa"))
+
+
+
+```
+##Using taxa 
+###mOTUs
+```{r}
+#Import mOTU ID lists that lets us link them to MAGs, and combine them
+mag_nm = read.csv("E:/Functional_R_analysis/mag_2_new_motus", header = F, sep = "\t") %>%
+  separate_rows(V2, sep = ";") %>%
+  dplyr::rename(mOTU_ID = V1) %>%
+  dplyr::rename(MAG_ID = V2)
+
+mag_emOTUs.df = read.csv("E:/Functional_R_analysis/mag_2_existing_motus", header = F, sep = "\t") %>%
+  separate_rows(V2, sep = ";") %>%
+  dplyr::select(V1, V2) %>%
+  dplyr::rename(mOTU_ID = V2) %>%
+  dplyr::rename(MAG_ID = V1)
+
+mOTUs2MAGs = rbind(mag_nmOTUs.df, mag_emOTUs.df) %>%
+  filter(mOTU_ID!="NotEnoughMGs")
+
+
+#Import module information and combine (number and colour)
+mOTUs_mod.df = read.csv("E:/Functional_R_analysis/Network/WGCNA_network_mOTUs_all.csv", sep = ";") %>%
+  dplyr::select(v_name, v_module, X, Y, v_motu_id) %>%
+  dplyr::rename(mOTU_ID = v_motu_id) %>%
+  dplyr::rename(taxa = v_name)
+
+#Import list of mOTUs and their respective module colour
+network_modules_mOTUs.df = read.csv("E:/Functional_R_analysis/Network/edgelist_mOTUs_all_type.tsv", sep = "\t") %>%
+  dplyr::select(gene1, module1) %>%
+  distinct()
+
+
+#Modify the annotation df, to make linking it clearer downstream
+annot_mod = annot %>%
+  rownames_to_column("gene_cluster")
+
+
+#Combine both module lists
+mOTUs_module_KO.df = network_modules_mOTUs.df %>%
+  left_join(mOTUs_mod.df, by = c("gene1" = "taxa")) %>%
+  drop_na(v_module) %>% # remove taxa that haven't been assigned a module
+  distinct() %>% # Remove duplicates
+  dplyr::rename(taxa = gene1) %>% #Rename taxa for consistency
+  dplyr::select(taxa, v_module, module1) %>% # choose only the columns that we need
+  separate(col = taxa, sep = "__", into = c("Phylum", "Class", "Order", "Family", "Genus", "Species", "mOTU_ID")) %>% # separate the taxa information and establish the mOTU ID column needed downstream
+  left_join(mOTUs2MAGs, by = c("mOTU_ID" = "mOTU_ID")) %>%
+  left_join(gene_cluster_taxa, by = c("MAG_ID" = "genome")) %>%
+  dplyr::select(-gene) %>%
+  distinct() %>%
+  left_join(annot_mod, by = c("gene_cluster" = "gene_cluster")) %>%
+  filter(KO != is.na(KO)) # filter to remova all NA
+  
+mOTUs_module_KO.df
+
+
+
+#Identify methanogens in mOTUs
+
+Methyl_taxa.df = mOTUs_module_KO.df %>%
+  unite(fulltaxa, c("Phylum", "Class", "Order", "Family", "Genus", "Species", "mOTU_ID")) %>% # make new column that contains taxa information
+  filter(str_detect(fulltaxa, "meth")) %>%
+  dplyr::select(DESCRIPTION, KO, v_module, module1, fulltaxa) %>%
+  distinct()
+
+dim(Methyl_taxa.df)
+
+
+#Identify CH4 correlation module taxa - brown
+
+BrownModuleTaxa.df = mOTUs_module_KO.df %>%
+  unite(fulltaxa, c("Phylum", "Class", "Order", "Family", "Genus", "Species", "mOTU_ID")) %>% # make new column that contains taxa information
+  filter(str_detect(module1, "brown")) %>%
+  dplyr::select(DESCRIPTION, KO, v_module, module1, fulltaxa) %>%
+  distinct()
+
+dim(BrownModuleTaxa.df)
+
+unique(BrownModuleTaxa.df$fulltaxa)
+
+
+#Identify salinity correlation module taxa - turquoise
+
+TurquoiseModuleTaxa.df = mOTUs_module_KO.df %>%
+  unite(fulltaxa, c("Phylum", "Class", "Order", "Family", "Genus", "Species", "mOTU_ID")) %>% # make new column that contains taxa information
+  filter(str_detect(module1, "turquoise")) %>%
+  dplyr::select(DESCRIPTION, KO, v_module, module1, fulltaxa, MAG_ID) %>%
+  distinct()
+
+dim(TurquoiseModuleTaxa.df)
+
+unique(TurquoiseModuleTaxa.df$fulltaxa)
+head(TurquoiseModuleTaxa.df)
+
+unique(TurquoiseModuleTaxa.df$MAG_ID)
+
+
+
+```
+
+###Extract MAG osmoregulation genes from turquoise/blue/brown mOTU module
+
+```{r}
+####Turquoise####
+
+TurquoiseModuleTaxa.df = mOTUs_module_KO.df %>%
+  unite(fulltaxa, c("Phylum", "Class", "Order", "Family", "Genus", "Species", "mOTU_ID")) %>% # make new column that contains taxa information
+  filter(str_detect(module1, "turquoise")) %>%
+  dplyr::select(DESCRIPTION, KO, v_module, module1, fulltaxa, mOTU_ID) %>%
+  distinct()
+
+dim(TurquoiseModuleTaxa.df)
+
+unique(TurquoiseModuleTaxa.df$fulltaxa)
+head(TurquoiseModuleTaxa.df)
+
+unique(TurquoiseModuleTaxa.df$MAG_ID)
+
+
+#Identify osmosis genes
+
+Turquoise_Osmotic_genes.df = TurquoiseModuleTaxa.df %>%
+  filter(str_detect(DESCRIPTION, "osmo")) %>%
+  dplyr::select(DESCRIPTION, KO, v_module, module1, mOTU_ID, fulltaxa) %>%
+  distinct()
+
+dim(Turquoise_Osmotic_genes.df)
+
+Turquoise_Osmotic_genes.df
+
+unique(Turquoise_Osmotic_genes.df$MAG_ID)
+
+#write.csv(Osmotic_genes.df, "E:/Functional_R_analysis/Osmoregulationgenes.csv")
+
+
+
+####Blue ####
+
+BlueModuleTaxa.df = mOTUs_module_KO.df %>%
+  unite(fulltaxa, c("Phylum", "Class", "Order", "Family", "Genus", "Species")) %>% # make new column that contains taxa information
+  filter(str_detect(module1, "blue")) %>%
+  dplyr::select(DESCRIPTION, KO, v_module, module1, fulltaxa, mOTU_ID) %>%
+  distinct()
+
+dim(BlueModuleTaxa.df)
+
+unique(BlueModuleTaxa.df$fulltaxa)
+head(BlueModuleTaxa.df)
+
+unique(BlueModuleTaxa.df$mOTU_ID)
+
+
+#Identify osmosis genes
+
+Blue_Osmotic_genes.df = BlueModuleTaxa.df %>%
+  filter(str_detect(DESCRIPTION, "osmo")) %>%
+  dplyr::select(DESCRIPTION, KO, v_module, module1, mOTU_ID, fulltaxa) %>%
+  distinct()
+
+dim(Blue_Osmotic_genes.df)
+
+Blue_Osmotic_genes.df
+
+unique(Blue_Osmotic_genes.df$mOTU_ID)
+
+#write.csv(Osmotic_genes.df, "E:/Functional_R_analysis/Osmoregulationgenes.csv")
+
+
+
+####Brown ####
+
+BrownModuleTaxa.df = mOTUs_module_KO.df %>%
+  unite(fulltaxa, c("Phylum", "Class", "Order", "Family", "Genus", "Species")) %>% # make new column that contains taxa information
+  filter(str_detect(module1, "brown")) %>%
+  dplyr::select(DESCRIPTION, KO, v_module, module1, fulltaxa, mOTU_ID, MAG_ID) %>%
+  distinct()
+
+dim(BrownModuleTaxa.df)
+
+unique(BrownModuleTaxa.df$fulltaxa)
+head(BrownModuleTaxa.df)
+
+unique(BrownModuleTaxa.df$mOTU_ID)
+
+
+#Identify osmosis genes
+
+Brown_Osmotic_genes.df = BrownModuleTaxa.df %>%
+  filter(str_detect(DESCRIPTION, "osmo")) %>%
+  dplyr::select(DESCRIPTION, KO, v_module, module1, mOTU_ID, MAG_ID, fulltaxa) %>%
+  distinct()
+
+dim(Brown_Osmotic_genes.df)
+
+Brown_Osmotic_genes.df
+
+unique(Brown_Osmotic_genes.df$mOTU_ID)
+unique(Brown_Osmotic_genes.df$MAG_ID)
+
+Brown_MAGs.ls = Brown_Osmotic_genes.df$MAG_ID
+#write.csv(Osmotic_genes.df, "E:/Functional_R_analysis/Osmoregulationgenes.csv")
+```
+
+###Extract nitrogen associated MAGs
+```{r}
+
+
+#Import gene list
+CarbonGenelist.df = read.csv("E:/Functional_R_analysis/CarbonGeneList.csv", header = T, sep = ";")%>%
+  dplyr::filter(Compound %in% c("CO2", "CH4"))
+dim(distinct(CarbonGenelist.df))
+unique(CarbonGenelist.df$Compound)
+
+NitrogenGenelist.df = read.csv("E:/Functional_R_analysis/CarbonGeneList.csv", header = T, sep = ";") %>%
+  dplyr::filter(Compound %nin% c("CO2", "CH4", ""))
+unique(NitrogenGenelist.df$Compound)
+
+#Subset for testing purposes
+#BugHunt_GeneList.df = subset(CarbonGenelist.df, Name == "methane monooxygenase")
+#BugHunt_GeneList.df = subset(CarbonGenelist.df, Direction == "Utilising")
+
+amoAMatches.ls = annot %>%
+  rownames_to_column("gene_cluster") %>%
+  left_join(gene_cluster_taxa, by=c("gene_cluster" = "gene_cluster")) %>% # add MAG information
+  left_join(taxa, by = c("genome" = "GENOME"), relationship = "many-to-many") %>% # add taxonomic information
+  filter(KO %in% CarbonGenelist.df$KEGG_Orthology) %>% # only extract the CO2CH4 gene
+  filter(str_detect(genus,"Nitros") & str_detect(KO, "^K10944$"))
+dim(amoAMatches.ls)
+sort(unique(amoAMatches.ls$KO))
+
+NitrogenClean_geneabund_KO = annot %>%
+  rownames_to_column("gene_cluster") %>%
+  left_join(gene_cluster_taxa, by=c("gene_cluster" = "gene_cluster")) %>% # add MAG information
+  mutate(DESCRIPTION = ifelse(gene %in% amoAMatches.ls$gene, "amoA; ammonia monooxygenase subunit A", DESCRIPTION)) %>% # Rename description based on above taxa filtering
+  mutate(DESCRIPTION = ifelse(KO == "K10944" & gene %nin% amoAMatches.ls$gene, "pmoA; methane monooxygenase subunit A", DESCRIPTION)) %>% # Rename description to purely pmoA
+  
+  left_join(taxa, by = c("genome" = "GENOME"), relationship = "many-to-many") %>% # add taxonomic information
+  filter(KO %in% NitrogenGenelist.df$KEGG_Orthology) %>% # only extract the CO2CH4 gene
+  anti_join(data.frame(gene = amoAMatches.ls$gene), by = "gene") %>% # Remove rows based on above taxa filtering
+  select(gene_cluster, KO) %>% # select only the columns titled gene_cluster and KO
+  left_join(geneabund_2, by=c("gene_cluster" = "gene_cluster")) %>% # join these two columns to the gene abundance dataframe based on the gene_cluster column
+  select(-length, -gene_cluster) %>% # remove the length and gene_cluster column
+  group_by(KO) %>% #aggregate the data by the KEGG ID
+  summarise(across(everything(), ~ sum(., na.rm = TRUE))) # summarise the data using the sum to get abundance data - this still needs to be divided by 1000 for actual per genome values
+dim(NitrogenClean_geneabund_KO)
+
+#Correct abundance
+NitrogenClean_geneabund_KO[c(2:264)] = NitrogenClean_geneabund_KO[c(2:264)] / 1000
+
+
+NitrogenClean_CO2CH4_tbl_long <- NitrogenClean_geneabund_KO %>%
+  filter(KO %in% NitrogenGenelist.df$KEGG_Orthology) %>% # only extract the CO2CH4 gene
+  pivot_longer(!KO, names_to = "sampleid", values_to = "counts", values_drop_na = 0) %>% # reformat from a wide to long format, remove gene-cluster information, column names will be in the sampleid column, and values that would be NA are replaced with a 0.
+  left_join(annot, by = c("KO" = "KO"), relationship = "many-to-many") %>% # add gene information
+  select(sampleid, counts, DESCRIPTION, KO, ) %>% # only keep relevant columns
+  separate(col = DESCRIPTION, sep = ";", into = c("SName", "LName")) %>% #separate description
+  left_join(NitrogenGenelist.df, by = c("KO"="KEGG_Orthology")) %>%
+  select(!c(EC_Number, Pathway)) %>%
+  left_join(metadata) %>% # add metadata
+  filter(Sample_date != "Nov 21") %>% # remove samples from Nov 21
+  filter(Station != 'BunthausSpitze') %>% #remove sample from BunthausSpitze
+  ##Identify genes occurring at 0.1% abundance in at least 30% of samples
+  ungroup() %>% 
+  distinct()
+
+#View(amoAClean_CO2CH4_tbl_long)
+dim(NitrogenClean_CO2CH4_tbl_long)
+
+#write.csv(NitrogenClean_CO2CH4_tbl_long, "NitrogenClean.csv")
+
+#NitrogenClean_CO2CH4_tbl_long = read.csv( "NitrogenClean.csv")
+
+#Reorder factors
+NitrogenClean_CO2CH4_tbl_long$Station = factor(NitrogenClean_CO2CH4_tbl_long$Station,
+                                   levels = c("Medemgrund",
+                                              "Brunsbuettel",
+                                              "Schwarztonnensand",
+                                              "Twielenfleth",
+                                              "Muehlenberger Loch"))
+
+NitrogenClean_CO2CH4_tbl_long$Sample_date = gsub("-", " ",NitrogenClean_CO2CH4_tbl_long$Sample_date)
+
+NitrogenClean_CO2CH4_tbl_long$Sample_date = factor(NitrogenClean_CO2CH4_tbl_long$Sample_date,
+                                   levels = c("May 21",
+                                              "Jul 21",
+                                              "Nov 21",
+                                              "Feb 22",
+                                              "May 22",
+                                              "Jun 22",
+                                              "Nov 22"))
+
+#Make data_type names informative
+NitrogenClean_CO2CH4_tbl_long$data_type = gsub("METAG", "Metagenomes", NitrogenClean_CO2CH4_tbl_long$data_type)
+NitrogenClean_CO2CH4_tbl_long$data_type = gsub("METAT", "Transcriptomes", NitrogenClean_CO2CH4_tbl_long$data_type)
+
+#Subset to split metagenomes and metatranscriptomes and remove superflous columns
+NitrogenClean_CO2CH4_tbl_long_MG = subset(NitrogenClean_CO2CH4_tbl_long, data_type == "Metagenomes") 
+
+NitrogenClean_CO2CH4_tbl_long_MG.sum = Rmisc::summarySE(NitrogenClean_CO2CH4_tbl_long_MG, 
+                                                        measurevar = "counts", 
+                                                        groupvars = c("station_km", "Compound", "Sample_date"))
+
+NitrogenGenes.plt = ggplot(data = NitrogenClean_CO2CH4_tbl_long_MG.sum, aes(x = station_km, y = counts, colour = Compound, group = Compound)) +
+  geom_line() +
+  geom_point() +
+  xlab("Elbe km")+
+  ylab("Abundance (%)")+
+  scale_colour_manual("Associated compound", values = expanded_cbbPalette)+
+  facet_grid(. ~ Sample_date) +
+  My_Theme +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
+NitrogenGenes.plt
+
+pdf("E:/Functional_R_analysis/Figures/NitrogenGenes_MG.pdf", width = 12, height = 4)
+NitrogenGenes.plt
+dev.off()
+
+```
+
+
+
+###MAGs
+```{r}
+
+#Import gene list
+CH4Genelist.df = read.csv("E:/Functional_R_analysis/CarbonGeneList.csv", header = T, sep = ";") %>%
+  filter(KEGG_Orthology %nin% c("K10945", "K10946")) %>%
+  filter(Compound == "CH4")
+
+#amoAMatches.ls = annot %>%
+#  rownames_to_column("gene_cluster") %>%
+#  left_join(gene_cluster_taxa, by=c("gene_cluster" = "gene_cluster")) %>% # add MAG information
+#  left_join(taxa, by = c("genome" = "GENOME"), relationship = "many-to-many") %>% # add taxonomic information
+#  filter(KO %in% CarbonGenelist.df$KEGG_Orthology) %>% # only extract the CO2CH4 gene
+#  filter(str_detect(genus,"Nitros") & str_detect(KO, "^K10944$"))
+#dim(amoAMatches.ls)
+#sort(unique(amoAMatches.ls$KO))
+
+Geneabund_KO_CH4 = annot %>%
+  rownames_to_column("gene_cluster") %>%
+  left_join(gene_cluster_taxa, by=c("gene_cluster" = "gene_cluster")) %>% # add MAG information
+  mutate(DESCRIPTION = ifelse(gene %in% amoAMatches.ls$gene, "amoA; ammonia monooxygenase subunit A", DESCRIPTION)) %>% # Rename description based on above taxa filtering
+  mutate(DESCRIPTION = ifelse(KO == "K10944" & gene %nin% amoAMatches.ls$gene, "pmoA; methane monooxygenase subunit A", DESCRIPTION)) %>% # Rename description to purely pmoA
+  dplyr::select(gene_cluster, DESCRIPTION) %>% # select only the columns titled gene_cluster and KO
+  left_join(geneabund_2, by=c("gene_cluster" = "gene_cluster")) %>% # join these two columns to the gene abundance dataframe based on the gene_cluster column
+  dplyr::select(-length, -gene_cluster) %>% # remove the length and gene_cluster column
+  group_by(DESCRIPTION) %>% #aggregate the data by the KEGG ID
+  summarise(across(everything(), ~ sum(., na.rm = TRUE))) # summarise the data using the sum to get abundance data - this still needs to be divided by 1000 for actual per genome values
+dim(Geneabund_KO_CH4)
+head(Geneabund_KO_CH4)
+
+
+#saveRDS(Geneabund_KO_CH4, "E:/Functional_R_analysis/Network/Geneabund_KO_CH4.rds")
+Geneabund_KO_CH4 = readRDS("E:/Functional_R_analysis/Network/Geneabund_KO_CH4.rds")
+
+
+
+
+Methyl_taxa.df = Geneabund_KO_CH4 %>%
+  left_join(taxa, by = c("genome" = "GENOME"), relationship = "many-to-many") %>% # add taxonomic information
+  unite(fulltaxa, c("Phylum", "Class", "Order", "Family", "Genus", "Species", "mOTU_ID")) %>% # make new column that contains taxa information
+  filter(str_detect(fulltaxa, "meth")) %>%
+  dplyr::select(DESCRIPTION, KO, v_module, module1, fulltaxa) %>%
+  distinct()
+
+dim(Methyl_taxa.df)
+
+
+
+
+
+Geneabund_KO_CH4_MG.lng <- Geneabund_KO_CH4 %>%
+  pivot_longer(!DESCRIPTION, names_to = "sampleid", values_to = "counts", values_drop_na = 0) # reformat from a wide to long format, remove gene-cluster information, column names will be in the sampleid column, and values that would be NA are replaced with a 0. 
+
+  
+##Need to cut dataframe into 120 pieces and run code on it in loop, and then stick it back together
+  ##This needs to be redone
+  
+Final_Geneabund_KO_MG.lng = as.data.frame(matrix(ncol = 27, nrow = 1))
+colnames(Final_Geneabund_KO_MG.lng) = c("sampleid", "counts", "SName", "LName", "KO", "Sample",   "Associatednumber", "DNA_concentration_ng.uL", "Station", "StationNumber", "Sample_type", "Sample_date", "SPM_mgperL", "DOC_mg.L", "TN_mg.L",  "DIC_mg.L", "DOC_uM.L", "DIC_uM.L", "POC_mgperL", "PTC_mgperL", "PTN_mgperL",  "PTH_mgperL", "BioSample", "ERANumber", "ProjectID", "data_type", "station_km")
+  
+i=1
+i=120
+for (i in 1:ceiling(dim(Geneabund_KO_MG.lng)[1]/18158)) {
+  
+  number = i * 18158 
+  #number = i * 20
+  
+  tmp.lng = Geneabund_KO_MG.lng[c((number-18158):number),] 
+  #tmp.lng = Geneabund_KO_MG.lng[c((number-20):number),] # Bug hunting
+  
+  tmp.out = tmp.lng %>% # reformat from a wide to long format, remove gene-cluster information, column names will be in the sampleid column, and values that would be NA are replaced with a 0.
+  left_join(annot, by = c("DESCRIPTION" = "DESCRIPTION"), relationship = "many-to-many") %>% # add gene information
+  mutate(KO = ifelse(DESCRIPTION == "amoA; ammonia monooxygenase subunit A", "K10944", KO)) %>% # add gene information for amoA
+  mutate(KO = ifelse(DESCRIPTION == "pmoA; methane monooxygenase subunit A", "K10944", KO)) %>% # add gene information for pmoA
+  dplyr::select(sampleid, counts, DESCRIPTION, KO, ) %>% # only keep relevant columns
+  separate(col = DESCRIPTION, sep = ";", into = c("SName", "LName")) %>% #separate description
+  left_join(metadata) %>% # add metadata
+  filter(Sample_date != "Nov 21") %>% # remove samples from Nov 21
+  filter(Station != 'BunthausSpitze') %>% #remove sample from BunthausSpitze
+  filter(data_type == 'METAG') %>% # keep only metagenomes
+  ##Identify genes occurring at 0.1% abundance in at least 30% of samples
+  ungroup() %>%
+  distinct()
+  
+  Final_Geneabund_KO_MG.lng = rbind(Final_Geneabund_KO_MG.lng, tmp.out)
+  
+  
+  if ( i == ceiling(dim(Geneabund_KO_MG.lng)[1]/18158) ) {
+    
+    end = dim(Geneabund_KO_MG.lng)[1]
+    number = ((i-1) * 18158)
+    tmp.lng = Geneabund_KO_MG.lng[c(number:end),] 
+    
+    tmp.out = tmp.lng %>% # reformat from a wide to long format, remove gene-cluster information, column names will be in the sampleid column, and values that would be NA are replaced with a 0.
+  left_join(annot, by = c("DESCRIPTION" = "DESCRIPTION"), relationship = "many-to-many") %>% # add gene information
+  mutate(KO = ifelse(DESCRIPTION == "amoA; ammonia monooxygenase subunit A", "K10944", KO)) %>% # add gene information fpr amoA
+  mutate(KO = ifelse(DESCRIPTION == "pmoA; methane monooxygenase subunit A", "K10944", KO)) %>% # add gene information for pmoA
+  dplyr::select(sampleid, counts, DESCRIPTION, KO, ) %>% # only keep relevant columns
+  separate(col = DESCRIPTION, sep = ";", into = c("SName", "LName")) %>% #separate description
+  left_join(metadata) %>% # add metadata
+  filter(Sample_date != "Nov 21") %>% # remove samples from Nov 21
+  filter(Station != 'BunthausSpitze') %>% #remove sample from BunthausSpitze
+  filter(data_type == 'METAG') %>% # keep only metagenomes
+  ##Identify genes occurring at 0.1% abundance in at least 30% of samples
+  ungroup() %>%
+  distinct()
+  
+  Final_Geneabund_KO_MG.lng = rbind(Final_Geneabund_KO_MG.lng, tmp.out)
+  
+  print(paste0("Finished the last one!"))
+  }
+  
+  print(paste0("Completed ", i, " out of ", round(dim(Geneabund_KO_MG.lng)[1]/18158), " dataframes, which is ", round(i/round(dim(Geneabund_KO_MG.lng)[1]/18158) * 100), "%"))
+  
+  
+}
+
+#Remove unnecesary top row, as it was generated when making the initial df
+Final_Geneabund_KO_MG.lng = Final_Geneabund_KO_MG.lng[-1,]
+
+Geneabund_KO_MG.lng = Final_Geneabund_KO_MG.lng
+
+#save in case of crashes (which are inevitable with a df of this size)
+saveRDS(Final_Geneabund_KO_MG.lng, "F:/Functional_R_analysis/Network/Geneabund_KO_MG.lng.rds")
+#Geneabund_KO_MG.lng = readRDS("E:/Functional_R_analysis/Network/Geneabund_KO_MG.lng.rds") 
+
+
+#Correct count data
+Geneabund_KO_MG.lng$counts = Geneabund_KO_MG.lng$counts / 1000
+
+#View(Geneabund_KO_MG.lng)
+dim(Geneabund_KO_MG.lng)
+
+#Reorder factors
+Geneabund_KO_MG.lng$Statio = factor(Geneabund_KO_MG.lng$Station,
+                                   levels = c("Medemgrund",
+                                              "Brunsbuettel",
+                                              "Schwarztonnensand",
+                                              "Twielenfleth",
+                                              "Muehlenberger Loch"))
+
+Geneabund_KO_MG.lng$Sample_date = gsub("-", " ",Geneabund_KO_MG.lng$Sample_date)
+
+Geneabund_KO_MG.lng$Sample_date = factor(Geneabund_KO_MG.lng$Sample_date,
+                                   levels = c("May 21",
+                                              "Jul 21",
+                                              "Nov 21",
+                                              "Feb 22",
+                                              "May 22",
+                                              "Jun 22",
+                                              "Nov 22"))
+
+#Make data_type names informative
+Geneabund_KO_MG.lng$data_type = gsub("METAG", "Metagenomes", Geneabund_KO_MG.lng$data_type)
+
+dim(Geneabund_KO_MG.lng)
+
+#Remove outliers and make dataframe wide from a long format
+Geneabund_KO_MG.wde = Geneabund_KO_MG.lng %>%
+  dplyr::select(Associatednumber, counts, KO) %>%
+  pivot_wider(names_from = KO, values_from = counts, values_fn = mean) %>%
+  as.data.frame() %>%
+  filter(Associatednumber!="164") %>%
+  column_to_rownames("Associatednumber")
+
+#We need to have samples as columns, and genes as rows in a wide format.
+WGCNA_MG_raw.df = t(Geneabund_KO_MG.wde)
+
+```
+
+
+
+
+
+
+
+
