@@ -232,7 +232,7 @@ h <- curl::new_handle()
 curl::handle_setopt(
   handle = h,
   httpauth = 1,
-  userpwd = "BICEST:vJGDYLs7"
+  userpwd = "" # Please ask for access
 )
 
 #url_geneabund <- "https://sunagawalab.ethz.ch/share/BICEST/GROS22/MAGs/gene_catalog/GROS22__insertcounts.lengthnorm.profile.cellab.profile.gz" 
