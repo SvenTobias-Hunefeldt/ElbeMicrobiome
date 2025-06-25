@@ -268,7 +268,7 @@ h <- curl::new_handle()
 curl::handle_setopt(
   handle = h,
   httpauth = 1,
-  userpwd = "BICEST:vJGDYLs7"
+  userpwd = #please ask for access
 )
 
 ##Download Data##
