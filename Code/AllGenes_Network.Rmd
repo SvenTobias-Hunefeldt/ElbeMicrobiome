@@ -51,12 +51,160 @@ library(genefilter)
 
 
 ```
+#Prep environment
+```{r}
+
+#Set seed to make results more reproducible
+set.seed(2)
+#Set language to english
+Sys.setenv(LANG = "en")
+#Set up working directory
+setwd("D:/Functional_R_analysis/")
+#Define theme for plotting
+My_Theme = theme_bw()+
+  theme(axis.title.x = element_text(size=18),
+       # theme_grey(base_size = 22),
+        axis.text.x = element_text(angle=0, colour = "black", vjust=1, hjust = 0.5, size=18), 
+        axis.text.y = element_text(colour = "black", size=18),
+        axis.title.y = element_text(size=18),
+        plot.title = element_text(size = 18, hjust = 0.5),
+        legend.title =element_text(size = 18),
+        legend.text = element_text(size = 16),
+        legend.position="right",
+        legend.key.size = unit(1, "cm"),
+        strip.text.x = element_text(size=18, face="bold"),
+        strip.text.y = element_text(size=18, face="bold"),
+        #panel.background = element_blank(),
+        panel.border = element_rect(fill = NA, colour = "black"),
+        strip.background = element_rect(colour="black"),
+       text = element_text(family = "sans"))
+
+Poster_Theme = theme_bw()+
+  theme(axis.title.x = element_text(size=28),
+       # theme_grey(base_size = 22),
+        axis.text.x = element_text(angle=0, colour = "black", vjust=1, hjust = 0.5, size=24), 
+        axis.text.y = element_text(colour = "black", size=24),
+        axis.title.y = element_text(size=28),
+        plot.title = element_text(size = 24, hjust = 0.5),
+        legend.title =element_text(size = 28),
+        legend.text = element_text(size = 24),
+        legend.position="right",
+        legend.key.size = unit(1, "cm"),
+        strip.text.x = element_text(size=24, face="bold"),
+        strip.text.y = element_text(size=24, face="bold"),
+        #panel.background = element_blank(),
+        panel.border = element_rect(fill = NA, colour = "black"),
+        strip.background = element_rect(colour="black"),
+       text = element_text(family = "sans"))
+
+#Station specific colours for consistency
+Station_colour_list <- c("Muelenberger Loch" =  "black",
+                "Twielenfleth" = "red",
+                #"" = "violet",
+                #"" = "violetred4", 
+                "Schwarztonnensand" = "navy",
+                #"" = "",
+                #"" = "thistle3", 
+                "Brunbuettel" = "forestgreen",
+                #"" = "darkred",
+                "Medemgrund" = "green",
+                #"" = "orange",
+                #"" = "turquoise",
+                #"" = "cornflowerblue",
+                #"" = "beige",
+                "Station6" = "magenta")
+
+Date_colour_list <- c(
+                "May 21" = "forestgreen",
+                "Jul 21" =  "red",
+                #"" = "violet",
+                #"" = "violetred4", 
+                #"" = "",
+                #"" = "thistle3", 
+                "Feb 22" = "black",
+                #"" = "darkred",
+                #"" = "turquoise",
+                #"" = "cornflowerblue",
+                #"" = "beige",
+                #"" = "orange",
+                "May 22" = "green",
+                "Jun 22" = "darkorange",
+                "Nov 22" = "cornflowerblue"
+                )
+
+#Colourblind friendly pallete
+cbbPalette <- c("black",
+                "red",
+                "navy", 
+                "green", 
+                "magenta",
+                "forestgreen")
+#If more options are needed
+expanded_cbbPalette <- c("#000000", #Black
+                "#E69F00", #Orange
+                "#56B4E9", #Blue (light)
+                "#009E73", #Sea green
+                "#CC79A7", #Magenta (light)
+                "#F0E442", #Yellow
+                "#0072B2", #Blue
+                "#D55E00", #Burnt orange
+                "dodgerblue4",
+                "rosybrown",
+                "floralwhite",
+                "lightgoldenrod4",
+                "cornsilk3",
+                "coral4",
+                "gray38",
+                "turquoise4",
+                "springgreen3",
+                "slateblue3",
+                "forestgreen",
+                "lightgreen") 
+
+#Shapes for ggplot2
+Shape_list = c(0, #Hollow square
+               15, #Filled square
+               1, #Hollow circle
+               16, #Filled circle
+               2, #Hollow triangle
+               17, #Filled triangle
+               5, #Hollow diamond
+               23) #Filled diamond
+                
+#Set up position dodge for ggplot2
+pd = position_dodge(0.15)
+
+ConditionColourList <- c("AlcianBlue" = "black",
+                         "CBBG" = "red")
+
+#Colourblind friendly pallete
+FractionColourList <- c("Suspended" = "grey50",
+                        "Sinking" = "black")
+FractionSecondaryColourList <- c(#"Suspended" = "black",
+                                 #"Sinking" = "red",
+                                 #"navy",
+                                 "Suspended" = "grey", 
+                                 "Sinking" = "grey40")
+
+
+Group_colours = c("Dissolved Organic" = "#000000", #Black
+                  "Dissolved Inorganic" =  "#E69F00", #Orange
+                  "Free-Living Organisms"= "#56B4E9", #Blue (light),
+                  "Suspended PAO" = "#009E73", #Sea green,
+                  "Sinking PAO" = "#CC79A7", #Magenta (light),
+                  "Suspended Organic Particles" = "#F0E442", #Yellow,
+                  "Suspended Inorganic Particles" = "#0072B2", #Blue,
+                  "Sinking Organic Particles" = "#D55E00", #Burnt orange,
+                  "Sinking Inorganic Particles" = "dodgerblue4")
+
+```
+
 #Prep metadata
 ```{r}
 
 
 #Read in new PP dataframe as a clean data frame
-Physicochem.df = read.csv("E:/Functional_R_analysis/PhysicochemicalParameters_mod2.txt", encoding = "UTF-8", sep = "\t") %>%
+Physicochem.df = read.csv("D:/Functional_R_analysis/PhysicochemicalParameters_mod2.txt", encoding = "UTF-8", sep = "\t") %>%
   subset(Sample_date!="Nov 21") #Remove data taken from shore
 
 #Clean up data  
@@ -267,7 +415,7 @@ All_WGCNA_taxtable = annot %>%
 
 ```
 
-#Carry out with metagenome data
+#Carry out with metagenome data - Figure 5
 ```{r Prep metagenome data}
 
 #Import gene list
@@ -377,7 +525,7 @@ Geneabund_KO_MG.lng = Final_Geneabund_KO_MG.lng
 
 #save in case of crashes (which are inevitable with a df of this size)
 saveRDS(Final_Geneabund_KO_MG.lng, "F:/Functional_R_analysis/Network/Geneabund_KO_MG.lng.rds")
-#Geneabund_KO_MG.lng = readRDS("E:/Functional_R_analysis/Network/Geneabund_KO_MG.lng.rds") 
+#Geneabund_KO_MG.lng = readRDS("D:/Functional_R_analysis/Network/Geneabund_KO_MG.lng.rds") 
 
 
 #Correct count data
@@ -1082,12 +1230,12 @@ unique(Results_WGCNA_MG.df$PhysicochemicalParameter)
 
 ```
 
-#Carry out with metatranscriptome data
+#Carry out with metatranscriptome data - all driven by 1-2 samples so excluded from analysis 
 
 ```{r}
 
 #Import gene list
-CarbonGenelist.df = read.csv("F:/Functional_R_analysis/CarbonGeneList.csv", header = T, sep = ";") %>%
+CarbonGenelist.df = read.csv("D:/Functional_R_analysis/CarbonGeneList.csv", header = T, sep = ";") %>%
   filter(KEGG_Orthology %nin% c("K10945", "K10946"))
 
 #amoAMatches.ls = annot %>%
@@ -1185,7 +1333,7 @@ Final_Geneabund_KO_MT.lng = Final_Geneabund_KO_MT.lng[-1,]
 
 #save in case of crashes (which are inevitable with a df of this size)
 saveRDS(Final_Geneabund_KO_MT.lng, "F:/Functional_R_analysis/Network/Geneabund_KO_MT.lng.rds")
-#Geneabund_KO_MT.lng = readRDS("F:/Functional_R_analysis/Network/Geneabund_KO_MT.lng.rds") 
+#Geneabund_KO_MT.lng = readRDS("D:/Functional_R_analysis/Network/Geneabund_KO_MT.lng.rds") 
 
 Geneabund_KO_MT.lng = Final_Geneabund_KO_MT.lng
 
@@ -1199,7 +1347,7 @@ dim(Geneabund_KO_MT.lng)
 
 write.csv(Geneabund_KO_MT.lng, "F:/Functional_R_analysis/OccurrenceFiltered_all_TG.csv")
 
-#Geneabund_KO_MT.lng = read.csv( "F:/Functional_R_analysis/OccurrenceFiltered_all_TG.csv", row.names = 1)
+#Geneabund_KO_MT.lng = read.csv( "D:/Functional_R_analysis/OccurrenceFiltered_all_TG.csv", row.names = 1)
 
 #Reorder factors
 Geneabund_KO_MT.lng$Station = factor(Geneabund_KO_MT.lng$Station,
@@ -1240,7 +1388,8 @@ Geneabund_KO_MT.lng = Geneabund_KO_MT.lng %>%
 CO2CH4_TG.df <- tidyr::spread(Geneabund_KO_MT.lng[ , ! names(Geneabund_KO_MT.lng) %in% c("X", "sampleid", "abundance", "occurrence", "X")], #Remove columns that will cause problems
                        data_type, #Column that will contain new column names
                        counts) %>% # Value that will fill new columns
-  mutate(across(c("Metagenomes", "Transcriptomes"), ~replace(., is.na(.), 0))) #Replace NAs with 0 in the new columns
+  filter(Transcriptomes > 0 & Metagenomes > 0) %>% #Remove all 0 values
+  filter(!is.na(Transcriptomes), !is.na(Metagenomes)) # remove all NAs
 #Ensure that it worked
 dim(Geneabund_KO_MT.lng)
 dim(CO2CH4_TG.df)
@@ -1250,11 +1399,6 @@ dim(CO2CH4_TG.df)
 
 #Calculate Transcripts per gene copy
 CO2CH4_TG.df$TranscriptsPerGenome = CO2CH4_TG.df$Transcriptomes / CO2CH4_TG.df$Metagenomes
-
-#Add more info - remove NA's and Infinite numbers
-CO2CH4_TG.df = CO2CH4_TG.df %>%
-  mutate_at(c("TranscriptsPerGenome"), ~replace(., is.na(.), 0)) %>% # This was ususally the case when 0/0
-  mutate_at(c("TranscriptsPerGenome"), ~replace(., is.infinite(.), "IncompleteMetagenome")) #Replace Infin with #/0, as Metagenome likely incomplete
 
 
 #This is our dataset
@@ -1306,7 +1450,7 @@ WGCNA_MT_raw.df = test %>%
 
 
 ```
-### Actual WGCNA for MT
+## Actual WGCNA for MT
 ```{r}
 
 set.seed(2)
@@ -1359,7 +1503,7 @@ dev.off()
 
 #Remove outliers
 mdata = mdata %>%
-  filter(value < 4000000)
+  filter(value < 40000)
 #Rerun above code to make sure outliers have been removed
 
 #Normalise data with DESeq2
@@ -1627,7 +1771,8 @@ plotDendroAndColors(
   guideHang = 0.05 )
 
 
-pdf("F:/Functional_R_analysis/Network/WGCNA_tree_MT_all.pdf", width = 16, height = 8)
+
+pdf("D:/Functional_R_analysis/Network/WGCNA_tree_MT_all.pdf", width = 16, height = 8)
 plotDendroAndColors(
   netwk$dendrograms[[1]],
   mergedColors[netwk$blockGenes[[1]]],
@@ -1670,7 +1815,7 @@ module_order = names(MEs0) %>% gsub("ME","", .)
 MEs0$treatment = row.names(MEs0)
 
 #export for downstream analysis backup
-write.csv(MEs0, "F:/Functional_R_analysis/Network/MEs0_MT.csv")
+write.csv(MEs0, "D:/Functional_R_analysis/Network/MEs0_MT.csv")
 
 # tidy & plot data
 mME = MEs0 %>%
@@ -1693,13 +1838,13 @@ WGCNA_sample_MT = mME %>% ggplot(., aes(x=treatment, y=name, fill=value)) +
   labs(title = "Module-trait Relationships", y = "Modules", fill="corr")
 WGCNA_sample_MT
 
-pdf("F:/Functional_R_analysis/Network/WGCNA_sample_MT_all.pdf", width = 20, height = 8)
+pdf("D:/Functional_R_analysis/Network/FigureS4_MT_SampleModule_WGCNA_sample_MT_all.pdf", width = 20, height = 8)
 WGCNA_sample_MT
 dev.off()
 
 
 # pick out a few modules of interest here
-modules_of_interest = c("green", "turquoise", "tan")
+modules_of_interest = c("green", "turquoise", "yellow", "brown", "blue")
 
 # Pull out list of genes in that module
 submod = module_df 
@@ -1868,7 +2013,7 @@ When any two X observations are dissimilar, are the corresponding Y observations
  
 ```{r}
 #Import MEs0
-MEs0 = read.csv("E:/Functional_R_analysis/Network/MEs0_MT.csv")
+MEs0 = read.csv("D:/Functional_R_analysis/Network/MEs0_MT.csv", row.names = 1)
 
 #Run loop for mOTUs vs individual physicochemical parameters
 Results_WGCNA_MT.df = data.frame("Data_type" = "TranscriptsPerGene",
@@ -1973,32 +2118,18 @@ unique(Results_WGCNA_MT.df$PhysicochemicalParameter)
 ##Metagenomes
 ###Set up microbiome taxa dataframes
 ```{r}
+#Import dataframe
+motus_final_taxa_metadata <- readRDS(file="D:/Functional_R_analysis/motus_final_taxa_metadata_mod.RDS")
 
-motus_final_taxa_metadata <- readRDS(file="E:/Functional_R_analysis/motus_final_taxa_metadata_mod.RDS")
+#Set metadata in the correct format
 metadata = Physicochem.df
 
-##Lets check out experimental scheme
-motus_final_taxa_metadata %>% 
-  dplyr::select(sampleid, data_type, date, station, sample_type) %>% 
-  group_by(data_type, sample_type, date) %>% 
-  dplyr::summarise(count=n_distinct(sampleid)) %>% 
-  print(n=30) 
-
-##So when we consider fraction and date we see that Nov 21 has few samples, we should consider removing it
-
-motus_final_taxa_metadata %>% 
-  dplyr::select(sampleid, data_type, date, station, sample_type) %>% 
-  group_by(data_type, sample_type, station) %>% 
-  dplyr::summarise(count=n_distinct(sampleid)) %>% 
-  print(n=30) 
-
-##By station we see that Kollmar, SeemanshÃ¶ft and BunthausSpitze also were sampled infrequently, lets also remove these. 
-
+#Exclude outlier results/results that don't fit into the experimental scheme
 motus_final_taxa_metadata <- motus_final_taxa_metadata %>% 
   filter(!grepl("Bunthaus|Kollmar|Seemans", station), !grepl("Nov 21", date))
 
 
-#so to do a ternary plot we actually need to create a physeq object really quick 
+#sCreate a physeq object
 motus_table <- motus_final_taxa_metadata %>%
   filter(data_type == "METAG") %>%
   dplyr::select(mOTU, sampleid, counts) %>%
@@ -2028,28 +2159,30 @@ bicest_motu_ps
 #bicest_motu_ps_v0 = bicest_motu_ps
 #bicest_motu_ps = bicest_motu_ps_v0
 
-Stupidworkaround.df = read.csv("E:/Functional_R_analysis/SAMEAID_SampleID_simplified.csv", sep = ";")
+
+#Rename samples with the appropriate Associatednumber
+#Stupidworkaround.df = read.csv("D:/Functional_R_analysis/SAMEAID_SampleID_simplified.csv", sep = ";")
 
 test = motus_sampledata
-i=1
-x=1
-for (i in 1:length(Stupidworkaround.df$BioSample)) {
-  for (x in 1:length(motus_sampledata$BioSample)) {
-  if(grepl(Stupidworkaround.df$BioSample[i], motus_sampledata$BioSample[x]) == T) {
+#i=1
+#x=1
+#for (i in 1:length(Stupidworkaround.df$BioSample)) {
+ # for (x in 1:length(motus_sampledata$BioSample)) {
+  #if(grepl(Stupidworkaround.df$BioSample[i], motus_sampledata$BioSample[x]) == T) {
     
-    test$Associatednumber[x] = Stupidworkaround.df$Associatednumber[i]
+   # motus_sampledata$Associatednumber[x] = Stupidworkaround.df$Associatednumber[i]
     
-    print(paste0("Matching ", motus_sampledata$BioSample[x], " with ", Stupidworkaround.df$BioSample[i]))
+    #print(paste0("Matching ", motus_sampledata$BioSample[x], " with ", Stupidworkaround.df$BioSample[i]))
     
-  }
-  }
-}
+#  }
+ # }
+#}
 
 
 
 #Fix german computer issues that replace periods and commas weirdly
-i=1
-x=59
+#i=1
+#x=59
 test$TEP_um2perL = 0
 test$CSP_um2perL = 0
 test$ParticleArea_um2perL = 0
@@ -2058,7 +2191,7 @@ test$doc_mg_l = 0
 test$dic_mg_l = 0
 for (i in 1:length(Physicochem.df$Associatednumber)) {
   for (x in 1:length(test$Associatednumber)) {
-  if(grepl(Physicochem.df$Associatednumber[i], test$Associatednumber[x]) == T) {
+  if(Physicochem.df$Associatednumber[i] == test$Associatednumber[x]) {
     
     print(paste0("Matching ", test$Associatednumber[x], " with ", Physicochem.df$Associatednumber[i]))
     
@@ -2116,8 +2249,9 @@ Microbiome_wide_mOTU = taxa.df %>%
   mutate(newname = paste0(taxapath, "__", OTU)) %>%
   dplyr::select(Abundance, Associatednumber, newname)
 
+write.csv(Microbiome_wide_mOTU, "D:/Functional_R_analysis/Taxaabund_all_mOTU_lng.csv")
 
-#Long to wide, in preparation for transcripts per gene copy calculation
+#Long to wide
 # The arguments to spread():
 # - data: Data object
 # - key: Name of column containing the new column names
@@ -2140,7 +2274,6 @@ colSums(Microbiome_wide_mOTU)
 ```
 
 ## Actual WGCNA for mOTUs
-### Sample_type
 ```{r}
 
 set.seed(2)
@@ -2189,7 +2322,7 @@ mdata$name = as.character(mdata$name)
     facet_grid(cols = vars(group), drop = TRUE, scales = "free_x")      # Facet by hour
 p
 
-pdf("E:/Functional_R_analysis/Network/WGCNA_OutlierHunting_mOTU_all.pdf", width = 48, height = 10)
+pdf("D:/Functional_R_analysis/Network/WGCNA_OutlierHunting_mOTU_all.pdf", width = 48, height = 10)
 p
 dev.off()
 #No outliers were detected
@@ -2490,7 +2623,7 @@ module_df[1:5,]
 #> 5  K00471   grey
 
 write_delim(module_df,
-            file = "E:/Functional_R_analysis/Network/WGCNA_gene_modules_mOTUs_all.txt",
+            file = "D:/Functional_R_analysis/Network/WGCNA_gene_modules_mOTUs_all.txt",
             delim = "\t")
 
 #How many modules are there
@@ -2507,7 +2640,7 @@ module_order = names(MEs0) %>% gsub("ME","", .)
 MEs0$treatment = row.names(MEs0)
 
 #Export MEs0 for later downstream analysis
-write.csv(MEs0, "E:/Functional_R_analysis/Network/MEsO_mOTUs.csv")
+write.csv(MEs0, "D:/Functional_R_analysis/Network/MEsO_mOTUs.csv")
 
 # tidy & plot data
 mME = MEs0 %>%
@@ -2547,7 +2680,7 @@ row.names(module_df) = module_df$gene_id
 wpn_vsd[1:5,1:10]
 
 #Subset gene list - expression profiles
-subexpr = wpn_vsd[submod$gene_id,]
+subexpr = wpn_vsd
 
 #Make into a dataframe
 submod_df = data.frame(subexpr) %>%
@@ -2576,7 +2709,7 @@ submod_df %>% ggplot(., aes(x=name, y=value, group=gene_id)) +
 
 genes_of_interest = module_df
 
-expr_of_interest = wpn_vsd[module_df$gene_id,]
+expr_of_interest = wpn_vsd
 expr_of_interest[1:5,1:5]
 #>                       B-3      B-4      B-5      L-3      L-4
 #> AC186512.3_FG001 6.901539 7.389644 6.975945 6.859593 7.370816
@@ -2587,7 +2720,7 @@ expr_of_interest[1:5,1:5]
 
 genes_of_interest = module_df
 
-expr_of_interest = wpn_vsd[genes_of_interest$gene_id,]
+expr_of_interest = wpn_vsd
 expr_of_interest[1:5,1:5]
 #>                       B-3      B-4      B-5      L-3      L-4
 #> AC186512.3_FG001 6.901539 7.389644 6.975945 6.859593 7.370816
@@ -2687,7 +2820,7 @@ V(network)$mOTU_ID = networktaxa.df$mOTU_ID
   
 
 # Export Network file to be read into Gephi, Cytoscape, VisANT, etc
-write_graph(network, "E:/Functional_R_analysis/Network/WGCNA_all_mOTUs_type.graphml", format = "graphml")
+write_graph(network, "D:/Functional_R_analysis/Network/WGCNA_all_mOTUs_type.graphml", format = "graphml")
 
 #Export edge file for back up
 write_delim(edge_list,
@@ -2699,7 +2832,7 @@ write_delim(edge_list,
 rm(Geneabund_KO_mOTUs.lng, Final_Geneabund_KO_mOTUs.lng, Geneabund_KO_mOTUs.wde, WGCNA_mOTUs_raw.df, MEs0, network, netwk, test, tmp.out, TOM, adj, edge_list, expr_of_interest, genecat_ps, input_mat, mdata, subexpr, vsd, dds, wpn_vsd.df, wpn_vsd)
 gc()
 ```
-##Correlate to environmental data
+###Correlate to environmental data
 
 The Pearson correlation test answers something like the question
 
@@ -2712,7 +2845,9 @@ When any two X observations are similar, are the corresponding Y observations al
 When any two X observations are dissimilar, are the corresponding Y observations also dissimilar?
  
 ```{r}
-
+#Import dataframe
+#Export MEs0 for later downstream analysis
+MEs0 = read.csv("D:/Functional_R_analysis/Network/MEsO_mOTUs.csv")
 MEs0
 
 #Run loop for motus vs individual physicochemical parameters
@@ -2815,8 +2950,8 @@ unique(Results_WGCNA_mOTUs.df$PhysicochemicalParameter)
 
 ```
 
-##Metatranscriptomes
-###Set up microbiome taxa dataframes
+###Metatranscriptomes
+####Set up microbiome taxa dataframes
 ```{r}
 
 motus_final_taxa_metadata <- readRDS(file="E:/Functional_R_analysis/motus_final_taxa_metadata_mod.RDS")
@@ -2984,8 +3119,8 @@ colSums(Microbiome_wide_mOTU)
 
 ```
 
-### Actual WGCNA for mOTUs
-#### Sample_type
+#### Actual WGCNA for mOTUs
+##### Sample_type
 ```{r}
 
 set.seed(2)
@@ -3541,7 +3676,7 @@ write_delim(edge_list,
 
 
 ```
-###Correlate to environmental data
+####Correlate to environmental data
 
 The Pearson correlation test answers something like the question
 
@@ -3657,7 +3792,7 @@ unique(Results_WGCNA_mOTUs_MT.df$PhysicochemicalParameter)
 
 ```
 
-# Plots
+## Plots - Figure 5
 ```{r}
 
 #Combine dataframes for a single plot
@@ -3829,14 +3964,14 @@ df_percentages
 ```
 ##Metatranscriptomes
 ```{r}
-MT_modules.df = read.csv("F:/Functional_R_analysis/Network/WGCNA_all_MT_nodes.csv") %>%
+MT_modules.df = read.csv("D:/Functional_R_analysis/Network/WGCNA_all_MT_nodes.csv", sep = ";") %>%
   dplyr::select(v_name, v_module) %>%
   mutate(KO = v_name) 
 
 unique(MT_modules.df$v_module)
 
 #Import gene list
-CarbonGenelist.df = read.csv("F:/Functional_R_analysis/CarbonGeneList.csv", header = T, sep = ";") %>%
+CarbonGenelist.df = read.csv("D:/Functional_R_analysis/CarbonGeneList.csv", header = T, sep = ";") %>%
   filter(KEGG_Orthology %nin% c("K10945", "K10946"))
 
 amoAMatches.ls = annot %>%
@@ -3866,12 +4001,12 @@ MT_modules_info.df = annot %>%
   #ungroup() %>%
   distinct()
 
-colnames(WGCNA_modules_Cinfo.df)
-
 WGCNA_modules_Cinfo.df = MT_modules_info.df %>%
   filter(!is.na(v_module)) %>%
   left_join(CarbonGenelist.df, by = c("KO" = "KEGG_Orthology")) %>%
   dplyr::select(SName, LName, KO, v_module, Compound)
+
+colnames(WGCNA_modules_Cinfo.df)
 
 module_total = WGCNA_modules_Cinfo.df %>%
   dplyr::count(v_module) %>%
@@ -3882,7 +4017,7 @@ module_total
 # Calculate the count and percentage of compounds within each v_module
 df_percentages <- WGCNA_modules_Cinfo.df %>%
   group_by(v_module) %>%  # Group by v_module
-  count(Compound) %>%      # Count the number of occurrences of each Compound within each v_module
+  dplyr::count(Compound) %>%      # Count the number of occurrences of each Compound within each v_module
   mutate(percentage = n / sum(n) * 100) %>%  # Calculate the percentage within each v_module
   ungroup()  # Ungroup to prevent affecting subsequent operations
 df_percentages
@@ -3890,105 +4025,1053 @@ df_percentages
 ```
 
 
-#Abundance of modules across PP - heatmap - already done, just need to match colours to numbers
+#Module abundance across spatiotemporal parameters - 
 
-```{r}
-
-#Import C and N gene list
-CarbonGenelist.df = read.csv("E:/Functional_R_analysis/CarbonGeneList.csv", header = T, sep = ";") %>%
-  filter(KEGG_Orthology %nin% c("K10945", "K10946"))
-
-
-
-```
-
-##Metagenomes
-```{r}
-
-MG_mod.df = read.csv("E:/Functional_R_analysis/Network/WGCNA_network_MG_all.csv", sep = ";") %>%
-  dplyr::select(v_name, v_module, X, Y)
-
-#MEs0 = read.csv("E:/Functional_R_analysis/Network/MEsO_MG.csv")
-
-network_modules_MG.df = read.csv("E:/Functional_R_analysis/Network/edgelist_MG_all_type.tsv", sep = "\t") %>%
-  dplyr::select(gene1, module1) %>%
-  distinct()
-
-
-MG_module_KO.df = network_modules_MG.df %>%
-  left_join(MG_mod.df, by = c("gene1" = "v_name")) %>%
-  drop_na(v_module) %>%
-  left_join(annot, by = c("gene1" = "KO")) %>%
-  distinct() %>%
-  rename(KO = gene1) %>%
-  dplyr::select(KO, DESCRIPTION, v_module, module1) %>%
-  left_join(CarbonGenelist.df, by = c("KO" = "KEGG_Orthology")) %>%
-  dplyr::select(KO, DESCRIPTION, v_module, module1, Compound)
-MG_module_KO.df
-
-```
-##Metatranscriptomes
-```{r}
-
-MT_mod.df = read.csv("E:/Functional_R_analysis/Network/WGCNA_network_MT_all.csv", sep = ";") %>%
-  dplyr::select(v_name, v_module, X, Y)
-
-#MEs0 = read.csv("E:/Functional_R_analysis/Network/MEsO_MT.csv")
-
-network_modules_MT.df = read.csv("E:/Functional_R_analysis/Network/edgelist_MT_all_type.tsv", sep = "\t") %>%
-  dplyr::select(gene1, module1) %>%
-  distinct()
-
-
-MT_module_KO.df = network_modules_MT.df %>%
-  left_join(MT_mod.df, by = c("gene1" = "v_name")) %>%
-  drop_na(v_module) %>%
-  left_join(annot, by = c("gene1" = "KO")) %>%
-  distinct() %>%
-  rename(KO = gene1) %>%
-  dplyr::select(KO, DESCRIPTION, v_module, module1) %>%
-  left_join(CarbonGenelist.df, by = c("KO" = "KEGG_Orthology")) %>%
-  dplyr::select(KO, DESCRIPTION, v_module, module1, Compound)
-MT_module_KO.df
-
-```
 ##mOTUs
-
+###Prep taxa and module ID df
 ```{r}
 
-
-mOTUs_mod.df = read.csv("E:/Functional_R_analysis/Network/WGCNA_network_mOTUs_all.csv", sep = ";") %>%
+#Read in KO and module information (numeric)
+mOTUs_mod.df = read.csv("F:/Functional_R_analysis/Network/WGCNA_network_mOTUs_all.csv", sep = ";") %>%
   dplyr::select(v_name, v_module, X, Y)
 
 #MEs0 = read.csv("E:/Functional_R_analysis/Network/MEsO_mOTUs.csv")
 
-network_modules_mOTUs.df = read.csv("E:/Functional_R_analysis/Network/edgelist_mOTUs_all_type.tsv", sep = "\t") %>%
+#Read in KO and module information (colour)
+network_modules_mOTUs.df = read.csv("F:/Functional_R_analysis/Network/edgelist_mOTUs_all_type.tsv", sep = "\t") %>%
   dplyr::select(gene1, module1) %>%
   distinct()
 
-
-mOTUs_module_KO.df = network_modules_mOTUs.df %>%
+#Combine KO and both module IDs (numeric and colour)
+mOTUs_module_taxa.df = network_modules_mOTUs.df %>%
   left_join(mOTUs_mod.df, by = c("gene1" = "v_name")) %>%
   drop_na(v_module) %>%
-  #left_join(annot, by = c("gene1" = "KO")) %>%
   distinct() %>%
   dplyr::rename(taxa = gene1) %>%
   dplyr::select(taxa, v_module, module1) 
-mOTUs_module_KO.df
+mOTUs_module_taxa.df
 
 
 ```
-#Match mOTUs to MAGs and get functional info
+###Prep mOTU dataframe
+```{r}
+#Import df
+Microbiome_wide_mOTU  = read.csv("F:/Functional_R_analysis/Taxaabund_all_mOTU_lng.csv", row.names = 1)
+
+metadata = metadata_v0 %>%
+  filter(data_type == "METAG") %>%
+  mutate(station_km = replace(station_km, station_km == 652, 651))
+
+```
+
+###Combine and plot
+```{r}
+
+#Combine dataframes
+mOTU_module_ab.df = Microbiome_wide_mOTU %>% #load in df
+  left_join(mOTUs_module_taxa.df, by = c("newname" = "taxa")) %>% # combine with module information
+  drop_na(module1) %>% #remove genes that were not part of a module
+  mutate(module1 = stringr::str_to_title(module1)) %>% #Capitalise all module names
+  mutate(Associatednumber = as.numeric(Associatednumber)) %>%
+  distinct() %>%
+  left_join(metadata, by = c("Associatednumber" = "Associatednumber"), relationship = "many-to-one") %>%
+  distinct() #sanity check to ensure only one copy of each row is present
+
+#Set up for analysis
+mOTU_module_ab.sum = mOTU_module_ab.df %>%
+  group_by(module1, station_km, Associatednumber) %>%
+  dplyr::summarise(sum_val = sum(Abundance),
+                   sd_val = sd(Abundance)) %>%
+  filter(station_km < 714 & station_km > 632)
+
+#Set groups manually
+mOTU_module_ab.sum$groups = paste0(mOTU_module_ab.sum$station_km, mOTU_module_ab.sum$module1)
+
+#Set station km appropriately
+mOTU_module_ab.sum$station_km = factor(mOTU_module_ab.sum$station_km,
+                                     levels = c("713",
+                                                "692",
+                                                "665",
+                                                "651",
+                                                "633"
+                                                ))
+
+#Generate spatial plot
+mOTU_km.plt = ggplot(mOTU_module_ab.sum,aes(y = sum_val*100, 
+                           x = as.factor(station_km), 
+                           #colour = module1,
+                           fill = module1,
+                           group = groups)) +
+  geom_boxplot(lwd = 1) +
+  scale_y_log10() +
+  facet_grid(. ~ module1)+
+  xlab("Elbe km") +
+  ylab("Module taxa abundance (%)") +
+  #scale_color_identity(guide = "legend") +
+  scale_fill_identity(guide = "legend") +
+  guides(colour=guide_legend(title="Module")) +
+  My_Theme+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  #stat_pvalue_manual(subset(results.df, p.adj > 0.05), 
+  #                   label = "p.symbol")
+  #ggpubr::stat_pwc(method = "wilcox_test",
+   #                p.adjust.method = "holm")
+mOTU_km.plt
+
+
+
+
+#Set up for analysis
+
+mOTU_module_ab.sum = mOTU_module_ab.df %>%
+  group_by(module1, Sample_date, Associatednumber) %>%
+  dplyr::summarise(sum_val = sum(Abundance),
+                   sd_val = sd(Abundance))
+
+#Set groups manually
+mOTU_module_ab.sum$Sample_date = gsub("-", " ",mOTU_module_ab.sum$Sample_date)
+mOTU_module_ab.sum$groups = paste0(mOTU_module_ab.sum$Sample_date, mOTU_module_ab.sum$module1)
+
+
+#Ensure order for dates
+mOTU_module_ab.sum$Sample_date = factor(mOTU_module_ab.sum$Sample_date,
+                                   levels = c("May 21",
+                                              "Jul 21",
+                                              "Nov 21",
+                                              "Feb 22",
+                                              "May 22",
+                                              "Jun 22",
+                                              "Nov 22"))
+
+#Generate spatial plot
+mOTU_date.plt = ggplot(mOTU_module_ab.sum,aes(y = sum_val*100, 
+                           x = as.factor(Sample_date), 
+                           #colour = module1,
+                           fill = module1,
+                           group = groups)) +
+  geom_boxplot(lwd = 1) +
+  scale_y_log10() +
+  facet_grid(. ~ module1)+
+  xlab("Date") +
+  ylab("Module taxa abundance (%)") +
+  #scale_color_identity(guide = "legend") +
+  scale_fill_identity(guide = "legend") +
+  guides(colour=guide_legend(title="Module")) +
+  My_Theme+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  #stat_pvalue_manual(subset(results.df, p.adj > 0.05), 
+  #                   label = "p.symbol")
+  #ggpubr::stat_pwc(method = "wilcox_test",
+   #                p.adjust.method = "holm")
+  
+mOTU_date.plt
+
+
+```
+##Metagenomes
+###Prep KO and module ID df
+```{r}
+#Read in KO and module information (numeric)
+MG_mod.df = read.csv("F:/Functional_R_analysis/Network/WGCNA_network_MG_all.csv", sep = ";") %>%
+  dplyr::select(v_name, v_module, X, Y)
+
+#Read in KO and module information (colour)
+network_modules_MG.df = read.csv("F:/Functional_R_analysis/Network/edgelist_MG_all_type.tsv", sep = "\t") %>%
+  dplyr::select(gene1, module1) %>%
+  distinct()
+
+#Combine KO and both module IDs (numeric and colour)
+MG_module_KO.df = network_modules_MG.df %>%
+  left_join(MG_mod.df, by = c("gene1" = "v_name")) %>%
+  drop_na(v_module) %>%
+  dplyr::rename(KO = gene1) %>%
+  dplyr::select(KO, v_module, module1) %>%
+  distinct()
+MG_module_KO.df
+
+unique(MG_module_KO.df$module1)
+
+```
+###Prep metagenome dataframe
+```{r}
+#Import precalculated dataframe
+#Geneabund_KO_MG.lng = readRDS("F:/Functional_R_analysis/Network/Geneabund_KO_MG.lng.rds") 
+
+
+#Correct count data
+Geneabund_KO_MG.lng$counts = Geneabund_KO_MG.lng$counts / 1000
+
+#View(Geneabund_KO_MG.lng)
+dim(Geneabund_KO_MG.lng)
+
+#Reorder factors
+Geneabund_KO_MG.lng$Statio = factor(Geneabund_KO_MG.lng$Station,
+                                   levels = c("Medemgrund",
+                                              "Brunsbuettel",
+                                              "Schwarztonnensand",
+                                              "Twielenfleth",
+                                              "Muehlenberger Loch"))
+
+Geneabund_KO_MG.lng$Sample_date = gsub("-", " ",Geneabund_KO_MG.lng$Sample_date)
+
+Geneabund_KO_MG.lng$Sample_date = factor(Geneabund_KO_MG.lng$Sample_date,
+                                   levels = c("May 21",
+                                              "Jul 21",
+                                              "Nov 21",
+                                              "Feb 22",
+                                              "May 22",
+                                              "Jun 22",
+                                              "Nov 22"))
+
+#Make data_type names informative
+Geneabund_KO_MG.lng$data_type = gsub("METAG", "Metagenomes", Geneabund_KO_MG.lng$data_type)
+
+dim(Geneabund_KO_MG.lng)
+```
+###Combine and plot
+```{r}
+
+#Combine dataframes
+MG_module_ab.df = Geneabund_KO_MG.lng %>% #load in df
+  left_join(MG_module_KO.df) %>% # combine with module information
+  drop_na(module1) %>% #remove genes that were not part of a module
+  mutate(module1 = stringr::str_to_title(module1)) %>% #Capitalise all module names
+  distinct() #sanity check to ensure only one copy of each row is present
+
+#Set groups manually
+MG_module_ab.df$groups = paste0(MG_module_ab.df$station_km, MG_module_ab.df$module1)
+
+#Run pairwise wilcoxon tests
+#results.df = rstatix::pairwise_wilcox_test(MG_module_ab.df, counts ~ groups, p.adjust.method = "bonferroni") %>%
+ # rstatix::add_significance(p.col = "p", output.col = "p.symbol") %>% # Adds significance labels  
+  #rstatix::add_y_position(fun = "max")  # Ensures y positions are properly set
+
+#Set up for analysis
+MG_module_ab.sum = MG_module_ab.df %>%
+  group_by(module1, station_km, Associatednumber) %>%
+  dplyr::summarise(sum_val = sum(counts),
+                   sd_val = sd(counts))
+
+#Set groups manually
+MG_module_ab.sum$groups = paste0(MG_module_ab.sum$station_km, MG_module_ab.sum$module1)
+
+#Set station km appropriately
+MG_module_ab.sum$station_km = factor(MG_module_ab.sum$station_km,
+                                     levels = c("713",
+                                                "692",
+                                                "665",
+                                                "651",
+                                                "633"
+                                                ))
+
+#Generate spatial plot
+MG_km.plt = ggplot(MG_module_ab.sum,aes(y = sum_val, 
+                           x = as.factor(station_km), 
+                           #colour = module1,
+                           fill = module1,
+                           group = groups)) +
+  geom_boxplot(lwd = 1) +
+  scale_y_log10() +
+  facet_wrap(. ~ module1, ncol = 8)+
+  xlab("Elbe km") +
+  ylab("Module gene count \n(per genome)") +
+  #scale_color_identity(guide = "legend") +
+  scale_fill_identity(guide = "legend") +
+  guides(colour=guide_legend(title="Module")) +
+  My_Theme+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  #stat_pvalue_manual(subset(results.df, p.adj > 0.05), 
+  #                   label = "p.symbol")
+  #ggpubr::stat_pwc(method = "wilcox_test",
+   #                p.adjust.method = "holm")
+MG_km.plt
+
+
+
+
+#Set up for analysis
+MG_module_ab.sum = MG_module_ab.df %>%
+  group_by(module1, Sample_date, Associatednumber) %>%
+  dplyr::summarise(sum_val = sum(counts),
+                   sd_val = sd(counts))
+
+#Set groups manually
+MG_module_ab.sum$groups = paste0(MG_module_ab.sum$Sample_date, MG_module_ab.sum$module1)
+
+#Ensure order for dates
+MG_module_ab.sum$Sample_date = factor(MG_module_ab.sum$Sample_date,
+                                   levels = c("May 21",
+                                              "Jul 21",
+                                              "Nov 21",
+                                              "Feb 22",
+                                              "May 22",
+                                              "Jun 22",
+                                              "Nov 22"))
+
+#Generate spatial plot
+MG_date.plt = ggplot(MG_module_ab.sum,aes(y = sum_val, 
+                           x = as.factor(Sample_date), 
+                           #colour = module1,
+                           fill = module1,
+                           group = groups)) +
+  geom_boxplot(lwd = 1) +
+  scale_y_log10() +
+  facet_wrap(. ~ module1, ncol = 8)+
+  xlab("Date") +
+  ylab("Module gene count \n(per genome)") +
+  #scale_color_identity(guide = "legend") +
+  scale_fill_identity(guide = "legend") +
+  guides(colour=guide_legend(title="Module")) +
+  My_Theme+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  #stat_pvalue_manual(subset(results.df, p.adj > 0.05), 
+  #                   label = "p.symbol")
+  #ggpubr::stat_pwc(method = "wilcox_test",
+   #                p.adjust.method = "holm")
+  
+MG_date.plt
+
+```
+
+
+##Metatranscriptomes - don't need as WGCNA failed
+
+###Prep KO and module ID df
+```{r}
+#Read in KO and module information (numeric)
+MT_mod.df = read.csv("F:/Functional_R_analysis/Network/WGCNA_network_MT_all.csv", sep = ";") %>%
+  dplyr::select(v_name, v_module, X, Y)
+
+#Read in KO and module information (colour)
+network_modules_MT.df = read.csv("F:/Functional_R_analysis/Network/edgelist_MT_all_type.tsv", sep = "\t") %>%
+  dplyr::select(gene1, module1) %>%
+  distinct()
+
+#Combine KO and both module IDs (numeric and colour)
+MT_module_KO.df = network_modules_MT.df %>%
+  left_join(MT_mod.df, by = c("gene1" = "v_name")) %>%
+  drop_na(v_module) %>%
+  dplyr::rename(KO = gene1) %>%
+  dplyr::select(KO, v_module, module1) %>%
+  distinct()
+MT_module_KO.df
+
+```
+###Prep metatranscriptome dataframe
+```{r}
+#Load df
+Geneabund_KO_MT.lng = read.csv( "F:/Functional_R_analysis/OccurrenceFiltered_all_TG.csv", row.names = 1)
+
+#Reorder factors
+Geneabund_KO_MT.lng$Station = factor(Geneabund_KO_MT.lng$Station,
+                                   levels = c("Medemgrund",
+                                              "Brunsbuettel",
+                                              "Schwarztonnensand",
+                                              "Twielenfleth",
+                                              "Muehlenberger Loch"))
+
+Geneabund_KO_MT.lng$Sample_date = gsub("-", " ",Geneabund_KO_MT.lng$Sample_date)
+
+Geneabund_KO_MT.lng$Sample_date = factor(Geneabund_KO_MT.lng$Sample_date,
+                                   levels = c("May 21",
+                                              "Jul 21",
+                                              "Nov 21",
+                                              "Feb 22",
+                                              "May 22",
+                                              "Jun 22",
+                                              "Nov 22"))
+
+#Make data_type names informative
+Geneabund_KO_MT.lng$data_type = gsub("METAG", "Metagenomes", Geneabund_KO_MT.lng$data_type)
+Geneabund_KO_MT.lng$data_type = gsub("METAT", "Transcriptomes", Geneabund_KO_MT.lng$data_type)
+
+#As we split it into a loop and 120 separate dataframes, we just need to run distinct one more time, but on the end dataframe
+Geneabund_KO_MT.lng = Geneabund_KO_MT.lng %>%
+  distinct()
+
+#Long to wide, in preparation for transcripts per gene copy calculation
+# The arguments to spread():
+# - data: Data object
+# - key: Name of column containing the new column names
+# - value: Name of column containing values
+CO2CH4_TG.df <- tidyr::spread(Geneabund_KO_MT.lng[ , ! names(Geneabund_KO_MT.lng) %in% c("X", "sampleid", "abundance", "occurrence", "X")], #Remove columns that will cause problems
+                       data_type, #Column that will contain new column names
+                       counts) %>% # Value that will fill new columns
+  filter(Transcriptomes > 0 & Metagenomes > 0) %>% #Remove all 0 values
+  filter(!is.na(Transcriptomes), !is.na(Metagenomes)) # remove all NAs
+#Ensure that it worked
+dim(Geneabund_KO_MT.lng)
+dim(CO2CH4_TG.df)
+
+
+#Calculate Transcripts per gene copy
+CO2CH4_TG.df$TranscriptsPerGenome = CO2CH4_TG.df$Transcriptomes / CO2CH4_TG.df$Metagenomes
+
+
+#This is our dataset
+CO2CH4_TG.df
+
+```
+
+
+###Combine and plot
+```{r}
+
+#Combine dataframes
+MT_module_ab.df = CO2CH4_TG.df %>% #load in df
+  left_join(MT_module_KO.df, by = c("KO" = "KO")) %>% # combine with module information
+  drop_na(module1) %>% #remove genes that were not part of a module
+  mutate(module1 = stringr::str_to_title(module1)) %>% #Capitalise all module names
+  distinct() #sanity check to ensure only one copy of each row is present
+
+#Set up for analysis
+MT_module_ab.sum = MT_module_ab.df %>%
+  group_by(module1, station_km, Associatednumber) %>%
+  dplyr::summarise(sum_val = sum(TranscriptsPerGenome),
+                   sd_val = sd(TranscriptsPerGenome))
+
+#Set groups manually
+MT_module_ab.sum$groups = paste0(MT_module_ab.sum$station_km, MT_module_ab.sum$module1)
+
+#Set station km appropriately
+MT_module_ab.sum$station_km = factor(MT_module_ab.sum$station_km,
+                                     levels = c("713",
+                                                "692",
+                                                "665",
+                                                "651",
+                                                "633"
+                                                ))
+
+#Generate spatial plot
+MT_km.plt = ggplot(MT_module_ab.sum,aes(y = sum_val, 
+                           x = as.factor(station_km), 
+                           #colour = module1,
+                           fill = module1,
+                           group = groups)) +
+  geom_boxplot(lwd = 1) +
+  scale_y_log10() +
+  facet_grid(. ~ module1)+
+  xlab("Elbe km") +
+  ylab("Module transcript count \n(per gene)") +
+  #scale_color_identity(guide = "legend") +
+  scale_fill_identity(guide = "legend") +
+  guides(colour=guide_legend(title="Module")) +
+  My_Theme+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  #stat_pvalue_manual(subset(results.df, p.adj > 0.05), 
+  #                   label = "p.symbol")
+  #ggpubr::stat_pwc(method = "wilcox_test",
+   #                p.adjust.method = "holm")
+MT_km.plt
+
+
+
+#Set up for analysis
+MT_module_ab.sum = MT_module_ab.df %>%
+  group_by(module1, Sample_date, Associatednumber) %>%
+  dplyr::summarise(sum_val = sum(TranscriptsPerGenome),
+                   sd_val = sd(TranscriptsPerGenome))
+
+#Set groups manually
+MT_module_ab.sum$groups = paste0(MT_module_ab.sum$Sample_date, MT_module_ab.sum$module1)
+
+#Ensure order for dates
+MT_module_ab.sum$Sample_date = factor(MT_module_ab.sum$Sample_date,
+                                   levels = c("May 21",
+                                              "Jul 21",
+                                              "Nov 21",
+                                              "Feb 22",
+                                              "May 22",
+                                              "Jun 22",
+                                              "Nov 22"))
+
+#Generate spatial plot
+MT_date.plt = ggplot(MT_module_ab.sum,aes(y = sum_val, 
+                           x = as.factor(Sample_date), 
+                           #colour = module1,
+                           fill = module1,
+                           group = groups)) +
+  geom_boxplot(lwd = 1) +
+  scale_y_log10() +
+  facet_grid(. ~ module1)+
+  xlab("Date") +
+  ylab("Module transcript count \n(per gene)") +
+  #scale_color_identity(guide = "legend") +
+  scale_fill_identity(guide = "legend") +
+  guides(colour=guide_legend(title="Module")) +
+  My_Theme+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  #stat_pvalue_manual(subset(results.df, p.adj > 0.05), 
+  #                   label = "p.symbol")
+  #ggpubr::stat_pwc(method = "wilcox_test",
+   #                p.adjust.method = "holm")
+  
+MT_date.plt
+
+
+```
+
+
+##Combine different plots and export as png and pdf
+```{r}
+
+module_abundance.plt = ggpubr::ggarrange(mOTU_km.plt, MG_km.plt, 
+                                         mOTU_date.plt, MG_date.plt,
+                                         
+                                         ncol = 2,
+                                         nrow = 2)
+module_abundance.plt
+
+png("F:/Functional_R_analysis/Figures/FigureS1_ModuleAbundance.png", units = "in", res = 300, width = 24, height = 12)
+module_abundance.plt
+dev.off()
+
+
+pdf("F:/Functional_R_analysis/Figures/FigureS1_ModuleAbundance.pdf", width = 24, height = 12)
+module_abundance.plt
+dev.off()
+
+```
+##Specific modules vs PP
+```{r}
+
+require(ggpmisc)
+require(SparseM)
+
+```
+
+###Salinity
+####mOTUs
+```{r}
+
+#Combine dataframes
+mOTU_module_ab.df = Microbiome_wide_mOTU %>% #load in df
+  left_join(mOTUs_module_taxa.df, by = c("newname" = "taxa")) %>% # combine with module information
+  drop_na(module1) %>% #remove genes that were not part of a module
+  mutate(module1 = stringr::str_to_title(module1)) %>% #Capitalise all module names
+  mutate(Associatednumber = as.numeric(Associatednumber)) %>%
+  left_join(metadata, by = c("Associatednumber" = "Associatednumber")) %>%
+  distinct() %>% #sanity check to ensure only one copy of each row is present
+  filter(module1 %in% c("Turquoise", "Yellow", "Blue",
+                        "Grey"))# extract only the modules we want
+
+
+#Set up for analysis
+mOTU_module_ab.sum = mOTU_module_ab.df %>% # load in data
+  group_by(module1, station_km, Associatednumber) %>% # group by relevant columns
+  dplyr::summarise(sum_val = sum(Abundance), # calculate the sum
+                   sd_val = sd(Abundance)) %>% # calculate standard deviation
+  ungroup() %>% # remove the grouping it calculates everything with
+  left_join(metadata) %>% # %>% # add salinity and other metadata back
+  mutate(bins = cut(Salinity_PSU, breaks=c(0, 3, 6, 9, 12, 15, 18, 21))) %>% # bin based on ranges
+  dplyr::select(bins, sum_val, module1)
+
+#Make sure the bins column looks nice
+mOTU_module_ab.sum$bins = gsub("\\(|\\]", "", mOTU_module_ab.sum$bins)
+mOTU_module_ab.sum$bins = gsub(",", "-", mOTU_module_ab.sum$bins)
+
+#Plot against salinity - might need to sum like before
+mOTU_sal.plt = ggplot(mOTU_module_ab.sum, aes(y = sum_val * 100, x = as.integer(factor(bins)), fill = module1)) +
+  geom_boxplot(aes(group = factor(bins)))+
+  ggpmisc::stat_poly_line() + # add line of best fit to data
+  ggpmisc::stat_poly_eq(ggpmisc::use_label(c("adj.R2")), label.x = "right") + # add line of best fit metrics to plot
+  #stat_summary(geom = "line", fun = mean, group = 1) +
+  facet_grid(. ~ module1) + # separate by the modules
+  scale_fill_identity(guide = "legend") +
+  xlab("Salinity (PSU)")+
+  ylab("Module taxa abundance (%)")+
+  scale_x_reverse(breaks = c(1,2,3,4,5),
+                   labels = c("1" = "0-3", "2" = "3-6", "3" = "9-12", "4" = "12-15", "5" = "18-21"))+
+  My_Theme+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+mOTU_sal.plt
+
+
+```
+####Metagenomes
 
 ```{r}
 
+#Combine dataframes
+MG_module_ab.df = Geneabund_KO_MG.lng %>% #load in df
+  left_join(MG_module_KO.df) %>% # combine with module information
+  drop_na(module1) %>% #remove genes that were not part of a module
+  mutate(module1 = stringr::str_to_title(module1)) %>% #Capitalise all module names
+  mutate(Associatednumber = as.numeric(Associatednumber)) %>%
+  distinct() %>% #sanity check to ensure only one copy of each row is present
+  filter(module1 %in% c("Lilac", "Turquoise", "Pink", "Cyan",
+                        "Yellow", "Magenta", "Brown", "Grey"))# extract only the modules we want
+
+#Set up for analysis
+MG_module_ab.sum = MG_module_ab.df %>%
+  group_by(module1, Associatednumber) %>%
+  dplyr::summarise(sum_val = sum(counts),
+                   sd_val = sd(counts)) %>%
+  ungroup() %>% # remove the grouping it calculates everything with
+  left_join(metadata) %>% # %>% # add salinity and other metadata back
+  mutate(bins = cut(Salinity_PSU, breaks=c(0, 3, 6, 9, 12, 15, 18, 21))) %>% # bin based on ranges
+  dplyr::select(bins, sum_val, module1)
+
+
+#Make sure the bins column looks nice
+MG_module_ab.sum$bins = gsub("\\(|\\]", "", MG_module_ab.sum$bins)
+MG_module_ab.sum$bins = gsub(",", "-", MG_module_ab.sum$bins)
+
+#Plot against salinity - might need to sum like before
+MG_sal.plt = ggplot(MG_module_ab.sum, aes(y = sum_val * 100, x = as.integer(factor(bins)), fill = module1)) +
+  geom_boxplot(aes(group = factor(bins)))+
+  ggpmisc::stat_poly_line() + # add line of best fit to data
+  ggpmisc::stat_poly_eq(ggpmisc::use_label(c("adj.R2")), label.x = "right") + # add line of best fit metrics to plot
+  #stat_summary(geom = "line", fun = mean, group = 1) +
+  facet_grid(. ~ module1) + # separate by the modules
+  scale_fill_identity(guide = "legend") +
+  xlab("Salinity (PSU)")+
+  ylab("Module gene counts")+
+  scale_x_reverse(breaks = c(1,2,3,4,5),
+                   labels = c("1" = "0-3", "2" = "3-6", "3" = "9-12", "4" = "12-15", "5" = "18-21"))+
+  scale_y_log10()+
+  My_Theme+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+MG_sal.plt
+
+
+```
+
+
+###dCO2
+####mOTUs
+```{r}
+
+#Combine dataframes
+mOTU_module_ab.df = Microbiome_wide_mOTU %>% #load in df
+  left_join(mOTUs_module_taxa.df, by = c("newname" = "taxa")) %>% # combine with module information
+  drop_na(module1) %>% #remove genes that were not part of a module
+  mutate(module1 = stringr::str_to_title(module1)) %>% #Capitalise all module names
+  mutate(Associatednumber = as.numeric(Associatednumber)) %>%
+  left_join(metadata, by = c("Associatednumber" = "Associatednumber")) %>%
+  distinct() %>% #sanity check to ensure only one copy of each row is present
+  filter(module1 %in% c("Green", # extract only the modules we want +
+                        "Yellow", "Turquoise", "Blue", "Grey"))# extract only the modules we want -
+
+#Set up for analysis
+mOTU_module_ab.sum = mOTU_module_ab.df %>% # load in data
+  group_by(module1, station_km, Associatednumber) %>% # group by relevant columns
+  dplyr::summarise(sum_val = sum(Abundance), # calculate the sum
+                   sd_val = sd(Abundance))  %>% # calculate standard deviation
+  ungroup() %>% # remove the grouping it calculates everything with
+  left_join(metadata) %>% # %>% # add salinity and other metadata back
+  mutate(bins = cut(dCO2_uM, breaks=c(0, 25, 50, 75, 100, 125, 150))) %>% # bin based on ranges
+  dplyr::select(bins, sum_val, module1)
+
+#Make sure the bins column looks nice
+mOTU_module_ab.sum$bins = gsub("\\(|\\]", "", mOTU_module_ab.sum$bins)
+mOTU_module_ab.sum$bins = gsub(",", "-", mOTU_module_ab.sum$bins)
+unique(mOTU_module_ab.sum$bins)
+
+#Plot against salinity - might need to sum like before
+mOTU_CO2.plt = ggplot(mOTU_module_ab.sum, aes(y = sum_val * 100, x = as.integer(factor(bins)), fill = module1)) +
+  geom_boxplot(aes(group = factor(bins)))+
+  ggpmisc::stat_poly_line() + # add line of best fit to data
+  ggpmisc::stat_poly_eq(ggpmisc::use_label(c("adj.R2")), label.x= "right") + # add line of best fit metrics to plot
+  #stat_summary(geom = "line", fun = mean, group = 1) +
+  facet_grid(. ~ module1) + # separate by the modules
+  scale_fill_identity(guide = "legend") +
+  xlab("dCO2 (uM)")+
+  ylab("Module taxa abundance (%)")+
+  scale_x_continuous(breaks = c(1,2,3,4,5),
+                   labels = c("1" = "25-50", "2" = "50-75", "3" = "75-100", "4" = "100-125", "5" = "125-150"))+
+  My_Theme+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+mOTU_CO2.plt
+
+
+```
+####Metagenomes
+
+```{r}
+
+#Combine dataframes
+MG_module_ab.df = Geneabund_KO_MG.lng %>% #load in df
+  left_join(MG_module_KO.df) %>% # combine with module information
+  drop_na(module1) %>% #remove genes that were not part of a module
+  mutate(module1 = stringr::str_to_title(module1)) %>% #Capitalise all module names
+  mutate(Associatednumber = as.numeric(Associatednumber)) %>%
+  distinct() %>% #sanity check to ensure only one copy of each row is present
+  filter(module1 %in% c("Tan", "Magenta", # extract only the modules we want +ve
+                        "Turquoise", "Cyan")) # extract only the modules we want -ve
+
+#Set up for analysis
+MG_module_ab.sum = MG_module_ab.df %>%
+  group_by(module1, Associatednumber) %>%
+  dplyr::summarise(sum_val = sum(counts),
+                   sd_val = sd(counts)) %>%
+  ungroup() %>% # remove the grouping it calculates everything with
+  left_join(metadata) %>% # %>% # add salinity and other metadata back
+  mutate(bins = cut(dCO2_uM, breaks=c(0, 25, 50, 75, 100, 125, 150))) %>% # bin based on ranges
+  dplyr::select(bins, sum_val, module1)
+
+
+#Make sure the bins column looks nice
+MG_module_ab.sum$bins = gsub("\\(|\\]", "", MG_module_ab.sum$bins)
+MG_module_ab.sum$bins = gsub(",", "-", MG_module_ab.sum$bins)
+unique(MG_module_ab.sum$bins)
+
+#Plot against salinity - might need to sum like before
+MG_CO2.plt = ggplot(MG_module_ab.sum, aes(y = sum_val * 100, x = as.integer(factor(bins)), fill = module1)) +
+  geom_boxplot(aes(group = factor(bins)))+
+  ggpmisc::stat_poly_line() + # add line of best fit to data
+  ggpmisc::stat_poly_eq(ggpmisc::use_label(c("adj.R2")), label.x = "right") + # add line of best fit metrics to plot
+  #stat_summary(geom = "line", fun = mean, group = 1) +
+  facet_grid(. ~ module1) + # separate by the modules
+  scale_fill_identity(guide = "legend") +
+  xlab("dCO2 (uM)")+
+  ylab("Module gene counts")+
+  scale_x_continuous(breaks = c(1,2,3,4,5),
+                   labels = c("1" = "25-50", "2" = "50-75", "3" = "75-100", "4" = "100-125", "5" = "125-150"))+
+  My_Theme+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+MG_CO2.plt
+
+
+```
+
+
+###dCH4
+####mOTUs
+```{r}
+
+#Combine dataframes
+mOTU_module_ab.df = Microbiome_wide_mOTU %>% #load in df
+  left_join(mOTUs_module_taxa.df, by = c("newname" = "taxa")) %>% # combine with module information
+  drop_na(module1) %>% #remove genes that were not part of a module
+  mutate(module1 = stringr::str_to_title(module1)) %>% #Capitalise all module names
+  mutate(Associatednumber = as.numeric(Associatednumber)) %>%
+  left_join(metadata, by = c("Associatednumber" = "Associatednumber")) %>%
+  distinct() %>% #sanity check to ensure only one copy of each row is present
+  filter(module1 %in% c("Brown" # extract only the modules we want +
+                        ))# extract only the modules we want -
+
+#Set up for analysis
+mOTU_module_ab.sum = mOTU_module_ab.df %>% # load in data
+  group_by(module1, station_km, Associatednumber) %>% # group by relevant columns
+  dplyr::summarise(sum_val = sum(Abundance), # calculate the sum
+                   sd_val = sd(Abundance))  %>% # calculate standard deviation
+  ungroup() %>% # remove the grouping it calculates everything with
+  left_join(metadata) %>% # %>% # add salinity and other metadata back
+  mutate(bins = cut(dCH4_nM, breaks=c(0, 200, 400, 600, 800, 1000, 1200))) %>% # bin based on ranges
+  dplyr::select(bins, sum_val, module1)
+
+#Make sure the bins column looks nice
+mOTU_module_ab.sum$bins = gsub("\\(|\\]", "", mOTU_module_ab.sum$bins)
+mOTU_module_ab.sum$bins = gsub(",", "-", mOTU_module_ab.sum$bins)
+unique(mOTU_module_ab.sum$bins)
+
+#Plot against salinity - might need to sum like before
+mOTU_CH4.plt = ggplot(mOTU_module_ab.sum, aes(y = sum_val * 100, x = as.integer(factor(bins)), fill = module1)) +
+  geom_boxplot(aes(group = factor(bins)))+
+  ggpmisc::stat_poly_line() + # add line of best fit to data
+  ggpmisc::stat_poly_eq(ggpmisc::use_label(c("adj.R2")), label.x= "right") + # add line of best fit metrics to plot
+  #stat_summary(geom = "line", fun = mean, group = 1) +
+  facet_grid(. ~ module1) + # separate by the modules
+  scale_fill_identity(guide = "legend") +
+  xlab("dCH4 (nM)")+
+  ylab("Module taxa abundance (%)")+
+  scale_x_continuous(breaks = c(1,2,3,4),
+                   labels = c("1" = "0-200", "2" = "200-400", "3" = "800-1000", "4" = "1000-1200"))+
+  My_Theme+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+mOTU_CH4.plt
+
+
+```
+####Metagenomes
+
+```{r}
+
+#Combine dataframes
+MG_module_ab.df = Geneabund_KO_MG.lng %>% #load in df
+  left_join(MG_module_KO.df) %>% # combine with module information
+  drop_na(module1) %>% #remove genes that were not part of a module
+  mutate(module1 = stringr::str_to_title(module1)) %>% #Capitalise all module names
+  mutate(Associatednumber = as.numeric(Associatednumber)) %>%
+  distinct() %>% #sanity check to ensure only one copy of each row is present
+  filter(module1 %in% c("Salmon", "Magenta", # extract only the modules we want +ve
+                        "Black")) # extract only the modules we want -ve
+
+#Set up for analysis
+MG_module_ab.sum = MG_module_ab.df %>%
+  group_by(module1, Associatednumber) %>%
+  dplyr::summarise(sum_val = sum(counts),
+                   sd_val = sd(counts)) %>%
+  ungroup() %>% # remove the grouping it calculates everything with
+  left_join(metadata) %>% # %>% # add salinity and other metadata back
+  mutate(bins = cut(dCH4_nM, breaks=c(0, 200, 400, 600, 800, 1000, 1200))) %>% # bin based on ranges
+  dplyr::select(bins, sum_val, module1)
+
+
+#Make sure the bins column looks nice
+MG_module_ab.sum$bins = gsub("\\(|\\]", "", MG_module_ab.sum$bins)
+MG_module_ab.sum$bins = gsub(",", "-", MG_module_ab.sum$bins)
+unique(MG_module_ab.sum$bins)
+
+#Plot against salinity - might need to sum like before
+MG_CH4.plt = ggplot(MG_module_ab.sum, aes(y = sum_val * 100, x = as.integer(factor(bins)), fill = module1)) +
+  geom_boxplot(aes(group = factor(bins)))+
+  ggpmisc::stat_poly_line() + # add line of best fit to data
+  ggpmisc::stat_poly_eq(ggpmisc::use_label(c("adj.R2")), label.x = "right") + # add line of best fit metrics to plot
+  #stat_summary(geom = "line", fun = mean, group = 1) +
+  facet_grid(. ~ module1) + # separate by the modules
+  scale_fill_identity(guide = "legend") +
+  xlab("dCH4 (nM)")+
+  ylab("Module gene counts")+
+  scale_x_continuous(breaks = c(1,2,3,4),
+                   labels = c("1" = "0-200", "2" = "200-400", "3" = "800-1000", "4" = "1000-1200"))+
+  My_Theme+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+MG_CH4.plt
+
+
+```
+###DOC
+####mOTUs
+```{r}
+
+#Combine dataframes
+mOTU_module_ab.df = Microbiome_wide_mOTU %>% #load in df
+  left_join(mOTUs_module_taxa.df, by = c("newname" = "taxa")) %>% # combine with module information
+  drop_na(module1) %>% #remove genes that were not part of a module
+  mutate(module1 = stringr::str_to_title(module1)) %>% #Capitalise all module names
+  mutate(Associatednumber = as.character(Associatednumber)) %>%
+  left_join(metadata, by = c("Associatednumber" = "Associatednumber")) %>%
+  distinct() %>% #sanity check to ensure only one copy of each row is present
+  filter(module1 %in% c("Brown", # extract only the modules we want +
+                        "Yellow"))# extract only the modules we want -
+
+#Set up for analysis
+mOTU_module_ab.sum = mOTU_module_ab.df %>% # load in data
+  group_by(module1, station_km, Associatednumber) %>% # group by relevant columns
+  dplyr::summarise(sum_val = sum(Abundance), # calculate the sum
+                   sd_val = sd(Abundance))  %>% # calculate standard deviation
+  ungroup() %>% # remove the grouping it calculates everything with
+  left_join(metadata) %>% # %>% # add salinity and other metadata back
+  mutate(bins = cut(DOC_mg.L, breaks=c(0, 2, 4, 6, 8, 10, 12))) %>% # bin based on ranges
+  select(bins, sum_val, module1)
+
+#Make sure the bins column looks nice
+mOTU_module_ab.sum$bins = gsub("\\(|\\]", "", mOTU_module_ab.sum$bins)
+mOTU_module_ab.sum$bins = gsub(",", "-", mOTU_module_ab.sum$bins)
+unique(mOTU_module_ab.sum$bins)
+
+#Plot against salinity - might need to sum like before
+mOTU_DOC.plt = ggplot(mOTU_module_ab.sum, aes(y = sum_val * 100, x = as.integer(factor(bins)))) +
+  geom_boxplot(aes(group = factor(bins)))+
+  ggpmisc::stat_poly_line() + # add line of best fit to data
+  ggpmisc::stat_poly_eq(ggpmisc::use_label(c("adj.R2")), label.x= "right") + # add line of best fit metrics to plot
+  #stat_summary(geom = "line", fun = mean, group = 1) +
+  facet_grid(. ~ module1) + # separate by the modules
+  xlab("DOC (mg L-1)")+
+  ylab("Module taxa abundance (%)")+
+  scale_x_continuous(breaks = c(1,2,3,4,5,6),
+                   labels = c("1" = "0-2", "2" = "2-4", "3" = "4-6", "4" = "6-8", "5" = "8-10", "6" = "10-12"))+
+  My_Theme+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+mOTU_DOC.plt
+
+
+```
+####Metagenomes
+
+```{r}
+
+#Combine dataframes
+MG_module_ab.df = Geneabund_KO_MG.lng %>% #load in df
+  left_join(MG_module_KO.df) %>% # combine with module information
+  drop_na(module1) %>% #remove genes that were not part of a module
+  mutate(module1 = stringr::str_to_title(module1)) %>% #Capitalise all module names
+  mutate(Associatednumber = as.character(Associatednumber)) %>%
+  distinct() %>% #sanity check to ensure only one copy of each row is present
+  filter(module1 %in% c( # extract only the modules we want +ve
+                        "Purple", "Pink", "Green")) # extract only the modules we want -ve
+
+#Set up for analysis
+MG_module_ab.sum = MG_module_ab.df %>%
+  group_by(module1, Associatednumber) %>%
+  dplyr::summarise(sum_val = sum(counts),
+                   sd_val = sd(counts)) %>%
+  ungroup() %>% # remove the grouping it calculates everything with
+  left_join(metadata) %>% # %>% # add salinity and other metadata back
+  mutate(bins = cut(DOC_mg.L, breaks=c(0, 2, 4, 6, 8, 10, 12))) %>% # bin based on ranges
+  select(bins, sum_val, module1)
+
+
+#Make sure the bins column looks nice
+MG_module_ab.sum$bins = gsub("\\(|\\]", "", MG_module_ab.sum$bins)
+MG_module_ab.sum$bins = gsub(",", "-", MG_module_ab.sum$bins)
+unique(MG_module_ab.sum$bins)
+
+#Plot against salinity - might need to sum like before
+MG_DOC.plt = ggplot(MG_module_ab.sum, aes(y = sum_val * 100, x = as.integer(factor(bins)))) +
+  geom_boxplot(aes(group = factor(bins)))+
+  ggpmisc::stat_poly_line() + # add line of best fit to data
+  ggpmisc::stat_poly_eq(ggpmisc::use_label(c("adj.R2")), label.x = "right") + # add line of best fit metrics to plot
+  #stat_summary(geom = "line", fun = mean, group = 1) +
+  facet_grid(. ~ module1) + # separate by the modules
+  xlab("dCH4 (nM)")+
+  ylab("Module gene counts")+
+  scale_x_continuous(breaks = c(1,2,3,4,5,6),
+                   labels = c("1" = "0-2", "2" = "2-4", "3" = "4-6", "4" = "6-8", "5" = "8-10", "6" = "10-12"))+
+  My_Theme+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+MG_DOC.plt
+
+
+```
+###TEP
+####mOTUs
+```{r}
+
+#Combine dataframes
+mOTU_module_ab.df = Microbiome_wide_mOTU %>% #load in df
+  left_join(mOTUs_module_taxa.df, by = c("newname" = "taxa")) %>% # combine with module information
+  drop_na(module1) %>% #remove genes that were not part of a module
+  mutate(module1 = stringr::str_to_title(module1)) %>% #Capitalise all module names
+  mutate(Associatednumber = as.character(Associatednumber)) %>%
+  left_join(metadata, by = c("Associatednumber" = "Associatednumber")) %>%
+  distinct() %>% #sanity check to ensure only one copy of each row is present
+  filter(module1 %in% c("Turquoise" # extract only the modules we want +
+                        ))# extract only the modules we want -
+
+#Set up for analysis
+mOTU_module_ab.sum = mOTU_module_ab.df %>% # load in data
+  group_by(module1, station_km, Associatednumber) %>% # group by relevant columns
+  dplyr::summarise(sum_val = sum(Abundance), # calculate the sum
+                   sd_val = sd(Abundance))  %>% # calculate standard deviation
+  ungroup() %>% # remove the grouping it calculates everything with
+  left_join(metadata) %>% # %>% # add salinity and other metadata back
+  mutate(bins = cut(TEP_um2perL, breaks=c(0, 150000000000000, 300000000000000, 450000000000000, 600000000000000, 750000000000000, 900000000000000))) %>% # bin based on ranges
+  select(bins, sum_val, module1)
+
+#Make sure the bins column looks nice
+mOTU_module_ab.sum$bins = gsub("\\(|\\]", "", mOTU_module_ab.sum$bins)
+mOTU_module_ab.sum$bins = gsub(",", "-", mOTU_module_ab.sum$bins)
+unique(mOTU_module_ab.sum$bins)
+
+#Plot against salinity - might need to sum like before
+mOTU_TEP.plt = ggplot(mOTU_module_ab.sum, aes(y = sum_val * 100, x = as.integer(factor(bins)))) +
+  geom_boxplot(aes(group = factor(bins)))+
+  ggpmisc::stat_poly_line() + # add line of best fit to data
+  ggpmisc::stat_poly_eq(ggpmisc::use_label(c("adj.R2")), label.x= "right") + # add line of best fit metrics to plot
+  #stat_summary(geom = "line", fun = mean, group = 1) +
+  facet_grid(. ~ module1) + # separate by the modules
+  xlab("TEP concentration (um2 L-1)")+
+  ylab("Module taxa abundance (%)")+
+  scale_x_continuous(breaks = c(1,2,3,4,5,6),
+                   labels = c("1" = "0-1.5e+14", 
+                              "2" = "1.5e+14-3e+14", 
+                              "3" = "3e+14-4.5e+14", 
+                              "4" = "4.5e+14-6e+14", 
+                              "5" = "6e+14-7.5e+14", 
+                              "6" = "7.5e+14-9e+14"))+
+  My_Theme+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+mOTU_TEP.plt
+
+
+```
+####Metagenomes
+
+```{r}
+
+#Combine dataframes
+MG_module_ab.df = Geneabund_KO_MG.lng %>% #load in df
+  left_join(MG_module_KO.df) %>% # combine with module information
+  drop_na(module1) %>% #remove genes that were not part of a module
+  mutate(module1 = stringr::str_to_title(module1)) %>% #Capitalise all module names
+  mutate(Associatednumber = as.character(Associatednumber)) %>%
+  distinct() %>% #sanity check to ensure only one copy of each row is present
+  filter(module1 %in% c("Pink", # extract only the modules we want +ve
+                        "Red", "Cyan")) # extract only the modules we want -ve
+
+#Set up for analysis
+MG_module_ab.sum = MG_module_ab.df %>%
+  group_by(module1, Associatednumber) %>%
+  dplyr::summarise(sum_val = sum(counts),
+                   sd_val = sd(counts)) %>%
+  ungroup() %>% # remove the grouping it calculates everything with
+  left_join(metadata) %>% # %>% # add salinity and other metadata back
+  mutate(bins = cut(TEP_um2perL, breaks=c(0, 150000000000000, 300000000000000, 450000000000000, 600000000000000, 750000000000000, 900000000000000))) %>% # bin based on ranges
+  select(bins, sum_val, module1)
+
+
+#Make sure the bins column looks nice
+MG_module_ab.sum$bins = gsub("\\(|\\]", "", MG_module_ab.sum$bins)
+MG_module_ab.sum$bins = gsub(",", "-", MG_module_ab.sum$bins)
+unique(MG_module_ab.sum$bins)
+
+#Plot against salinity - might need to sum like before
+MG_TEP.plt = ggplot(MG_module_ab.sum, aes(y = sum_val * 100, x = as.integer(factor(bins)))) +
+  geom_boxplot(aes(group = factor(bins)))+
+  ggpmisc::stat_poly_line() + # add line of best fit to data
+  ggpmisc::stat_poly_eq(ggpmisc::use_label(c("adj.R2")), label.x = "right") + # add line of best fit metrics to plot
+  #stat_summary(geom = "line", fun = mean, group = 1) +
+  facet_grid(. ~ module1) + # separate by the modules
+  xlab("TEP concentration (um2 L-1)")+
+  ylab("Module gene counts")+
+  scale_x_continuous(breaks = c(1,2,3,4,5,6),
+                   labels = c("1" = "0-1.5e+14", 
+                              "2" = "1.5e+14-3e+14", 
+                              "3" = "3e+14-4.5e+14", 
+                              "4" = "4.5e+14-6e+14", 
+                              "5" = "6e+14-7.5e+14", 
+                              "6" = "7.5e+14-9e+14"))+
+  My_Theme+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+MG_TEP.plt
+
+
+```
+###Combine mOTU and metagenome to PP plots and export
+```{r}
+
+Modules2PP.plt = ggpubr::ggarrange(mOTU_sal.plt, MG_sal.plt,
+                                   mOTU_CO2.plt, MG_CO2.plt,
+                                   mOTU_CH4.plt, MG_CH4.plt,
+                                   #mOTU_DOC.plt, MG_DOC.plt,
+                                   #mOTU_TEP.plt, MG_TEP.plt,
+                                   ncol = 2,
+                                   nrow = 3)
+Modules2PP.plt
+
+png("F:/Functional_R_analysis/Figures/FigureS1_modules2PP.png", units = "in", res = 120, width = 24, height = 12)
+Modules2PP.plt
+dev.off()
+
+pdf("F:/Functional_R_analysis/Figures/FigureS1_modules2PP.pdf",width = 24, height = 12)
+Modules2PP.plt
+dev.off()
+
+
+```
+
+#Match mOTUs to MAGs and get functional info - sal corr. to osmoreg % in here - Figure 5 associated
+##Set up dataframes and module level osmoregulation gene calculation
+Jurdzinski et al, 2023; 10.1126/sciadv.adg2059
+brackish vs marine - no mechanism , "K07064", "K06987", "
+```{r}
+#Brackish:
+BrackishJurdzinskiOsmoList.ls = c("K03498", "K03499", "K07301", "K16055", "K08974", #brackish vs fresh - brackish identified
+                                  #"K01480", "K04759", "K00809", "K01585", "K03782", "K21498", "K19159", "K05844", "K18310", "K14940", "K03284", "K03282", "K02237", "K03321", "K02036", "K01673", "K07007", "K07290", "K07115", "K02482", "K07343", "K03630", "K03413", "K20974", "K07497", "K02238", "K07460", "K07391", # brackish vs marine - brackish identified
+                                  "K08974", "K03499", "K07301", "K16052", "" #freshwater vs marine - marine identified
+                                  )
+
+
 #Import mOTU ID lists that lets us link them to MAGs, and combine them
-mag_nmOTUs.df = read.csv("E:/Functional_R_analysis/mag_2_new_motus", header = F, sep = "\t") %>%
+mag_nmOTUs.df = read.csv("F:/Functional_R_analysis/mag_2_new_motus", header = F, sep = "\t") %>%
   separate_rows(V2, sep = ";") %>%
   dplyr::rename(mOTU_ID = V1) %>%
   dplyr::rename(MAG_ID = V2)
 
-mag_emOTUs.df = read.csv("E:/Functional_R_analysis/mag_2_existing_motus", header = F, sep = "\t") %>%
+mag_emOTUs.df = read.csv("F:/Functional_R_analysis/mag_2_existing_motus", header = F, sep = "\t") %>%
   separate_rows(V2, sep = ";") %>%
   dplyr::select(V1, V2) %>%
   dplyr::rename(mOTU_ID = V2) %>%
@@ -3999,13 +5082,13 @@ mOTUs2MAGs = rbind(mag_nmOTUs.df, mag_emOTUs.df) %>%
 
 
 #Import module information and combine (number and colour)
-mOTUs_mod.df = read.csv("E:/Functional_R_analysis/Network/WGCNA_network_mOTUs_all.csv", sep = ";") %>%
+mOTUs_mod.df = read.csv("F:/Functional_R_analysis/Network/WGCNA_network_mOTUs_all.csv", sep = ";") %>%
   dplyr::select(v_name, v_module, X, Y, v_motu_id) %>%
   dplyr::rename(mOTU_ID = v_motu_id) %>%
   dplyr::rename(taxa = v_name)
 
 #Import list of mOTUs and their respective module colour
-network_modules_mOTUs.df = read.csv("E:/Functional_R_analysis/Network/edgelist_mOTUs_all_type.tsv", sep = "\t") %>%
+network_modules_mOTUs.df = read.csv("F:/Functional_R_analysis/Network/edgelist_mOTUs_all_type.tsv", sep = "\t") %>%
   dplyr::select(gene1, module1) %>%
   distinct()
 
@@ -4034,7 +5117,7 @@ mOTUs_module_KO.df
 
 
 #How many mOTUs matched MAGs? - all, as they are MAG derived
-test = network_modules_mOTUs.df %>%
+matched_modulmOTUMAG.df = network_modules_mOTUs.df %>%
   left_join(mOTUs_mod.df, by = c("gene1" = "taxa")) %>%
   drop_na(v_module) %>% # remove taxa that haven't been assigned a module
   distinct() %>% # Remove duplicates
@@ -4045,11 +5128,13 @@ test = network_modules_mOTUs.df %>%
   left_join(gene_cluster_taxa, by = c("MAG_ID" = "genome")) %>%
   dplyr::select(-gene) %>%
   distinct() %>%
-  dplyr::select(mOTU_ID, MAG_ID) %>%
-  distinct()
-test
+  dplyr::select(module1, mOTU_ID) %>%
+  distinct() %>%
+  group_by(module1) %>%
+  summarise(totalmatches = n())
+matched_modulmOTUMAG.df
 
-dim(test)
+dim(matched_modulmOTUMAG.df)
 
 
 #Identify methanogenesis
@@ -4069,14 +5154,437 @@ dim(methanemetabolism_genes.df)
 #Identify osmosis genes
 
 Osmotic_genes.df = mOTUs_module_KO.df %>%
-  filter(str_detect(DESCRIPTION, "osmo")) %>%
+  filter(str_detect(DESCRIPTION, "osmo") | KO %in% BrackishJurdzinskiOsmoList.ls) %>%
   dplyr::select(DESCRIPTION, KO, v_module, module1, Phylum, Class, Order, Family, Genus, Species) %>%
   distinct()
 
 dim(Osmotic_genes.df)
 
-write.csv(Osmotic_genes.df, "E:/Functional_R_analysis/Osmoregulationgenes.csv")
+#write.csv(Osmotic_genes.df, "E:/Functional_R_analysis/Osmoregulationgenes.csv")
 
+
+#Identify pufM
+
+AAP_genes.df = mOTUs_module_KO.df %>%
+  filter(str_detect(KO, "K08929")) %>%
+  dplyr::select(DESCRIPTION, KO, v_module, module1, Phylum, Class, Order, Family, Genus, Species) %>%
+  distinct()
+
+dim(AAP_genes.df)
+
+
+#To calculate how many taxa in each module contain a osmoregulation gene
+Osmotic_genes.df = mOTUs_module_KO.df %>%
+  filter(str_detect(DESCRIPTION, "osmo") | KO %in% BrackishJurdzinskiOsmoList.ls) %>%
+  dplyr::select(v_module, module1, Phylum, Class, Order, Family, Genus, Species, mOTU_ID) %>%
+  distinct() %>%
+  group_by(module1) %>%
+  summarise(Osmoreg_numbers = n()) %>%
+  left_join(matched_modulmOTUMAG.df) %>%
+  mutate(PercentageOsmoTaxa = (Osmoreg_numbers / totalmatches)*100)
+
+Osmotic_genes.df
+
+#To calculate how many taxa in each module contain pufM
+AAP_genes.df = mOTUs_module_KO.df %>%
+  filter(str_detect(KO, "K08929")) %>%
+  dplyr::select(v_module, module1, Phylum, Class, Order, Family, Genus, Species, mOTU_ID) %>%
+  distinct() %>%
+  group_by(module1) %>%
+  summarise(AAPreg_numbers = n()) %>%
+  left_join(matched_modulmOTUMAG.df) %>%
+  mutate(PercentageAAPTaxa = (AAPreg_numbers / totalmatches)*100)
+AAP_genes.df
+
+#For later checking
+mOTUMAGmatches.df = network_modules_mOTUs.df %>%
+  left_join(mOTUs_mod.df, by = c("gene1" = "taxa")) %>%
+  drop_na(v_module) %>% # remove taxa that haven't been assigned a module
+  distinct() %>% # Remove duplicates
+  dplyr::rename(taxa = gene1) %>% #Rename taxa for consistency
+  dplyr::select(taxa, module1) %>% # choose only the columns that we need
+  separate(col = taxa, sep = "__", into = c("Phylum", "Class", "Order", "Family", "Genus", "Species", "mOTU_ID")) %>% # separate the taxa information and establish the mOTU ID column needed downstream
+  left_join(mOTUs2MAGs, by = c("mOTU_ID" = "mOTU_ID"))
+mOTUMAGmatches.df
+
+```
+
+##Identify what mOTUs are in each module + osmoregulation % + methanotroph ab.
+Use indicator species analysis for this. Should make it quicker/easier.
+
+```{r}
+
+#Read in KO and module information (numeric)
+mOTUs_mod.df = read.csv("D:/Functional_R_analysis/Network/WGCNA_network_mOTUs_all.csv", sep = ";") %>%
+  dplyr::select(v_name, v_module, X, Y)
+
+#MEs0 = read.csv("E:/Functional_R_analysis/Network/MEsO_mOTUs.csv")
+
+#Read in KO and module information (colour)
+network_modules_mOTUs.df = read.csv("D:/Functional_R_analysis/Network/edgelist_mOTUs_all_type.tsv", sep = "\t") %>%
+  dplyr::select(gene1, module1) %>%
+  distinct()
+
+#Combine KO and both module IDs (numeric and colour)
+mOTUs_module_taxa.df = network_modules_mOTUs.df %>%
+  left_join(mOTUs_mod.df, by = c("gene1" = "v_name")) %>%
+  drop_na(v_module) %>%
+  distinct() %>%
+  dplyr::rename(taxa = gene1) %>%
+  dplyr::select(taxa, v_module, module1) 
+mOTUs_module_taxa.df
+
+
+
+#Import df to prep mOTU dataframe
+Microbiome_wide_mOTU  = read.csv("D:/Functional_R_analysis/Taxaabund_all_mOTU_lng.csv", row.names = 1)
+
+
+
+#Combine dataframes
+mOTU_module_ab.df = Microbiome_wide_mOTU %>% #load in df
+  left_join(mOTUs_module_taxa.df, by = c("newname" = "taxa")) %>% # combine with module information
+  drop_na(module1) %>% #remove genes that were not part of a module
+  mutate(module1 = stringr::str_to_title(module1)) %>% #Capitalise all module names
+  mutate(Associatednumber = as.numeric(Associatednumber)) %>%
+  left_join(filter(metadata, data_type=="METAG"), by = c("Associatednumber" = "Associatednumber"), relationship = "many-to-one") %>%
+  distinct() #sanity check to ensure only one copy of each row is present
+mOTU_module_ab.df
+
+```
+
+
+###Identify taxa in the grey mOTU module
+```{r}
+
+#Extract grey module taxa
+mOTU_grey.ls = mOTU_module_ab.df %>% # load in data
+  filter(module1 == "Grey") %>% #filter to only a specific module
+  select(newname) %>% # choose only the informative column
+  separate(newname, sep = "__", into = c("Phylum", "Class", "Order", "Family", "Genus", "Species", "MAGID")) %>% #separate the taxa column into individual taxa names according to the level
+  distinct() %>% #remove duplicates
+  arrange(across(everything()))  # Reorders columns alphabetically
+mOTU_grey.ls
+
+#Export for ease and downstream analysis
+#write.csv(mOTU_grey.ls, "D:/Functional_R_analysis/mOTU_WGCNAmodule_greytaxa.csv")
+
+#Abundance across FL vs PA
+mOTU_grey.df = mOTU_module_ab.df %>% # load in data
+  filter(module1 == "Grey") %>% #filter to only a specific module
+  #select(newname) %>% # choose only the informative column
+  distinct() %>% #remove duplicates
+  mutate(Sample_type = ifelse(grepl("fraction", Sample_type), "PA", Sample_type)) %>% #replace all mention of fractions to PA
+  mutate(Sample_type = ifelse(grepl("living", Sample_type), "FL", Sample_type)) #replace all mention of living to FL
+mOTU_grey.df
+
+#Identify most significantly changing  taxa
+library(broom)
+# Fit a linear model for each taxon and extract p-values
+top5_taxa <- mOTU_grey.df %>%
+  group_by(newname) %>%  # Group by taxon
+  summarise(
+    model = list(lm(Abundance ~ Salinity_PSU, data = cur_data())),  # Fit model
+    .groups = "drop"
+  ) %>%
+  mutate(tidy_model = map(model, broom::tidy)) %>%  # Extract model details
+  unnest(tidy_model) %>%
+  filter(term == "Salinity_PSU") %>%  # Keep only the predictor term
+  arrange(p.value)# %>%  # Sort by significance (ascending)
+  #slice_head(n = 5)  # Select top 5 most significant taxa
+top5_taxa
+
+#Make plot to see what the difference looks like across PA vs FL
+mOTU_grey.plt = ggplot(mOTU_grey.df, aes(x = Sample_type, y = Abundance*100)) +
+  geom_boxplot()+
+  scale_y_log10()+
+  My_Theme+
+  stat_compare_means()
+mOTU_grey.plt
+
+
+
+#Calculate p.value and effect size (r)
+tmp.w = wilcox.test(mOTU_grey.df$Abundance ~ mOTU_grey.df$Sample_type)
+W <- tmp.w$statistic
+n1 <- length(subset(mOTU_grey.df, Sample_type == "FL")$Sample_type)
+n2 <- length(subset(mOTU_turquoise.df, Sample_type == "PA")$Sample_type)
+r <- W / (n1 * n2)
+r
+tmp.w
+
+#Calculate mean abundnace difference
+mean_diff = mOTU_grey.df %>%
+  group_by(Sample_type) %>%
+  summarise(mean_val = mean(Abundance))
+mean_diff
+mean_diff[2,2] / mean_diff[1,2]
+
+
+```
+
+###Identify taxa in the turquoise mOTU module
+```{r}
+
+#Extract turquoise module taxa
+mOTU_turquoise.ls = mOTU_module_ab.df %>% # load in data
+  filter(module1 == "Turquoise") %>% #filter to only a specific module
+  select(newname) %>% # choose only the informative column
+  separate(newname, sep = "__", into = c("Phylum", "Class", "Order", "Family", "Genus", "Species", "MAGID")) %>% #separate the taxa column into individual taxa names according to the level
+  distinct() %>% #remove duplicates
+  arrange(across(everything()))  # Reorders columns alphabetically
+mOTU_turquoise.ls
+
+
+#Export for ease and downstream analysis
+#write.csv(mOTU_turquoise.ls, "D:/Functional_R_analysis/mOTU_WGCNAmodule_turquoisetaxa.csv")
+
+#Abundance across FL vs PA
+mOTU_turquoise.df = mOTU_module_ab.df %>% # load in data
+  filter(module1 == "Turquoise") %>% #filter to only a specific module
+  #select(newname) %>% # choose only the informative column
+  distinct() %>% #remove duplicates
+  mutate(Sample_type = ifelse(grepl("fraction", Sample_type), "PA", Sample_type)) %>% #replace all mention of fractions to PA
+  mutate(Sample_type = ifelse(grepl("living", Sample_type), "FL", Sample_type)) #replace all mention of living to FL
+mOTU_turquoise.df
+
+#Make plot to see what the difference looks like
+mOTU_turquoise.plt = ggplot(mOTU_turquoise.df, aes(x = Sample_type, y = Abundance*100)) +
+  geom_boxplot()+
+  scale_y_log10()+
+  My_Theme+
+  stat_compare_means()
+mOTU_turquoise.plt
+
+#Calculate p.value and effect size (r)
+tmp.w = wilcox.test(mOTU_turquoise.df$Abundance ~ mOTU_turquoise.df$Sample_type)
+W <- tmp.w$statistic
+n1 <- length(subset(mOTU_turquoise.df, Sample_type == "FL")$Sample_type)
+n2 <- length(subset(mOTU_turquoise.df, Sample_type == "PA")$Sample_type)
+r <- W / (n1 * n2)
+r
+tmp.w
+
+#Calculate mean abundnace difference
+mean_diff = mOTU_turquoise.df %>%
+  group_by(Sample_type) %>%
+  summarise(mean_val = mean(Abundance))
+mean_diff
+mean_diff[2,2] / mean_diff[1,2]
+
+
+```
+
+
+###Identify taxa in the Blue mOTU module
+```{r}
+
+#Extract Blue module taxa
+mOTU_Blue.ls = mOTU_module_ab.df %>% # load in data
+  filter(module1 == "Blue") %>% #filter to only a specific module
+  select(newname) %>% # choose only the informative column
+  separate(newname, sep = "__", into = c("Phylum", "Class", "Order", "Family", "Genus", "Species", "MAGID")) %>% #separate the taxa column into individual taxa names according to the level
+  distinct() %>% #remove duplicates
+  arrange(across(everything()))  # Reorders columns alphabetically
+mOTU_Blue.ls
+
+#Abundance across FL vs PA
+mOTU_Blue.df = mOTU_module_ab.df %>% # load in data
+  filter(module1 == "Blue") %>% #filter to only a specific module
+  #select(newname) %>% # choose only the informative column
+  distinct() %>% #remove duplicates
+  mutate(Sample_type = ifelse(grepl("fraction", Sample_type), "PA", Sample_type)) %>% #replace all mention of fractions to PA
+  mutate(Sample_type = ifelse(grepl("living", Sample_type), "FL", Sample_type)) #replace all mention of living to FL
+mOTU_Blue.df
+
+#Make plot to see what the difference looks like
+mOTU_Blue.plt = ggplot(mOTU_Blue.df, aes(x = Sample_type, y = Abundance*100)) +
+  geom_boxplot()+
+  scale_y_log10()+
+  My_Theme+
+  stat_compare_means()
+mOTU_Blue.plt
+
+#Calculate p.value and effect size (r)
+tmp.w = wilcox.test(mOTU_Blue.df$Abundance ~ mOTU_Blue.df$Sample_type)
+W <- tmp.w$statistic
+n1 <- length(subset(mOTU_Blue.df, Sample_type == "FL")$Sample_type)
+n2 <- length(subset(mOTU_Blue.df, Sample_type == "PA")$Sample_type)
+r <- W / (n1 * n2)
+r
+tmp.w
+
+#Calculate mean abundnace difference
+mean_diff = mOTU_Blue.df %>%
+  group_by(Sample_type) %>%
+  summarise(mean_val = mean(Abundance))
+mean_diff
+mean_diff[2,2] / mean_diff[1,2]
+
+
+```
+
+###Identify taxa in the Yellow mOTU module
+```{r}
+
+#Extract Yellow module taxa
+mOTU_Yellow.ls = mOTU_module_ab.df %>% # load in data
+  filter(module1 == "Yellow") %>% #filter to only a specific module
+  select(newname) %>% # choose only the informative column
+  separate(newname, sep = "__", into = c("Phylum", "Class", "Order", "Family", "Genus", "Species", "MAGID")) %>% #separate the taxa column into individual taxa names according to the level
+  distinct() %>% #remove duplicates
+  arrange(across(everything()))  # Reorders columns alphabetically
+mOTU_Yellow.ls
+
+#Abundance across FL vs PA
+mOTU_Yellow.df = mOTU_module_ab.df %>% # load in data
+  filter(module1 == "Yellow") %>% #filter to only a specific module
+  #select(newname) %>% # choose only the informative column
+  distinct() %>% #remove duplicates
+  mutate(Sample_type = ifelse(grepl("fraction", Sample_type), "PA", Sample_type)) %>% #replace all mention of fractions to PA
+  mutate(Sample_type = ifelse(grepl("living", Sample_type), "FL", Sample_type)) #replace all mention of living to FL
+mOTU_Yellow.df
+
+#Make plot to see what the difference looks like
+mOTU_Yellow.plt = ggplot(mOTU_Yellow.df, aes(x = Sample_type, y = Abundance*100)) +
+  geom_boxplot()+
+  scale_y_log10()+
+  My_Theme+
+  stat_compare_means()
+mOTU_Yellow.plt
+
+#Calculate p.value and effect size (r)
+tmp.w = wilcox.test(mOTU_Yellow.df$Abundance ~ mOTU_Yellow.df$Sample_type)
+W <- tmp.w$statistic
+n1 <- length(subset(mOTU_Yellow.df, Sample_type == "FL")$Sample_type)
+n2 <- length(subset(mOTU_Yellow.df, Sample_type == "PA")$Sample_type)
+r <- W / (n1 * n2)
+r
+tmp.w
+
+#Calculate mean abundnace difference
+mean_diff = mOTU_Yellow.df %>%
+  group_by(Sample_type) %>%
+  summarise(mean_val = mean(Abundance))
+mean_diff
+mean_diff[2,2] / mean_diff[1,2]
+
+
+```
+###Taxa in common from Turquoise + Blue + Yellow
+
+```{r}
+library(purrr)
+
+#test = rbind(mOTU_turquoise.ls, mOTU_Blue.ls, mOTU_Yellow.ls)
+
+# Create a list of dataframes with the last two columns removed
+dfs <- list(
+  mOTU_turquoise.ls %>% select(-((ncol(.)-2):ncol(.))),
+  mOTU_Blue.ls %>% select(-((ncol(.)-2):ncol(.))),
+  mOTU_Yellow.ls %>% select(-((ncol(.)-2):ncol(.)))
+)
+
+# Use reduce() and inner_join() to join the dataframes on all common columns.
+common_rows <- reduce(dfs, inner_join)
+
+# View the result
+common_rows
+
+```
+
+
+###Identify taxa in the Green mOTU module
+```{r}
+
+#Extract Green module taxa
+mOTU_Green.ls = mOTU_module_ab.df %>% # load in data
+  filter(module1 == "Green") %>% #filter to only a specific module
+  select(newname) %>% # choose only the informative column
+  separate(newname, sep = "__", into = c("Phylum", "Class", "Order", "Family", "Genus", "Species", "MAGID")) %>% #separate the taxa column into individual taxa names according to the level
+  distinct() %>% #remove duplicates
+  arrange(across(everything()))  # Reorders columns alphabetically
+mOTU_Green.ls
+
+#Abundance across FL vs PA
+mOTU_Green.df = mOTU_module_ab.df %>% # load in data
+  filter(module1 == "Green") %>% #filter to only a specific module
+  #select(newname) %>% # choose only the informative column
+  distinct() %>% #remove duplicates
+  mutate(Sample_type = ifelse(grepl("fraction", Sample_type), "PA", Sample_type)) %>% #replace all mention of fractions to PA
+  mutate(Sample_type = ifelse(grepl("living", Sample_type), "FL", Sample_type)) #replace all mention of living to FL
+mOTU_Green.df
+
+#Make plot to see what the difference looks like
+mOTU_Green.plt = ggplot(mOTU_Green.df, aes(x = Sample_type, y = Abundance*100)) +
+  geom_boxplot()+
+  scale_y_log10()+
+  My_Theme+
+  stat_compare_means()
+mOTU_Green.plt
+
+#Calculate p.value and effect size (r)
+tmp.w = wilcox.test(mOTU_Green.df$Abundance ~ mOTU_Green.df$Sample_type)
+W <- tmp.w$statistic
+n1 <- length(subset(mOTU_Green.df, Sample_type == "FL")$Sample_type)
+n2 <- length(subset(mOTU_Green.df, Sample_type == "PA")$Sample_type)
+r <- W / (n1 * n2)
+r
+tmp.w
+
+#Calculate mean abundnace difference
+mean_diff = mOTU_Green.df %>%
+  group_by(Sample_type) %>%
+  summarise(mean_val = mean(Abundance))
+mean_diff
+mean_diff[2,2] / mean_diff[1,2]
+
+
+```
+###Identify taxa in the Brown mOTU module
+```{r}
+
+#Extract Brown module taxa
+mOTU_Brown.ls = mOTU_module_ab.df %>% # load in data
+  filter(module1 == "Brown") %>% #filter to only a specific module
+  select(newname) %>% # choose only the informative column
+  separate(newname, sep = "__", into = c("Phylum", "Class", "Order", "Family", "Genus", "Species", "MAGID")) %>% #separate the taxa column into individual taxa names according to the level
+  distinct() %>% #remove duplicates
+  arrange(across(everything()))  # Reorders columns alphabetically
+mOTU_Brown.ls
+
+#Abundance across FL vs PA
+mOTU_Brown.df = mOTU_module_ab.df %>% # load in data
+  filter(module1 == "Brown") %>% #filter to only a specific module
+  #select(newname) %>% # choose only the informative column
+  distinct() %>% #remove duplicates
+  mutate(Sample_type = ifelse(grepl("fraction", Sample_type), "PA", Sample_type)) %>% #replace all mention of fractions to PA
+  mutate(Sample_type = ifelse(grepl("living", Sample_type), "FL", Sample_type)) #replace all mention of living to FL
+mOTU_Brown.df
+
+#Make plot to see what the difference looks like
+mOTU_Brown.plt = ggplot(mOTU_Brown.df, aes(x = Sample_type, y = Abundance*100)) +
+  geom_boxplot()+
+  scale_y_log10()+
+  My_Theme+
+  stat_compare_means()
+mOTU_Brown.plt
+
+#Calculate p.value and effect size (r)
+tmp.w = wilcox.test(mOTU_Brown.df$Abundance ~ mOTU_Brown.df$Sample_type)
+W <- tmp.w$statistic
+n1 <- length(subset(mOTU_Brown.df, Sample_type == "FL")$Sample_type)
+n2 <- length(subset(mOTU_Brown.df, Sample_type == "PA")$Sample_type)
+r <- W / (n1 * n2)
+r
+tmp.w
+
+#Calculate mean abundnace difference
+mean_diff = mOTU_Brown.df %>%
+  group_by(Sample_type) %>%
+  summarise(mean_val = mean(Abundance))
+mean_diff
+mean_diff[2,2] / mean_diff[1,2]
 
 
 ```
@@ -4390,12 +5898,12 @@ Temp_MG.sum = Rmisc::summarySE(Temp_taxa_MG.df, measurevar = "counts", groupvars
 ###mOTUs
 ```{r}
 #Import mOTU ID lists that lets us link them to MAGs, and combine them
-mag_nm = read.csv("E:/Functional_R_analysis/mag_2_new_motus", header = F, sep = "\t") %>%
+mag_nm = read.csv("D:/Functional_R_analysis/mag_2_new_motus", header = F, sep = "\t") %>%
   separate_rows(V2, sep = ";") %>%
   dplyr::rename(mOTU_ID = V1) %>%
   dplyr::rename(MAG_ID = V2)
 
-mag_emOTUs.df = read.csv("E:/Functional_R_analysis/mag_2_existing_motus", header = F, sep = "\t") %>%
+mag_emOTUs.df = read.csv("D:/Functional_R_analysis/mag_2_existing_motus", header = F, sep = "\t") %>%
   separate_rows(V2, sep = ";") %>%
   dplyr::select(V1, V2) %>%
   dplyr::rename(mOTU_ID = V2) %>%
@@ -4406,15 +5914,19 @@ mOTUs2MAGs = rbind(mag_nmOTUs.df, mag_emOTUs.df) %>%
 
 
 #Import module information and combine (number and colour)
-mOTUs_mod.df = read.csv("E:/Functional_R_analysis/Network/WGCNA_network_mOTUs_all.csv", sep = ";") %>%
+mOTUs_mod.df = read.csv("D:/Functional_R_analysis/Network/WGCNA_network_mOTUs_all.csv", sep = ";") %>%
   dplyr::select(v_name, v_module, X, Y, v_motu_id) %>%
   dplyr::rename(mOTU_ID = v_motu_id) %>%
   dplyr::rename(taxa = v_name)
 
 #Import list of mOTUs and their respective module colour
-network_modules_mOTUs.df = read.csv("E:/Functional_R_analysis/Network/edgelist_mOTUs_all_type.tsv", sep = "\t") %>%
+network_modules_mOTUs.df = read.csv("D:/Functional_R_analysis/Network/edgelist_mOTUs_all_type.tsv", sep = "\t") %>%
   dplyr::select(gene1, module1) %>%
   distinct()
+
+#How many methanotrophs in the WGCNA analysis
+meths = network_modules_mOTUs.df %>%
+  filter(str_detect(gene1, "meth"))
 
 
 #Modify the annotation df, to make linking it clearer downstream
@@ -4587,7 +6099,7 @@ Brown_MAGs.ls = Brown_Osmotic_genes.df$MAG_ID
 #write.csv(Osmotic_genes.df, "E:/Functional_R_analysis/Osmoregulationgenes.csv")
 ```
 
-###Extract nitrogen associated MAGs
+###Extract nitrogen associated MAGs - Figure S5
 ```{r}
 
 
@@ -4875,6 +6387,273 @@ WGCNA_MG_raw.df = t(Geneabund_KO_MG.wde)
 
 ```
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+#Osmoregulation transcripts and how they link to mOTU taxa modules - no matches
+
+```{r}
+mOTUMAGmatches.df
+
+Geneabund_Osmo = annot %>%
+  rownames_to_column("gene_cluster") %>%
+  left_join(gene_cluster_taxa, by=c("gene_cluster" = "gene_cluster")) %>% # add MAG information
+  left_join(taxa, by = c("genome" = "GENOME"), relationship = "many-to-many") %>% # add taxonomic information
+  filter(DESCRIPTION %in% "osmo") %>% # only extract the osmoregulation
+  anti_join(data.frame(gene = amoAMatches.ls$gene), by = "gene") %>% # Remove rows based on above taxa filtering
+  select(gene_cluster, genome, KO) %>% # select only the columns titled gene_cluster and KO
+  
+  
+  #Need to test this
+  left_join(geneabund_2, by=c("gene_cluster" = "gene_cluster")) %>% # join these two columns to the gene abundance dataframe based on the gene_cluster column
+  select(-length, -gene_cluster) %>% # remove the length and gene_cluster column
+  group_by(KO) %>% #aggregate the data by the KEGG ID
+  summarise(across(everything(), ~ sum(., na.rm = TRUE))) # summarise the data using the sum to get abundance data - this still needs to be divided by 1000 for actual per genome values
+dim(amoAClean_geneabund_KO)
+
+
+  filter(str_detect(SName, "osmo") | str_detect(LName, "osmo"))
+
+Osmo_tbl_long <- Geneabund_Osmo %>%
+  filter(DESCRIPTION %in% "osmo") %>% # only extract the osmoregulation
+  pivot_longer(!KO, names_to = "sampleid", values_to = "counts", values_drop_na = 0) %>% # reformat from a wide to long format, remove gene-cluster information, column names will be in the sampleid column, and values that would be NA are replaced with a 0.
+  left_join(annot, by = c("KO" = "KO"), relationship = "many-to-many") %>% # add gene information
+  select(sampleid, counts, DESCRIPTION, KO, ) %>% # only keep relevant columns
+  separate(col = DESCRIPTION, sep = ";", into = c("SName", "LName")) %>% #separate description
+  select(!c(EC_Number, Pathway)) %>%
+  left_join(metadata) %>% # add metadata
+  filter(Sample_date != "Nov 21") %>% # remove samples from Nov 21
+  filter(Station != 'BunthausSpitze') %>% #remove sample from BunthausSpitze
+  ##Identify genes occurring at 0.1% abundance in at least 30% of samples
+  ungroup() %>% 
+  #mutate(nsamples = n_distinct(sampleid)) %>%  ## 245 samples
+  #mutate(abundance = if_else(counts < 0.1, 0, 1)) %>% 
+  #group_by(KO) %>% 
+  #mutate(occurrence = sum(abundance)/nsamples) %>% 
+  #ungroup() %>% 
+#  filter(occurrence > 0, occurrence < .3)  %>% 
+#  select(taxa) %>%  
+#  unique() ##790 Conditionally Rare Taxa,  mOTUs occurring above 0.1% in less than 30% of samples 
+  #filter(occurrence > 0.2) %>%
+  distinct()
+
+#Correct abundance
+Osmo_tbl_long$counts = Osmo_tbl_long$counts / 1000
+
+
+#View(Osmo_tbl_long)
+dim(Osmo_tbl_long)
+
+#write.csv(Osmo_tbl_long, "Osmo_tbl_long.csv")
+
+#Osmo_tbl_long = read.csv( "Osmo_tbl_long.csv")
+
+#Reorder factors
+Osmo_tbl_long$Station = factor(Osmo_tbl_long$Station,
+                                   levels = c("Medemgrund",
+                                              "Brunsbuettel",
+                                              "Schwarztonnensand",
+                                              "Twielenfleth",
+                                              "Muehlenberger Loch"))
+
+Osmo_tbl_long$Sample_date = gsub("-", " ",Osmo_tbl_long$Sample_date)
+
+Osmo_tbl_long$Sample_date = factor(Osmo_tbl_long$Sample_date,
+                                   levels = c("May 21",
+                                              "Jul 21",
+                                              "Nov 21",
+                                              "Feb 22",
+                                              "May 22",
+                                              "Jun 22",
+                                              "Nov 22"))
+
+#Make data_type names informative
+Osmo_tbl_long$data_type = gsub("METAT", "Transcriptomes", Osmo_tbl_long$data_type)
+Osmo_tbl_long$data_type = gsub("METAG", "Metagenomes", Osmo_tbl_long$data_type)
+
+
+#Long to wide, in preparation for transcripts per gene copy calculation
+# The arguments to spread():
+# - data: Data object
+# - key: Name of column containing the new column names
+# - value: Name of column containing values
+Osmo_TG.df <- spread(Osmo_tbl_long[ , ! names(Osmo_tbl_long) %in% c("sampleid", "abundance", "occurrence", "X")], #Remove columns that will cause problems
+                       data_type, #Column that will contain new column names
+                       counts) %>% # Value that will fill new columns
+  filter(Transcriptomes > 0 & Metagenomes > 0) %>% #Remove all 0 values
+  filter(!is.na(Transcriptomes), !is.na(Metagenomes)) # remove all NAs
+#Ensure that it worked
+dim(Osmo_tbl_long)
+dim(Osmo_TG.df)
+
+
+#Calculate Transcripts per gene copy
+Osmo_TG.df$TranscriptsPerGenome = Osmo_TG.df$Transcriptomes / Osmo_TG.df$Metagenomes
+
+
+#Convert from wide to long format
+Osmo_TG.df = gather(Osmo_TG.df, key = data_type, value = counts, Metagenomes:TranscriptsPerGenome)
+dim(Osmo_TG.df)
+
+#Remove data_types and columns that are no longer relevant 
+Osmo_TG.df = subset(Osmo_TG.df, data_type == "TranscriptsPerGenome") %>%
+  select(counts, KO, Associatednumber)
+dim(Osmo_TG.df)
+
+
+#Remove samples for which we have no metatranscriptomes
+Osmo_TG.df = subset(Osmo_TG.df, Associatednumber > 116)
+dim(Osmo_TG.df)
+#Remove samples for which sequencing failed
+Osmo_TG.df = subset(Osmo_TG.df, !(Associatednumber %in% c(127, 128, 140, 145, 146, 157, 169, 170,
+                                                               119, 125, 126, 136, 137, 153, 154)))
+dim(Osmo_TG.df)
+
+#Make sure data is set up properly
+Osmo_TG.df$counts = as.numeric(as.character(Osmo_TG.df$counts))
+Osmo_TG.df$Associatednumber = as.character(Osmo_TG.df$Associatednumber)
+
+
+
+
+
+```
+#Link mOTU module taxa to AAP - pufM
+
+```{r}
+
+mOTUMAGmatches.df
+
+Geneabund_AAP = annot %>%
+  rownames_to_column("gene_cluster") %>%
+  left_join(gene_cluster_taxa, by=c("gene_cluster" = "gene_cluster")) %>% # add MAG information
+  left_join(taxa, by = c("genome" = "GENOME"), relationship = "many-to-many") %>% # add taxonomic information
+  filter(KO %in% "K08929") %>% # only extract the AAPregulation
+  select(gene_cluster, genome, KO) %>% # select only the columns titled gene_cluster and KO
+  
+  
+  #Need to test this
+  left_join(geneabund_2, by=c("gene_cluster" = "gene_cluster")) %>% # join these two columns to the gene abundance dataframe based on the gene_cluster column
+  select(-length, -gene_cluster) %>% # remove the length and gene_cluster column
+  group_by(KO) %>% #aggregate the data by the KEGG ID
+  summarise(across(everything(), ~ sum(., na.rm = TRUE))) # summarise the data using the sum to get abundance data - this still needs to be divided by 1000 for actual per genome values
+dim(pufMClean_geneabund_KO)
+
+
+  filter(str_detect(SName, "AAP") | str_detect(LName, "AAP"))
+
+AAP_tbl_long <- Geneabund_AAP %>%
+  filter(DESCRIPTION %in% "AAP") %>% # only extract the AAPregulation
+  pivot_longer(!KO, names_to = "sampleid", values_to = "counts", values_drop_na = 0) %>% # reformat from a wide to long format, remove gene-cluster information, column names will be in the sampleid column, and values that would be NA are replaced with a 0.
+  left_join(annot, by = c("KO" = "KO"), relationship = "many-to-many") %>% # add gene information
+  select(sampleid, counts, DESCRIPTION, KO, ) %>% # only keep relevant columns
+  separate(col = DESCRIPTION, sep = ";", into = c("SName", "LName")) %>% #separate description
+  select(!c(EC_Number, Pathway)) %>%
+  left_join(metadata) %>% # add metadata
+  filter(Sample_date != "Nov 21") %>% # remove samples from Nov 21
+  filter(Station != 'BunthausSpitze') %>% #remove sample from BunthausSpitze
+  ##Identify genes occurring at 0.1% abundance in at least 30% of samples
+  ungroup() %>% 
+  #mutate(nsamples = n_distinct(sampleid)) %>%  ## 245 samples
+  #mutate(abundance = if_else(counts < 0.1, 0, 1)) %>% 
+  #group_by(KO) %>% 
+  #mutate(occurrence = sum(abundance)/nsamples) %>% 
+  #ungroup() %>% 
+#  filter(occurrence > 0, occurrence < .3)  %>% 
+#  select(taxa) %>%  
+#  unique() ##790 Conditionally Rare Taxa,  mOTUs occurring above 0.1% in less than 30% of samples 
+  #filter(occurrence > 0.2) %>%
+  distinct()
+
+#Correct abundance
+AAP_tbl_long$counts = AAP_tbl_long$counts / 1000
+
+
+#View(AAP_tbl_long)
+dim(AAP_tbl_long)
+
+#write.csv(AAP_tbl_long, "AAP_tbl_long.csv")
+
+#AAP_tbl_long = read.csv( "AAP_tbl_long.csv")
+
+#Reorder factors
+AAP_tbl_long$Station = factor(AAP_tbl_long$Station,
+                                   levels = c("Medemgrund",
+                                              "Brunsbuettel",
+                                              "Schwarztonnensand",
+                                              "Twielenfleth",
+                                              "Muehlenberger Loch"))
+
+AAP_tbl_long$Sample_date = gsub("-", " ",AAP_tbl_long$Sample_date)
+
+AAP_tbl_long$Sample_date = factor(AAP_tbl_long$Sample_date,
+                                   levels = c("May 21",
+                                              "Jul 21",
+                                              "Nov 21",
+                                              "Feb 22",
+                                              "May 22",
+                                              "Jun 22",
+                                              "Nov 22"))
+
+#Make data_type names informative
+AAP_tbl_long$data_type = gsub("METAT", "Transcriptomes", AAP_tbl_long$data_type)
+AAP_tbl_long$data_type = gsub("METAG", "Metagenomes", AAP_tbl_long$data_type)
+
+
+#Long to wide, in preparation for transcripts per gene copy calculation
+# The arguments to spread():
+# - data: Data object
+# - key: Name of column containing the new column names
+# - value: Name of column containing values
+AAP_TG.df <- spread(AAP_tbl_long[ , ! names(AAP_tbl_long) %in% c("sampleid", "abundance", "occurrence", "X")], #Remove columns that will cause problems
+                       data_type, #Column that will contain new column names
+                       counts) %>% # Value that will fill new columns
+  filter(Transcriptomes > 0 & Metagenomes > 0) %>% #Remove all 0 values
+  filter(!is.na(Transcriptomes), !is.na(Metagenomes)) # remove all NAs
+#Ensure that it worked
+dim(AAP_tbl_long)
+dim(AAP_TG.df)
+
+
+#Calculate Transcripts per gene copy
+AAP_TG.df$TranscriptsPerGenome = AAP_TG.df$Transcriptomes / AAP_TG.df$Metagenomes
+
+
+#Convert from wide to long format
+AAP_TG.df = gather(AAP_TG.df, key = data_type, value = counts, Metagenomes:TranscriptsPerGenome)
+dim(AAP_TG.df)
+
+#Remove data_types and columns that are no longer relevant 
+AAP_TG.df = subset(AAP_TG.df, data_type == "TranscriptsPerGenome") %>%
+  select(counts, KO, Associatednumber)
+dim(AAP_TG.df)
+
+
+#Remove samples for which we have no metatranscriptomes
+AAP_TG.df = subset(AAP_TG.df, Associatednumber > 116)
+dim(AAP_TG.df)
+#Remove samples for which sequencing failed
+AAP_TG.df = subset(AAP_TG.df, !(Associatednumber %in% c(127, 128, 140, 145, 146, 157, 169, 170,
+                                                               119, 125, 126, 136, 137, 153, 154)))
+dim(AAP_TG.df)
+
+#Make sure data is set up properly
+AAP_TG.df$counts = as.numeric(as.character(AAP_TG.df$counts))
+AAP_TG.df$Associatednumber = as.character(AAP_TG.df$Associatednumber)
+
+
+
+```
 
 
 
